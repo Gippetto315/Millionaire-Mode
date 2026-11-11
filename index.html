@@ -101,9 +101,13 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .dock button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .dock button.on{color:var(--em)}
 /* sheet */
-.scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease-out}
+.scrim{cursor:pointer;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease-out}
 .sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;padding:10px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px;animation:rise .24s cubic-bezier(.2,.9,.3,1)}
 .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:2px auto 0}
+.sheet{cursor:auto}
+.stop{display:flex;align-items:center;justify-content:space-between;margin-bottom:-6px}
+.stop .grab{margin:0}
+.xbtn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:16px;font-weight:800;display:grid;place-items:center}
 .shead{display:flex;align-items:center;gap:12px}
 .shead .tile{width:54px;height:54px;font-size:28px;border-radius:16px}
 .shead h3{margin:0;font:700 18px/1.2 var(--display)}
@@ -579,7 +583,7 @@ const sheetOpen = () => !!$("sheetroot").firstChild;
 let sheetFn = null, sheetLocked = false;
 function openSheet(fn, locked){ sheetFn=fn; sheetLocked=!!locked; drawSheet(); }
 function closeSheet(){ sheetFn=null; $("sheetroot").innerHTML=""; }
-function drawSheet(){ if (!sheetFn) return; const html = sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
+function drawSheet(){ if (!sheetFn) return; const html = sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
 
 function rowHtml(o){
   return `<button class="row${o.locked?" locked":""}" ${o.act?`data-act="${o.act}"`:""} ${o.arg!==undefined?`data-arg="${esc(o.arg)}"`:""}>
