@@ -33,6 +33,15 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:linear-gradient(var(--bg) 75%,rgba(9,12,11,0));display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:12px 14px}
 .brand{font:800 12px/1 var(--display);letter-spacing:.14em;color:var(--gold)}
 .brand span{color:var(--text)}
+.topr{display:flex;align-items:center;gap:8px}
+.help{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--line);color:var(--gold);font:800 15px var(--display);display:grid;place-items:center}
+.ilist{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.ilist li{display:grid;grid-template-columns:22px 1fr;gap:10px;color:var(--muted);font-size:14.5px;line-height:1.45}
+.ilist li b{color:var(--text)}
+.ilist li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--em);margin:7px 0 0 7px}
+.dots{display:flex;gap:6px;justify-content:center}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--gold);width:20px;border-radius:9px}
 .cashchip{display:flex;gap:6px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--muted)}
 .cashchip b{color:var(--em);font-weight:800}
 h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
@@ -150,7 +159,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 
 
 <div class="app">
-  <header class="top"><div class="brand">MILLIONAIRE <span>MODE</span></div><div class="cashchip">Cash <b class="num" data-live="cash"></b></div></header>
+  <header class="top"><div class="brand">MILLIONAIRE <span>MODE</span></div><div class="topr"><button class="help" data-act="help" aria-label="How this screen works">?</button><div class="cashchip">Cash <b class="num" data-live="cash"></b></div></div></header>
   <main id="view"></main>
 </div>
 <div class="dock"><nav id="dock">
@@ -801,8 +810,50 @@ function showWelcome(inc, gap){
     <button class="btn" data-act="close">Collect</button>`, true);
 }
 
+/* ================= help & first-run guide ================= */
+const GUIDE = [
+  {tab:null,e:"💰",t:"Welcome to Millionaire Mode",p:"Start with $100. Turn it into $1 billion.",l:[
+    "<b>Net worth</b> is your score: your cash plus everything you own.",
+    "Businesses and rentals <b>earn money every second</b>, even with the app closed (up to 24 hours).",
+    "Every choice can make you money <b>or lose it</b>. Nothing here is real money."]},
+  {tab:"home",e:"🏠",t:"Home",p:"Your empire at a glance.",l:[
+    "<b>Net worth</b> and the gold bar show how close you are to your next rank.",
+    "<b>Passive income</b> is what you earn per day without lifting a finger.",
+    "<b>Side hustle</b> pays a little cash once a minute. Great for getting started.",
+    "<b>Opportunities</b> are items for sale below what they're worth."]},
+  {tab:"market",e:"🛍️",t:"Market",p:"Where you buy things that make money.",l:[
+    "<b>Businesses</b> earn every hour. Open more locations or upgrade to earn more.",
+    "<b>Real estate</b> (from $10,000 net worth): buy cheap, renovate, then rent it out or sell it.",
+    "<b>Vehicles and collectibles</b>: buy below value and sell higher. Everyday cars lose value; classics and watches gain.",
+    "New listings show up every <b>20 minutes</b>."]},
+  {tab:"invest",e:"📈",t:"Invest",p:"Stocks, funds and crypto. All fictional.",l:[
+    "Prices move <b>every minute</b>, even while you're away.",
+    "Tap one to see its chart, then <b>buy with a slice of your cash</b> (10%, 25%, 50% or all of it).",
+    "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
+  {tab:"auctions",e:"🔨",t:"Auctions",p:"Bid against rival buyers.",l:[
+    "Three auctions run at once. <b>Tap Bid</b> to raise the price; rivals will try to top you.",
+    "A bid in the last 15 seconds <b>adds 15 seconds</b> to the clock.",
+    "You only pay if you win. <b>Mystery storage units</b> could hold treasure or junk."]},
+  {tab:"profile",e:"👤",t:"Profile",p:"Your rank, trophies and history.",l:[
+    "<b>Milestones</b> unlock new businesses, properties and items as you get richer.",
+    "<b>Achievements</b> track your firsts. <b>Collections</b> add +5% to all business income when complete.",
+    "<b>Reset game</b> starts you over at $100."]},
+  {tab:null,e:"⚡",t:"Expect surprises",p:"Every few minutes, something happens.",l:[
+    "Breakdowns, rush hours, hot deals, tax audits. <b>You decide</b> how to handle each one.",
+    "Some help you, some hurt. Choose carefully.",
+    "Tap the gold <b>?</b> at the top any time to see how a screen works."]}
+];
+function guideCard(g){ return `<div class="shead"><div class="tile gold">${g.e}</div><div><h3>${g.t}</h3><p>${g.p}</p></div></div><ul class="ilist">${g.l.map(x=>`<li><span>${x}</span></li>`).join("")}</ul>`; }
+let gStep = 0;
+function openGuide(){ gStep = 0; openSheet(() => { const g = GUIDE[gStep], last = gStep === GUIDE.length-1;
+  return `${guideCard(g)}<div class="dots">${GUIDE.map((_,i)=>`<i class="${i===gStep?"on":""}"></i>`).join("")}</div>
+  <div class="btns">${gStep?`<button class="btn ghost" data-act="gback">Back</button>`:`<button class="btn ghost" data-act="gskip">Skip</button>`}<button class="btn ${last?"gold":""}" data-act="${last?"gdone":"gnext"}">${last?"Let's get rich":"Next"}</button></div>`; }, true); }
+function openHelp(){ const g = GUIDE.find(x=>x.tab===tab) || GUIDE[0]; openSheet(() => `${guideCard(g)}<button class="btn ghost" data-act="gall">Show the full tour</button>`); }
+function guideSeen(){ try { return localStorage.getItem("mm-guide") === "1"; } catch(e){ return true; } }
+function markGuide(){ try { localStorage.setItem("mm-guide","1"); } catch(e){} }
+
 /* ================= input ================= */
-let resetArm = 0;
+let resetArm = 0, pendingWelcome = null;
 document.addEventListener("click", e => {
   const tb = e.target.closest("[data-tab]");
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
@@ -834,6 +885,11 @@ document.addEventListener("click", e => {
     case "stkSell": { const [s,f]=arg.split("|"); run(()=>A.stkSell(s,+f)); break; }
     case "bid": run(()=>A.bid(arg)); break;
     case "evc": if (evChoose) evChoose(+arg); break;
+    case "help": openHelp(); break;
+    case "gall": openGuide(); break;
+    case "gnext": gStep++; drawSheet(); break;
+    case "gback": gStep--; drawSheet(); break;
+    case "gskip": case "gdone": markGuide(); closeSheet(); render(); if (pendingWelcome){ const w=pendingWelcome; pendingWelcome=null; showWelcome(w[0],w[1]); } break;
     case "reset":
       if (Date.now()-resetArm < 4000){ S = fresh(); auctionsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
       else { resetArm = Date.now(); el.textContent = "Tap again to erase everything"; setTimeout(()=>{ const b=$("resetbtn"); if (b) b.textContent="Reset game"; }, 4000); }
@@ -847,8 +903,9 @@ function boot(){
   S = saved || fresh();
   const gap = t - S.last;
   const r = advance(t);
-  if (saved && gap > 60000) showWelcome(r.inc, gap);
   save(); render();
+  if (!guideSeen()){ if (saved && gap > 60000) pendingWelcome = [r.inc, gap]; openGuide(); }
+  else if (saved && gap > 60000) showWelcome(r.inc, gap);
 }
 function tick(){
   const t = Date.now(), gap = t - S.last;
