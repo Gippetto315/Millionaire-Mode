@@ -72,7 +72,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .tile{flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:radial-gradient(circle at 35% 30%,#24332c,#141a17);border:1px solid var(--line)}
 .tile.gold{background:radial-gradient(circle at 35% 30%,#4a3a17,#1c160a);border-color:#4a3c1c}
 .rmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.rmain strong{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmain strong{font-weight:800;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rmain span{color:var(--muted);font-size:12.5px}
 .rside{text-align:right;display:flex;flex-direction:column;gap:2px;flex:none}
 .rside b{font-weight:800}
@@ -246,9 +246,9 @@ const ITEMS = [
   {id:"super",c:"veh",n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
   {id:"hyper",c:"veh",n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
   {id:"proto",c:"veh",n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
-  {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0},
-  {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0},
-  {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0},
+  {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0,hidden:true},
+  {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0,hidden:true},
+  {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0,hidden:true},
   {id:"diver",c:"col",n:"Steel Diver Watch",e:"⌚",t:2,base:8000,a:.0004,carry:0,set:"watch"},
   {id:"chrono",c:"col",n:"Gold Chronograph",e:"⏱️",t:3,base:40000,a:.0004,carry:0,set:"watch"},
   {id:"tourb",c:"col",n:"Platinum Tourbillon",e:"💎",t:5,base:400000,a:.0004,carry:0,set:"watch"},
@@ -256,6 +256,49 @@ const ITEMS = [
   {id:"fossil",c:"col",n:"T-Rex Fossil",e:"🦖",t:7,base:5e6,a:.0003,carry:0},
   {id:"storage",c:"col",n:"Storage Unit Find",e:"📦",t:99,base:1,a:0,carry:0,hidden:true}
 ];
+/* ---- generated collectibles: hundreds of one-of-a-kind items ---- */
+(function(){
+  const TB=[[150,450],[600,2500],[3500,12000],[18000,60000],[90000,280000],[350000,1e6],[1.2e6,4e6],[5e6,18e6],[22e6,60e6]];
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"");
+  const T = [
+    {k:"sig",lo:0,hi:5,a:[-.0001,.0004],
+     A:["Benny Klotz","Rosa Vance","Duke Marlow","Tiny Okafor","Gus Lindqvist","Mickey Shaw","Lena Kovac","Jet Ramirez","Sunny Park","Trey Calloway","Big Al Brennan","Cy Whitlock","Ace Moreno","Hank 'Hammer' Doyle","Ray 'Rocket' Ellis","Marisol 'The Wall' Cruz"],
+     B:[["Baseball","⚾",1],["Rookie card","🃏",1.3],["Football","🏈",1.1],["Basketball","🏀",1.1],["Hockey stick","🏒",1.4],["Boxing gloves","🥊",1.6],["Game-worn jersey","👕",2],["Golf flag","⛳",1.2],["Batting helmet","⛑️",1.7],["Championship ring box","🏆",2.6]],
+     name:(a,b)=>`${b} signed by ${a}`},
+    {k:"wood",lo:1,hi:4,a:[0,.0003],
+     A:["Pine","Oak","Walnut","Cherry","Teak","Olive Wood","Curly Maple","Zebrawood","Purpleheart","Bocote","Bubinga","Koa","Cocobolo","Black Ebony","Snakewood","Lignum Vitae"],
+     B:[["chess set","♟️",1.3],["pocket knife","🔪",.7],["jewelry box","🎁",1],["fountain pen","🖋️",.8],["acoustic guitar","🎸",2.2],["walking cane","🦯",.9],["serving bowl","🥣",.8],["mantel clock","🕰️",1.5],["rocking chair","🪑",1.8],["cigar humidor","📦",1.2]],
+     name:(a,b)=>`Hand-carved ${a} ${b}`},
+    {k:"vint",lo:0,hi:4,a:[0,.0005],
+     A:["1990s","1980s","1970s","1960s","Mid-century","1950s","Art Deco","1920s","Victorian"],
+     B:[["lunchbox","🍱",.5],["camera","📷",.9],["rotary telephone","☎️",.7],["typewriter","⌨️",1],["radio","📻",1],["movie poster","🎞️",1.2],["record player","💿",1.3],["neon sign","💡",1.6],["pinball machine","🕹️",2.2],["jukebox","🎶",2.8],["pocket watch","⏱️",1.4]],
+     name:(a,b)=>`${a} ${b}`},
+    {k:"comic",lo:0,hi:6,a:[-.0002,.0006],
+     A:["Astro Kid","Mister Molecule","Night Lynx","Captain Comet","The Iron Saint","Midnight Ranger","Doctor Paradox","The Crimson Atom"],
+     B:[["graded 4.0","📕",.4],["graded 6.0","📕",.7],["graded 8.0","📗",1.1],["graded 9.4","📘",1.8],["graded 9.8","📙",3.2],["signed first print","✍️",4.5]],
+     name:(a,b)=>`${a} #1, ${b}`},
+    {k:"kicks",lo:0,hi:3,a:[-.0003,.0003],
+     A:["Chalk White","Cherry Bomb","Volt Storm","Arctic Ghost","Lava Flow","Midnight Gold","Desert Mirage","Galaxy Fade","Toxic Lime","Royal Velvet"],
+     B:[["high-tops","👟",1],["runners","👟",.8],["skate shoes","🛹",.7],["player-edition sneakers","👟",1.9]],
+     name:(a,b)=>`'${a}' ${b}`},
+    {k:"gem",lo:3,hi:7,a:[.0001,.0004],
+     A:["Amethyst","Jade","Star Garnet","Sapphire","Ruby","Emerald","Tanzanite","Black Opal","Alexandrite","Pink Diamond"],
+     B:[["ring","💍",1],["pendant","📿",1.1],["cufflinks","💠",.6],["brooch","🌸",.9],["bracelet","✨",1.3],["tiara","👑",2.6]],
+     name:(a,b)=>`${a} ${b}`},
+    {k:"art",lo:4,hi:8,a:[.0002,.0007],
+     A:["Clara Voss","Tobias Wren","Amara Diallo","Ivo Petrenko","Kenji Arata","Elena Moreau","Soren Halvorsen"],
+     B:[["watercolor","🎨",.6],["charcoal study","✏️",.5],["oil painting","🖼️",1.4],["bronze sculpture","🗿",1.8],["marble bust","🏛️",1.6],["stained-glass panel","🪟",1.1]],
+     name:(a,b)=>`${b[0].toUpperCase()+b.slice(1)} by ${a}`}
+  ];
+  T.forEach(t => t.A.forEach((a,i) => t.B.forEach(([b,e,m]) => {
+    const id = `g-${t.k}-${slug(a)}-${slug(b)}`;
+    const tier = Math.min(8, t.lo + Math.round(i/(t.A.length-1)*(t.hi-t.lo)));
+    const r = TB[tier], h = r01(id,"v");
+    const base = Math.round(r[0]*Math.pow(r[1]/r[0],h)*m);
+    const ap = t.a[0] + r01(id,"a")*(t.a[1]-t.a[0]);
+    ITEMS.push({id,c:"col",n:t.name(a,b),e,t:tier,base,a:ap,carry:0,gen:1});
+  })));
+})();
 const ITEMM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 const SETS = {watch:{n:"Watch Collection",ids:["diver","chrono","tourb"]},cars:{n:"Hypercar Garage",ids:["super","hyper","proto"]}};
 const STK = [
@@ -413,8 +456,11 @@ function itemListings(c){
   const w = win(), t = Date.now();
   const pool = ITEMS.filter(i => i.c===c && !i.hidden && i.t <= S.lvl+1);
   const out = [];
-  for (let k=0; k<5 && pool.length; k++){
-    const d = pool[Math.floor(r01(c,w,k,"i")*pool.length)];
+  const used = new Set();
+  for (let k=0; k<(c==="col"?6:5) && pool.length; k++){
+    let d, tries=0;
+    do { d = pool[Math.floor(r01(c,w,k,"i",tries)*pool.length)]; tries++; } while (used.has(d.id) && tries < 8);
+    used.add(d.id);
     const cm = COND[Math.floor(r01(c,w,k,"c")*4)][0];
     const base = d.base*cm*(.92+r01(c,w,k,"b")*.16);
     const val = base*wob(d.id,t);
@@ -457,12 +503,14 @@ const A = {
   itemSell(u){ const i=S.items.findIndex(x=>x.uid===u); if (i<0) return; const it=S.items[i]; const v=itemVal(it); S.items.splice(i,1); gain(v,"sell",`Sold ${it.name||ITEMM[it.id].n}`); },
   stkBuy(s,f){ const amt = S.cash*f; if (amt < .01) { toast("Not enough cash"); return; } const p=S.stk[s].p; if (!spend(amt,"buy",`Bought ${s}`)) return; const h=S.hold[s]||(S.hold[s]={sh:0,cost:0}); h.sh += amt/p; h.cost += amt; },
   stkSell(s,f){ const h=S.hold[s]; if (!h || h.sh<=0) return; const sh=h.sh*f, p=S.stk[s].p, v=sh*p, basis=h.cost*f; S.realized += v-basis; h.sh-=sh; h.cost-=basis; if (h.sh < 1e-9 || f>=1) delete S.hold[s]; gain(v,"sell",`Sold ${s} (${signed(v-basis)})`); },
-  bid(id){ const L=S.auc.find(x=>x.id===id); if (!L || Date.now()>=L.end || L.top==="you") return; const amt=nextBid(L); if (amt > S.cash){ toast("Not enough cash for that bid"); return; } L.cur=amt; L.top="you"; L.hist.unshift({w:"you",a:amt,t:Date.now()}); if (L.end-Date.now() < 15000) L.end += 15000; L.nextNpc = Date.now() + 3000 + Math.random()*6000; }
+  bid(id, add){ const L=S.auc.find(x=>x.id===id); if (!L || Date.now()>=L.end || L.top==="you") return; const amt=myBid(L, add); if (amt > S.cash){ toast("Not enough cash for that bid"); return; } L.cur=amt; L.top="you"; L.hist.unshift({w:"you",a:amt,t:Date.now()}); if (L.end-Date.now() < 15000) L.end += 15000; L.nextNpc = Date.now() + 3000 + Math.random()*6000; }
 };
 const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*100)/100;
 
 /* ================= auctions ================= */
 const nextBid = L => L.top ? L.cur + incr(L.cur) : L.cur;
+const MINRAISE = 2.5;
+const myBid = (L, add) => L.top ? L.cur + (add || MINRAISE) : L.cur;
 function incr(c){ const raw=Math.max(10,c*.05), mag=Math.pow(10,Math.floor(Math.log10(raw))); return Math.ceil(raw/mag)*mag; }
 function newLot(t, k){
   const mystery = Math.random() < .2;
@@ -672,9 +720,19 @@ function viewHome(){
 function txRow(x){ return `<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(x.desc)}</strong><span>${ago(x.t)}</span></div><div class="rside"><b class="num ${x.amt>=0?"up":""}">${signed(x.amt)}</b><span class="num">${money(x.bal)}</span></div></div>`; }
 
 function viewMarket(){
-  const cats=[["biz","Businesses"],["prop","Real estate"],["veh","Vehicles"],["col","Collectibles"]];
+  const cats=[["mine","My stuff"],["biz","Businesses"],["prop","Real estate"],["veh","Vehicles"],["col","Collectibles"]];
   let body="";
-  if (mcat==="biz"){
+  if (mcat==="mine"){
+    const t=Date.now(), owned=ownedBiz(), veh=S.items.filter(i=>ITEMM[i.id].c==="veh"), col=S.items.filter(i=>ITEMM[i.id].c==="col");
+    const tot=bizVal()+S.props.reduce((a,p)=>a+propVal(p,t),0)+S.items.reduce((a,i)=>a+itemVal(i,t),0);
+    const grp=(name,rows,emptyTxt)=>`<div class="sechead" style="margin-top:6px"><h2>${name}</h2><small>${rows.length} owned</small></div>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="empty">${emptyTxt}</div>`}`;
+    body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
+    ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
+    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
+    ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
+    ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
+    <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
+  } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
       return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · Level ${o.l} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?"next location":"to open"}</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
@@ -709,8 +767,8 @@ function viewAuctions(){
   <div class="list">${S.auc.map(L=>{const lead=L.top==="you";return `<div class="card" style="display:flex;flex-direction:column;gap:12px">
     <div class="shead"><div class="tile ${L.mystery?"gold":""}">${lotIcon(L)}</div><div style="flex:1;min-width:0"><h3 style="font-size:15px">${lotName(L)}</h3><p>${L.mystery?"Contents unknown":condName(L.cm)} · est. ${L.mystery?money(L.val*.3)+" to "+money(L.val*2.2):money(L.val)}</p></div><div class="rside"><span>Ends in</span><b class="timer num" data-live="auc:${L.id}"></b></div></div>
     <div class="aucbid"><div><div class="lbl">${L.top?"Current bid":"Opening bid"}</div><b class="num">${money(L.cur)}</b></div><div style="text-align:right"><span class="pill ${lead?"":"m"}">${lead?"You're winning":L.top?"Outbid":"No bids"}</span><div class="note" style="margin-top:4px">${L.bidders} bidders watching</div></div></div>
-    <div class="btns"><button class="btn ghost" data-act="openLot" data-arg="${L.id}">Details</button><button class="btn" data-act="bid" data-arg="${L.id}" ${lead||nextBid(L)>S.cash?"disabled":""}>${lead?"Top bid":"Bid "+money(nextBid(L))}</button></div></div>`;}).join("")}</div>
-  <p class="note">Bids in the last 15 seconds add 15 seconds to the clock. You pay only if you win.</p></section>
+    <div class="btns"><button class="btn ghost" data-act="openLot" data-arg="${L.id}">Details</button><button class="btn" data-act="bid" data-arg="${L.id}" ${lead||myBid(L)>S.cash?"disabled":""}>${lead?"Top bid":"Bid "+money(myBid(L))}</button></div></div>`;}).join("")}</div>
+  <p class="note">Raise any bid by as little as $2.50. Bids in the last 15 seconds add 15 seconds to the clock. You pay only if you win.</p></section>
   <section class="sec"><div class="sechead"><h2>Results</h2></div>${S.aucLog.length?`<div class="list">${S.aucLog.map(r=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(r.n)}</strong><span>${ago(r.t)}${r.why?" · "+r.why:""}</span></div><div class="rside"><b class="num ${r.won?"up":""}">${money(r.a)}</b><span class="pill ${r.won?"g":"m"}">${r.won?"Won":"Sold to rival"}</span></div></div>`).join("")}</div>`:`<div class="empty">Finished auctions show here.</div>`}</section>`;
 }
 
@@ -792,8 +850,8 @@ function sheetStock(s){ return () => {
 function sheetLot(id){ return () => {
   const L=S.auc.find(x=>x.id===id); if (!L) return null; const lead=L.top==="you";
   return `<div class="shead"><div class="tile${L.mystery?" gold":""}">${lotIcon(L)}</div><div><h3>${lotName(L)}</h3><p>Ends in <span class="timer num" data-live="auc:${id}"></span></p></div></div>
-  ${kv([["Current bid",money(L.cur)],["Next bid",money(nextBid(L))],["Est. value",L.mystery?"Unknown":money(L.val)],["Bidders",L.bidders]])}
-  <button class="btn" data-act="bid" data-arg="${id}" ${lead||nextBid(L)>S.cash?"disabled":""}>${lead?"You have the top bid":"Bid "+money(nextBid(L))}</button>
+  ${kv([["Current bid",money(L.cur)],["Your cash",money(S.cash)],["Est. value",L.mystery?"Unknown":money(L.val)],["Bidders",L.bidders]])}
+  ${lead?`<button class="btn" disabled>You have the top bid</button>`:!L.top?`<button class="btn" data-act="bid" data-arg="${id}" ${L.cur>S.cash?"disabled":""}>Open the bidding at ${money(L.cur)}</button>`:`<div class="lbl">Raise the bid by</div><div class="btns three">${[2.5,25,100].map(a=>`<button class="btn stk" data-act="bid" data-arg="${id}|${a}" ${L.cur+a>S.cash?"disabled":""}><span>+${money(a).replace(".00","")}</span><small>${money(L.cur+a)}</small></button>`).join("")}</div>`}
   <div class="lbl">Bid history</div>${L.hist.length?`<div class="lines">${L.hist.map(b=>`<div><span>${b.w==="you"?"You":"Rival bidder"} · ${ago(b.t)}</span><b class="num">${money(b.a)}</b></div>`).join("")}</div>`:`<p class="note">No bids yet.</p>`}`;
 };}
 function showEvent(ev){
@@ -825,6 +883,7 @@ const GUIDE = [
     "<b>Side hustle</b> pays a little cash once a minute. Great for getting started.",
     "<b>Opportunities</b> are items for sale below what they're worth."]},
   {tab:"market",e:"🛍️",t:"Market",p:"Where you buy things that make money.",l:[
+    "<b>My stuff</b> shows everything you own in one place, with what it's worth.",
     "<b>Businesses</b> earn every hour. Open more locations or upgrade to earn more.",
     "<b>Real estate</b> (from $10,000 net worth): buy cheap, renovate, then rent it out or sell it.",
     "<b>Vehicles and collectibles</b>: buy below value and sell higher. Everyday cars lose value; classics and watches gain.",
@@ -834,7 +893,7 @@ const GUIDE = [
     "Tap one to see its chart. The <b>10%, 25%, 50% and All</b> buttons mean how much of your cash to spend, and each shows the dollar amount.",
     "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
   {tab:"auctions",e:"🔨",t:"Auctions",p:"Bid against rival buyers.",l:[
-    "Three auctions run at once. <b>Tap Bid</b> to raise the price; rivals will try to top you.",
+    "Three auctions run at once. <b>Tap Bid</b> to raise the price by as little as $2.50, or open Details to raise it more. Rivals will try to top you.",
     "A bid in the last 15 seconds <b>adds 15 seconds</b> to the clock.",
     "You only pay if you win. <b>Mystery storage units</b> could hold treasure or junk."]},
   {tab:"profile",e:"👤",t:"Profile",p:"Your rank, trophies and history.",l:[
@@ -908,7 +967,7 @@ document.addEventListener("click", e => {
     case "itemSell": run(()=>A.itemSell(arg)); break;
     case "stkBuy": { const [s,f]=arg.split("|"); run(()=>A.stkBuy(s,+f)); break; }
     case "stkSell": { const [s,f]=arg.split("|"); run(()=>A.stkSell(s,+f)); break; }
-    case "bid": run(()=>A.bid(arg)); break;
+    case "bid": { const [i,a]=arg.split("|"); run(()=>A.bid(i, a?+a:0)); break; }
     case "evc": if (evChoose) evChoose(+arg); break;
     case "help": openHelp(); break;
     case "gall": openGuide(); break;
