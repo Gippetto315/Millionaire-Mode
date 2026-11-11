@@ -60,8 +60,9 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .prog small{color:var(--muted);font-size:12px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.stat b{font:700 18px/1.15 var(--display);overflow-wrap:anywhere}
-.stat b.em{color:var(--em)}.stat b.gold{color:var(--gold)}
+.stat b{font:700 18px/1.15 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat b.em{color:var(--em)}
+.stat .unit{font-size:12px;color:var(--muted);font-weight:700;margin-top:-2px}.stat b.gold{color:var(--gold)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
 .chart svg{display:block;width:100%;height:120px}
 .chartfoot{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:6px}
@@ -206,23 +207,23 @@ const MS = [
 ];
 // cost = first location; rev/exp per hour per location
 const BIZ = [
-  {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:80,rev:40,exp:12},
-  {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:450,rev:190,exp:70},
-  {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2500,rev:1050,exp:420},
-  {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:12000,rev:4600,exp:1900},
-  {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55000,rev:18500,exp:8200},
-  {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:240000,rev:72000,exp:34000},
-  {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:600000,rev:160000,exp:70000},
-  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1400000,rev:330000,exp:140000},
-  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2200000,rev:520000,exp:250000},
-  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:4000000,rev:900000,exp:420000},
-  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:12e6,rev:2.4e6,exp:1.1e6},
-  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:45e6,rev:8e6,exp:3.9e6},
-  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:120e6,rev:19e6,exp:9e6},
-  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:300e6,rev:44e6,exp:21e6},
-  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:650e6,rev:88e6,exp:42e6},
-  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1.8e9,rev:230e6,exp:105e6},
-  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:6e9,rev:700e6,exp:330e6}
+  {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:80,rev:14,exp:6},
+  {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:450,rev:75,exp:35},
+  {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2500,rev:380,exp:200},
+  {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:12000,rev:1700,exp:900},
+  {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55000,rev:6500,exp:3500},
+  {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:240000,rev:24000,exp:14000},
+  {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:600000,rev:50000,exp:28000},
+  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1400000,rev:105000,exp:57000},
+  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2200000,rev:150000,exp:80000},
+  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:4000000,rev:260000,exp:140000},
+  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:12e6,rev:700000,exp:370000},
+  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:45e6,rev:2.3e6,exp:1.2e6},
+  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:120e6,rev:5.4e6,exp:2.8e6},
+  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:300e6,rev:12.5e6,exp:6.5e6},
+  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:650e6,rev:25e6,exp:13e6},
+  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1.8e9,rev:62e6,exp:32e6},
+  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:6e9,rev:185e6,exp:95e6}
 ];
 const BIZM = Object.fromEntries(BIZ.map(b => [b.id, b]));
 const PROP = [
@@ -592,7 +593,7 @@ const EVENTS = [
       {label:"Pass",run(){ return "Someone else snapped it up."; }}
     ]};
   }},
-  {id:"rumor", ok:()=>S.cash>=50, make(){
+  {id:"rumor", ok:()=>S.lvl>=1 && S.cash>=200, make(){
     const x=STK[1+Math.floor(Math.random()*(STK.length-2))]; const amt=S.cash*.25;
     return {icon:"📰",title:"Market rumor",text:`Word on the street: ${x.n} (${x.s}) may announce a big partnership. Rumors cut both ways.`,choices:[
       {label:`Buy ${money(amt)} of ${x.s}`,cost:amt,run(){ A.stkBuy(x.s,.25); const up=Math.random()<.58, f=up?1.12+Math.random()*.1:.86-Math.random()*.08; S.stk[x.s].p*=f; S.stk[x.s].hist.push(S.stk[x.s].p); return up?`The deal was real. ${x.s} jumped ${((f-1)*100).toFixed(1)}%.`:`False alarm. ${x.s} fell ${((1-f)*100).toFixed(1)}%.`; }},
@@ -606,13 +607,6 @@ const EVENTS = [
       {label:"Decline",run(){ return "You kept the location."; }}
     ]};
   }},
-  {id:"yard", ok:()=>S.cash>=30, make(){
-    const price=Math.max(25,Math.min(S.cash*.3, 25*Math.pow(1+S.lvl,2.2)));
-    return {icon:"🔎",title:"Estate sale find",text:`An old watch at an estate sale. The seller wants ${money(price)}. Could be a treasure, could be junk.`,choices:[
-      {label:`Take the gamble (${money(price)})`,cost:price,run(){ if(!spend(price,"buy","Estate sale watch")) return "You couldn't cover it."; const hit=Math.random()<.5, v=price*(hit?2.5+Math.random()*1.5:.3+Math.random()*.3); S.items.push({uid:uid(),id:"storage",cm:1,base:v,at:Date.now(),paid:price,name:hit?"Rare estate watch":"Costume watch"}); return hit?`An appraiser values it at ${money(v)}.`:`It's a costume piece worth about ${money(v)}.`; }},
-      {label:"Walk away",run(){ return "You left it on the table."; }}
-    ]};
-  }},
   {id:"audit", ok:()=>S.peak>=1e4 && S.cash>100, make(){
     return {icon:"🧾",title:"Tax audit",text:"The tax office flagged your books. You can settle now or fight it.",choices:[
       {label:`Settle (${money(S.cash*.02)})`,run(){ const c=S.cash*.02; spend(c,"event","Audit settlement"); return `Settled for ${money(c)}.`; }},
@@ -623,10 +617,11 @@ const EVENTS = [
 let evOpen=false;
 function maybeEvent(t){
   if (t < S.nextEv || sheetOpen()) return;
-  const pool = EVENTS.filter(e => e.ok());
-  S.nextEv = t + (6+Math.random()*8)*MIN;
+  const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv);
+  S.nextEv = t + (12+Math.random()*13)*MIN;
   if (!pool.length) return;
-  const ev = pool[Math.floor(Math.random()*pool.length)].make();
+  const pk = pool[Math.floor(Math.random()*pool.length)]; S.lastEv = pk.id;
+  const ev = pk.make();
   showEvent(ev);
 }
 
@@ -669,7 +664,7 @@ function sparkSvg(vals, color){
 const LIVE = {
   cash: () => money(S.cash),
   nw: () => money(netWorth()),
-  ph: () => signed(perHour()*24) + "/day",
+  ph: () => signed(perHour()*24),
   assets: () => money(assetsVal()+bizVal()),
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
@@ -703,7 +698,7 @@ function viewHome(){
   </section>
   <div class="stats">
     <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b></div>
-    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b></div>
+    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
     <div class="stat"><span class="lbl">Debt</span><b class="num">$0.00</b></div>
   </div>
@@ -900,7 +895,7 @@ const GUIDE = [
     "<b>Milestones</b> unlock new businesses, properties and items as you get richer.",
     "<b>Achievements</b> track your firsts. <b>Collections</b> add +5% to all business income when complete.",
     "<b>Reset game</b> starts you over at $100."]},
-  {tab:null,e:"⚡",t:"Expect surprises",p:"Every few minutes, something happens.",l:[
+  {tab:null,e:"⚡",t:"Expect surprises",p:"Every so often, something happens.",l:[
     "Breakdowns, rush hours, hot deals, tax audits. <b>You decide</b> how to handle each one.",
     "Some help you, some hurt. Choose carefully.",
     "Tap the gold <b>?</b> at the top any time to see how a screen works."]}
