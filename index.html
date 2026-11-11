@@ -94,6 +94,8 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .btns.three{grid-template-columns:repeat(3,1fr)}
 .btns.four{grid-template-columns:repeat(4,1fr)}
 .btns .btn{min-height:46px;padding:0 8px;font-size:14px}
+.btn.stk{flex-direction:column;gap:1px;min-height:56px;line-height:1.1}
+.btn.stk small{font-size:11.5px;font-weight:700;opacity:.75}
 .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-2px;padding:2px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:10px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:800;font-size:13.5px}
@@ -591,8 +593,8 @@ function toast(msg, em){
 const sheetOpen = () => !!$("sheetroot").firstChild;
 let sheetFn = null, sheetLocked = false;
 function openSheet(fn, locked){ sheetFn=fn; sheetLocked=!!locked; drawSheet(); }
-function closeSheet(){ sheetFn=null; $("sheetroot").innerHTML=""; }
-function drawSheet(){ if (!sheetFn) return; const html = sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
+function closeSheet(){ sheetFn=null; cfm=null; $("sheetroot").innerHTML=""; }
+function drawSheet(){ if (!sheetFn) return; const html = cfm ? cfmHtml() : sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
 
 function rowHtml(o){
   return `<button class="row${o.locked?" locked":""}" ${o.act?`data-act="${o.act}"`:""} ${o.arg!==undefined?`data-arg="${esc(o.arg)}"`:""}>
@@ -781,9 +783,10 @@ function sheetStock(s){ return () => {
   return `<div class="shead"><div class="tile gold" style="font:800 12px var(--display);color:var(--gold)">${s}</div><div><h3>${x.n}</h3><p>${x.k} · ${x.risk} risk</p></div></div>
   <div class="card chart" style="padding:10px">${sparkSvg(st.hist.slice(-120),st.p>=ref?"#1fc983":"#ff6b62")}<div class="chartfoot"><span>2h ago</span><span>now</span></div></div>
   ${kv([["Price",money(st.p)],["1h change",`<span class="${st.p>=ref?"up":"down"}">${pct(st.p/ref-1)}</span>`],["You hold",h?money(val):"Nothing"],["Profit / loss",h?`<span class="${val-h.cost>=0?"up":"down"}">${signed(val-h.cost)}</span>`:"—"]])}
-  <div class="lbl">Buy with your cash (${money(S.cash)})</div>
-  <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"Max"]].map(([f,n])=>`<button class="btn" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}>${n}</button>`).join("")}</div>
-  ${h?`<div class="lbl">Sell your position</div><div class="btns three">${[[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn ghost" data-act="stkSell" data-arg="${s}|${f}">${n}</button>`).join("")}</div>`:""}
+  <div class="lbl">Buy</div>
+  <p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your cash (${money(S.cash)}) to put into ${s}. You'll confirm before anything is bought.</p>
+  <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}><span>${n}</span><small>${money(S.cash*f)}</small></button>`).join("")}</div>
+  ${h?`<div class="lbl">Sell</div><p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your ${s} (${money(val)}) to sell.</p><div class="btns three">${[[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn ghost stk" data-act="stkSell" data-arg="${s}|${f}"><span>${n}</span><small>${money(val*f)}</small></button>`).join("")}</div>`:""}
   <p class="note">Simulated prices. Returns are never guaranteed.</p>`;
 };}
 function sheetLot(id){ return () => {
@@ -828,7 +831,7 @@ const GUIDE = [
     "New listings show up every <b>20 minutes</b>."]},
   {tab:"invest",e:"📈",t:"Invest",p:"Stocks, funds and crypto. All fictional.",l:[
     "Prices move <b>every minute</b>, even while you're away.",
-    "Tap one to see its chart, then <b>buy with a slice of your cash</b> (10%, 25%, 50% or all of it).",
+    "Tap one to see its chart. The <b>10%, 25%, 50% and All</b> buttons mean how much of your cash to spend, and each shows the dollar amount.",
     "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
   {tab:"auctions",e:"🔨",t:"Auctions",p:"Bid against rival buyers.",l:[
     "Three auctions run at once. <b>Tap Bid</b> to raise the price; rivals will try to top you.",
@@ -853,12 +856,34 @@ function guideSeen(){ try { return localStorage.getItem("mm-guide") === "1"; } c
 function markGuide(){ try { localStorage.setItem("mm-guide","1"); } catch(e){} }
 
 /* ================= input ================= */
-let resetArm = 0, pendingWelcome = null;
+let resetArm = 0, pendingWelcome = null, cfm = null;
+/* confirmation step for every Market buy and sell */
+function cfmInfo(act, arg){
+  const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
+  if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
+  if (act==="bizUp"){ const b=BIZM[arg], c=upCost(arg), o=S.biz[arg]; return {e:b.e,t:`Upgrade ${b.n} to level ${o.l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
+  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(o.l)*setBonus()-b.exp*expMult(o.l)))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
+  if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
+  if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["You get",money(v)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="itemBuy"){ const [c,l]=arg.split("|"), L=itemListings(c).find(x=>x.lid===l); if (!L) return null; const d=ITEMM[L.id]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
+  if (act==="itemSell"){ const it=S.items.find(x=>x.uid===arg), v=itemVal(it); return {e:ITEMM[it.id].e,t:`Sell ${it.name||ITEMM[it.id].n}?`,l:[["You get",money(v)],["You paid",money(it.paid)],["Profit",`<span class="${v-it.paid>=0?"up":"down"}">${signed(v-it.paid)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="stkBuy"){ const [k,fr]=arg.split("|"), amt=S.cash*+fr, p=S.stk[k].p; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Buy ${money(amt)} of ${k}?`,l:[["Share of your cash",Math.round(+fr*100)+"%"],["Price per share",money(p)],["Shares you get",(amt/p).toLocaleString("en-US",{maximumFractionDigits:4})]],n:after(-amt)+". Prices can drop as well as rise.",yes:`Buy ${money(amt)}`}; }
+  if (act==="stkSell"){ const [k,fr]=arg.split("|"), h=S.hold[k]; if (!h) return null; const v=h.sh*+fr*S.stk[k].p, basis=h.cost*+fr; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Sell ${Math.round(+fr*100)}% of your ${k}?`,l:[["You get",money(v)],["You paid",money(basis)],["Profit",`<span class="${v-basis>=0?"up":"down"}">${signed(v-basis)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  return null;
+}
+function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>Please confirm</p></div></div>
+  <div class="lines">${i.l.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div><p class="note" style="color:var(--muted)">${i.n}</p>
+  <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>`; }
+const NEEDS_CFM = ["bizBuy","bizUp","bizSell","propBuy","propReno","propSell","itemBuy","itemSell","stkBuy","stkSell"];
 document.addEventListener("click", e => {
   const tb = e.target.closest("[data-tab]");
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
   const el = e.target.closest("[data-act]"); if (!el) return;
-  const act = el.dataset.act, arg = el.dataset.arg;
+  let act = el.dataset.act, arg = el.dataset.arg;
+  if (act==="cfmno"){ cfm=null; drawSheet(); return; }
+  if (act==="cfmyes"){ if (!cfm) return; act=cfm.act; arg=cfm.arg; cfm=null; }
+  else if (NEEDS_CFM.includes(act)){ const info=cfmInfo(act,arg); if (!info){ toast("That listing is gone"); return; } cfm={act,arg,info}; drawSheet(); return; }
   if (act==="scrim"){ if (e.target===el && !sheetLocked) closeSheet(); return; }
   const run = fn => { fn(); progress(); save(); render(); drawSheet(); };
   switch(act){
