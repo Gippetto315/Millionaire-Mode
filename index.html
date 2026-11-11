@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Millionaire">
+<meta name="theme-color" content="#090c0b">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Millionaire Mode</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: one phone-width column, sticky cash bar on top, five-tab dock fixed to the bottom, bottom sheets for details */
+:root{
+  --bg:#090c0b;--surface:#121715;--surface2:#19201d;--line:#24302b;
+  --text:#f1f5f2;--muted:#8b9a92;--dim:#5f6d66;
+  --em:#1fc983;--em-deep:#0e7a4f;--gold:#e4b95b;--gold-deep:#8a6a22;--red:#ff6b62;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--text);font:600 15px/1.4 var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.app{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:linear-gradient(var(--bg) 75%,rgba(9,12,11,0));display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:12px 14px}
+.brand{font:800 12px/1 var(--display);letter-spacing:.14em;color:var(--gold)}
+.brand span{color:var(--text)}
+.cashchip{display:flex;gap:6px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--muted)}
+.cashchip b{color:var(--em);font-weight:800}
+h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
+.sec{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sechead small{color:var(--muted);font-weight:600;font-size:12px}
+.lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+/* hero */
+.hero{padding-block:6px 4px;display:flex;flex-direction:column;gap:8px}
+.nw{font:800 clamp(34px,11vw,48px)/1 var(--display);letter-spacing:-.02em;background:linear-gradient(180deg,#fff 0%,#d9f7e8 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rank{font:700 11px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:#1b1406;background:linear-gradient(180deg,#f3d58c,var(--gold));padding:6px 10px;border-radius:999px}
+.prog{flex:1;min-width:140px;display:flex;flex-direction:column;gap:5px}
+.bar{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--em-deep),var(--em));border-radius:999px}
+.prog small{color:var(--muted);font-size:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat b{font:700 18px/1.15 var(--display);overflow-wrap:anywhere}
+.stat b.em{color:var(--em)}.stat b.gold{color:var(--gold)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
+.chart svg{display:block;width:100%;height:120px}
+.chartfoot{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:6px}
+/* list rows */
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:left;width:100%;min-height:64px}
+.row:active{background:var(--surface2)}
+.tile{flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:radial-gradient(circle at 35% 30%,#24332c,#141a17);border:1px solid var(--line)}
+.tile.gold{background:radial-gradient(circle at 35% 30%,#4a3a17,#1c160a);border-color:#4a3c1c}
+.rmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rmain strong{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmain span{color:var(--muted);font-size:12.5px}
+.rside{text-align:right;display:flex;flex-direction:column;gap:2px;flex:none}
+.rside b{font-weight:800}
+.rside span{font-size:12px;color:var(--muted)}
+.up{color:var(--em)!important}.down{color:var(--red)!important}.goldt{color:var(--gold)!important}
+.pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:rgba(31,201,131,.14);color:var(--em)}
+.pill.g{background:rgba(228,185,91,.15);color:var(--gold)}
+.pill.r{background:rgba(255,107,98,.14);color:var(--red)}
+.pill.m{background:var(--surface2);color:var(--muted)}
+.locked{opacity:.5}
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 18px;border-radius:14px;font-weight:800;font-size:15px;background:linear-gradient(180deg,#28d892,var(--em));color:#03140c;width:100%}
+.btn:active{transform:translateY(1px)}
+.btn.gold{background:linear-gradient(180deg,#f2d27f,var(--gold));color:#1d1504}
+.btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:rgba(255,107,98,.14);color:var(--red);border:1px solid rgba(255,107,98,.3)}
+.btn:disabled{opacity:.38;cursor:default;transform:none}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns.three{grid-template-columns:repeat(3,1fr)}
+.btns.four{grid-template-columns:repeat(4,1fr)}
+.btns .btn{min-height:46px;padding:0 8px;font-size:14px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-2px;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:10px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:800;font-size:13.5px}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.hustle{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center}
+.hustle .rmain span{font-size:12.5px}
+.hustle .btn{grid-column:1/-1;min-height:48px}
+.empty{color:var(--muted);font-size:13.5px;padding:14px;border:1px dashed var(--line);border-radius:16px;text-align:center}
+.note{color:var(--dim);font-size:12px}
+/* dock */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:rgba(12,16,14,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px max(10px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-right,0px))}
+.dock nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.dock button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;color:var(--dim);font-size:10.5px;font-weight:800;letter-spacing:.03em}
+.dock button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dock button.on{color:var(--em)}
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease-out}
+.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;padding:10px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px;animation:rise .24s cubic-bezier(.2,.9,.3,1)}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:2px auto 0}
+.shead{display:flex;align-items:center;gap:12px}
+.shead .tile{width:54px;height:54px;font-size:28px;border-radius:16px}
+.shead h3{margin:0;font:700 18px/1.2 var(--display)}
+.shead p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.kv div{background:var(--surface2);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kv span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.kv b{font-weight:800;font-size:15px;overflow-wrap:anywhere}
+.sheet .big{font:800 30px/1.1 var(--display);text-align:center}
+.sheet .sub{color:var(--muted);text-align:center;margin-top:-6px}
+.lines{display:flex;flex-direction:column;gap:6px}
+.lines div{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted)}
+.lines div b{color:var(--text);font-weight:800}
+.welcome{font:800 13px/1 var(--display);letter-spacing:.2em;color:var(--gold);text-align:center;margin-top:6px}
+.evtext{color:var(--muted);font-size:14.5px;line-height:1.5;margin:0}
+.toast{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;background:linear-gradient(180deg,#2a2210,#1b160a);border:1px solid var(--gold-deep);color:var(--gold);font-weight:800;font-size:14px;padding:11px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);display:flex;align-items:center;gap:8px;max-width:calc(100% - 32px);animation:drop .3s cubic-bezier(.2,1.4,.4,1)}
+.toast.em{background:linear-gradient(180deg,#0f2a1e,#0a1b13);border-color:var(--em-deep);color:var(--em)}
+.ach{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ach div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px;display:flex;flex-direction:column;gap:3px}
+.ach div b{font-size:13.5px}
+.ach div span{font-size:12px;color:var(--muted)}
+.ach div.got{border-color:var(--gold-deep);background:linear-gradient(180deg,#1f1a0d,var(--surface))}
+.ach div.got b{color:var(--gold)}
+.ms{display:flex;flex-direction:column;gap:6px}
+.ms div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:13.5px}
+.ms div.got{border-color:var(--em-deep)}
+.ms div.got b{color:var(--em)}
+.ms div span{color:var(--muted)}
+.timer{font-weight:800;color:var(--gold)}
+.aucbid{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.aucbid b{font:700 20px/1.1 var(--display)}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{transform:translateY(40px);opacity:.4}}
+@keyframes drop{from{transform:translate(-50%,-20px);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header class="top"><div class="brand">MILLIONAIRE <span>MODE</span></div><div class="cashchip">Cash <b class="num" data-live="cash"></b></div></header>
+  <main id="view"></main>
+</div>
+<div class="dock"><nav id="dock">
+  <button data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg>Home</button>
+  <button data-tab="market"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 10.5h-13z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/></svg>Market</button>
+  <button data-tab="invest"><svg viewBox="0 0 24 24"><path d="M3 17l5.5-5.5 4 4L21 7"/><path d="M15 7h6v6"/></svg>Invest</button>
+  <button data-tab="auctions"><svg viewBox="0 0 24 24"><path d="M13.5 4.5l6 6"/><path d="M11 7l6 6"/><path d="M9.5 8.5l6 6-2 2-6-6z"/><path d="M8.5 13.5 3 19"/><path d="M14 21h7"/></svg>Auctions</button>
+  <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</button>
+</nav></div>
+<div id="sheetroot"></div>
+<div id="toastroot"></div>
+
+<script>
+"use strict";
+/* ================= helpers ================= */
+const H = 3600000, MIN = 60000, CAP = 24 * H, KEY = "mm-save-v1";
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function h32(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}h^=h>>>13;h=Math.imul(h,0x5bd1e995);h^=h>>>15;return h>>>0}
+const r01 = (...p) => h32(p.join("|")) / 4294967296;
+function gauss(...p){const u=Math.max(1e-9,r01(...p,"a")),v=r01(...p,"b");return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function money(x, opts){
+  opts = opts || {}; const neg = x < 0; x = Math.abs(x); let s;
+  if (!opts.full && x >= 1e12) s = (x/1e12).toFixed(2) + "T";
+  else if (!opts.full && x >= 1e9) s = (x/1e9).toFixed(2) + "B";
+  else if (!opts.full && x >= 1e6) s = (x/1e6).toFixed(2) + "M";
+  else if (x < 10000 && !opts.whole) s = x.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  else s = Math.round(x).toLocaleString("en-US");
+  return (neg ? "-$" : "$") + s;
+}
+const signed = x => (x >= 0 ? "+" : "") + money(x);
+const pct = x => (x >= 0 ? "+" : "") + (x*100).toFixed(1) + "%";
+function dur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}h ${m}m`:m?`${m}:${String(ss).padStart(2,"0")}`:`0:${String(ss).padStart(2,"0")}`}
+function ago(t){const d=Date.now()-t;return d<MIN?"just now":d<H?Math.floor(d/MIN)+"m ago":d<24*H?Math.floor(d/H)+"h ago":Math.floor(d/(24*H))+"d ago"}
+let uidN = 0; const uid = () => Date.now().toString(36) + (uidN++).toString(36) + Math.floor(Math.random()*1e4).toString(36);
+
+/* ================= catalog ================= */
+const MS = [
+  [100,"The Beginning"],[1e3,"Hustler"],[1e4,"Entrepreneur"],[5e4,"Business Owner"],[1e5,"Investor"],
+  [5e5,"Mogul"],[1e6,"Millionaire"],[1e7,"Tycoon"],[1e8,"Empire Builder"],[1e9,"Billionaire"]
+];
+// cost = first location; rev/exp per hour per location
+const BIZ = [
+  {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:80,rev:40,exp:12},
+  {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:450,rev:190,exp:70},
+  {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2500,rev:1050,exp:420},
+  {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:12000,rev:4600,exp:1900},
+  {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55000,rev:18500,exp:8200},
+  {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:240000,rev:72000,exp:34000},
+  {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:600000,rev:160000,exp:70000},
+  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1400000,rev:330000,exp:140000},
+  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2200000,rev:520000,exp:250000},
+  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:4000000,rev:900000,exp:420000},
+  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:12e6,rev:2.4e6,exp:1.1e6},
+  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:45e6,rev:8e6,exp:3.9e6},
+  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:120e6,rev:19e6,exp:9e6},
+  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:300e6,rev:44e6,exp:21e6},
+  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:650e6,rev:88e6,exp:42e6},
+  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1.8e9,rev:230e6,exp:105e6},
+  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:6e9,rev:700e6,exp:330e6}
+];
+const BIZM = Object.fromEntries(BIZ.map(b => [b.id, b]));
+const PROP = [
+  {id:"studio",n:"Studio Apartment",e:"🚪",t:2,base:14000},
+  {id:"starter",n:"Starter Home",e:"🏠",t:3,base:46000},
+  {id:"family",n:"Single-Family Home",e:"🏡",t:4,base:120000},
+  {id:"duplex",n:"Duplex",e:"🏘️",t:4,base:260000},
+  {id:"aptbld",n:"Apartment Building",e:"🏬",t:6,base:1.8e6},
+  {id:"plaza",n:"Commercial Plaza",e:"🏦",t:6,base:6e6},
+  {id:"mansion",n:"Luxury Mansion",e:"🏰",t:7,base:15e6},
+  {id:"tower",n:"Skyscraper",e:"🌆",t:8,base:250e6}
+];
+const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
+// a = value drift per hour held, carry = insurance+maintenance per hour as share of value
+const ITEMS = [
+  {id:"hatch",c:"veh",n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-.0012,carry:.00012},
+  {id:"sedan",c:"veh",n:"Family Sedan",e:"🚙",t:2,base:24000,a:-.0008,carry:.00012},
+  {id:"coupe",c:"veh",n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-.0004,carry:.00015},
+  {id:"lux",c:"veh",n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-.0006,carry:.00015},
+  {id:"classic",c:"veh",n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
+  {id:"super",c:"veh",n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
+  {id:"hyper",c:"veh",n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
+  {id:"proto",c:"veh",n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
+  {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0},
+  {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0},
+  {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0},
+  {id:"diver",c:"col",n:"Steel Diver Watch",e:"⌚",t:2,base:8000,a:.0004,carry:0,set:"watch"},
+  {id:"chrono",c:"col",n:"Gold Chronograph",e:"⏱️",t:3,base:40000,a:.0004,carry:0,set:"watch"},
+  {id:"tourb",c:"col",n:"Platinum Tourbillon",e:"💎",t:5,base:400000,a:.0004,carry:0,set:"watch"},
+  {id:"paint",c:"col",n:"Abstract Painting",e:"🖼️",t:6,base:900000,a:.0005,carry:0},
+  {id:"fossil",c:"col",n:"T-Rex Fossil",e:"🦖",t:7,base:5e6,a:.0003,carry:0},
+  {id:"storage",c:"col",n:"Storage Unit Find",e:"📦",t:99,base:1,a:0,carry:0,hidden:true}
+];
+const ITEMM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+const SETS = {watch:{n:"Watch Collection",ids:["diver","chrono","tourb"]},cars:{n:"Hypercar Garage",ids:["super","hyper","proto"]}};
+const STK = [
+  {s:"BRKT",n:"Bracket Foods",k:"Stock",p:42,mu:.00002,sd:.0035,risk:"Low"},
+  {s:"FLUX",n:"Flux Energy",k:"Stock",p:118,mu:.00003,sd:.006,risk:"Medium"},
+  {s:"NOVA",n:"Nova Robotics",k:"Stock",p:64,mu:.00004,sd:.011,risk:"High"},
+  {s:"GRDN",n:"Garden 500 Index",k:"Index fund",p:310,mu:.00002,sd:.0022,risk:"Low"},
+  {s:"BOND",n:"Treasury Bond Fund",k:"Bonds",p:100,mu:.000012,sd:.0006,risk:"Very low"},
+  {s:"GLDX",n:"Goldex",k:"Crypto",p:2.4,mu:.00002,sd:.016,risk:"High"},
+  {s:"MOON",n:"MoonCoin",k:"Crypto",p:.083,mu:.00001,sd:.03,risk:"Extreme"}
+];
+const STKM = Object.fromEntries(STK.map(s => [s.s, s]));
+const COND = [[.78,"Fair"],[.9,"Good"],[1,"Excellent"],[1.1,"Mint"]];
+const condName = m => COND.reduce((a,c) => m >= c[0]-.001 ? c[1] : a, "Fair");
+const propCond = c => c >= 95 ? "Renovated" : c >= 70 ? "Good" : c >= 45 ? "Worn" : "Rundown";
+
+/* ================= economy curves ================= */
+function econ(t){const h=t/H;return 1+.06*Math.sin(2*Math.PI*h/30+1)+.03*Math.sin(2*Math.PI*h/7.3+2)}
+function wob(id,t){const h=t/H,p1=8+r01(id,"p1")*20,p2=2+r01(id,"p2")*5;return 1+.06*Math.sin(2*Math.PI*h/p1+r01(id,"f1")*6.28)+.03*Math.sin(2*Math.PI*h/p2+r01(id,"f2")*6.28)}
+
+/* ================= state ================= */
+let S;
+function fresh(){
+  const t = Date.now(), stk = {};
+  STK.forEach(x => { stk[x.s] = {n: Math.floor(t/MIN) - 120, p: x.p, hist: []}; });
+  return {v:1,cash:100,created:t,last:t,peak:100,lvl:0,earned:0,biz:{},props:[],items:[],hold:{},stk,auc:[],aucLog:[],mods:[],sold:[],ach:{},tx:[],hist:[[t,100]],nextEv:t+5*MIN,shifts:0,shiftAt:0,news:[],realized:0,flips:0,aucWins:0,evs:0,pending:0,pendingAt:t};
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function load(){ try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v === 1) return j; } catch(e){} return null; }
+function tx(type, desc, amt){ S.tx.unshift({t:Date.now(),type,desc,amt,bal:S.cash}); if (S.tx.length > 80) S.tx.length = 80; }
+
+/* ================= engine: values ================= */
+const bizMult = l => 1 + .5*l, expMult = l => 1 + .3*l;
+function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
+function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
+function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*o.n*bizMult(o.l)*setBonus() : 0; }
+function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*o.n*expMult(o.l) : 0; }
+function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
+function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
+function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*.6 : 0; }
+function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.15, o ? o.n : 0); }
+function upCost(id){ const o=S.biz[id]; return BIZM[id].cost*o.n*.75*(o.l+1); }
+function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
+function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
+function propRent(p,t){ return propVal(p,t)*.006*.92; }
+function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
+function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
+function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H); }
+function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
+function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
+function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
+function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); }
+function netWorth(){ return S.cash + assetsVal() + bizVal() - 0; }
+function perHour(t){
+  t=t||Date.now(); let v=0;
+  Object.keys(S.biz).forEach(id => v += bizNetAt(id,t));
+  S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); v -= propCost(p,t); });
+  S.items.forEach(i => v -= itemCarry(i,t));
+  return v;
+}
+
+/* income over [t0,t1] with event modifiers integrated exactly */
+function incomeBetween(t0,t1){
+  const lines=[]; let tot=0; const hrs=(t1-t0)/H; if (hrs <= 0) return {lines,total:0};
+  Object.keys(S.biz).forEach(id => {
+    const rev=bizRev(id); let r=rev*hrs;
+    S.mods.forEach(m => { if (m.b==="*"||m.b===id){ const o=Math.max(0,Math.min(t1,m.until)-Math.max(t0,m.from)); r += rev*(m.m-1)*o/H; } });
+    const amt = r - bizExp(id)*hrs; tot += amt; lines.push([BIZM[id].n, amt]);
+  });
+  let rent=0, pc=0;
+  S.props.forEach(p => { if (p.rented){ const rh=Math.max(0,t1-Math.max(t0,p.renoUntil))/H; rent += propRent(p,t1)*rh; } pc += propCost(p,t1)*hrs; });
+  if (S.props.length){ if (rent) lines.push(["Rental income", rent]); lines.push(["Property upkeep & taxes", -pc]); tot += rent - pc; }
+  const carry = S.items.reduce((a,i)=>a+itemCarry(i,t1)*hrs,0);
+  if (carry > 0){ lines.push(["Vehicle insurance & upkeep", -carry]); tot -= carry; }
+  return {lines,total:tot};
+}
+
+/* ================= engine: time ================= */
+function credit(amt){
+  if (amt >= 0){ S.cash += amt; S.earned += amt; }
+  else S.cash = Math.max(0, S.cash + amt);
+}
+function stepStocks(t){
+  const target = Math.floor(t/MIN); let changed=false;
+  STK.forEach(x => {
+    const st = S.stk[x.s];
+    if (target - st.n > 1440){ st.n = target - 1440; }
+    while (st.n < target){
+      st.n++;
+      const z = gauss(x.s, st.n), cyc = (econ(st.n*MIN)-1)*.002;
+      const ret = x.mu + cyc + x.sd*z;
+      st.p = Math.max(x.p*.02, st.p*Math.exp(ret));
+      st.hist.push(st.p); if (st.hist.length > 180) st.hist.shift();
+      if (Math.abs(z) > 2.6 && target - st.n < 60 && x.s !== "BOND"){
+        const up = z > 0, nm = x.n;
+        const ups = [`${nm} jumps after a strong earnings report`,`Buyers pile into ${nm}`,`${nm} lands a major new contract`];
+        const dns = [`${nm} slides on supply worries`,`Analysts cut their outlook on ${nm}`,`${nm} drops after a weak forecast`];
+        const pick = (up?ups:dns)[Math.floor(r01(x.s,st.n,"nw")*3)];
+        S.news.unshift({t:st.n*MIN, s:x.s, up, text:pick}); if (S.news.length > 14) S.news.length = 14;
+      }
+      changed = true;
+    }
+  });
+  return changed;
+}
+function sample(t){ const lastS = S.hist[S.hist.length-1]; if (!lastS || t - lastS[0] >= 5*MIN){ S.hist.push([t, netWorth()]); if (S.hist.length > 240) S.hist.shift(); } }
+
+/* advance the whole world to now; returns income summary for the gap */
+function advance(t){
+  const from = Math.max(S.last, t - CAP);
+  const inc = incomeBetween(from, t);
+  credit(inc.total);
+  S.pending += inc.total;
+  S.last = t;
+  S.mods = S.mods.filter(m => m.until > t);
+  { const w = "-" + win(t) + "-"; S.sold = S.sold.filter(l => l.includes(w)); }
+  S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t && p.cond < 100){ p.cond = 100; toast(`${p.name} renovation finished`, true); } });
+  const sc = stepStocks(t);
+  const ac = auctionsTick(t);
+  if (t - S.pendingAt >= 5*MIN){ if (Math.abs(S.pending) >= .01) tx("income","Passive income",S.pending); S.pending=0; S.pendingAt=t; }
+  progress();
+  sample(t);
+  return {inc, from, changed: sc || ac};
+}
+
+/* ================= progression ================= */
+function progress(){
+  const nw = netWorth(); if (nw > S.peak) S.peak = nw;
+  let l = 0; MS.forEach((m,i) => { if (S.peak >= m[0]) l = i; });
+  if (l > S.lvl){ S.lvl = l; toast(`Milestone: ${MS[l][1]}. New opportunities unlocked`); needRender = true; }
+  checkAch();
+}
+const ACH = [
+  ["first","First Purchase","Buy anything",s=>s.tx.some(x=>x.type==="buy")],
+  ["k1","First $1,000","Reach $1,000 net worth",s=>s.peak>=1e3],
+  ["biz1","First Business","Open a business",s=>Object.keys(s.biz).length>=1],
+  ["inv","First Profitable Trade","Sell an investment for a gain",s=>s.realized>0],
+  ["flip","First Property Flip","Sell a property for more than you put in",s=>s.flips>=1],
+  ["auc","Going Once, Going Twice","Win an auction",s=>s.aucWins>=1],
+  ["k10","First $10,000 Day","Earn $10,000 a day in passive income",s=>perHour()*24>=1e4],
+  ["biz5","Five Businesses Owned","Own five different businesses",s=>Object.keys(s.biz).length>=5],
+  ["set","Collector","Complete a collection set",s=>Object.keys(SETS).some(setDone)],
+  ["p10","Ten Properties Owned","Own ten properties at once",s=>s.props.length>=10],
+  ["m1","First Million","Reach $1,000,000 net worth",s=>s.peak>=1e6],
+  ["b1","Billionaire","Reach $1,000,000,000 net worth",s=>s.peak>=1e9]
+];
+function checkAch(){ ACH.forEach(a => { if (!S.ach[a[0]] && a[3](S)){ S.ach[a[0]] = Date.now(); toast(`Achievement: ${a[1]}`); } }); }
+const nextMs = () => MS[Math.min(S.lvl+1, MS.length-1)];
+const msName = t => MS[t] ? MS[t][1] : "";
+
+/* ================= listings ================= */
+const WIN = 20*MIN;
+const win = t => Math.floor((t||Date.now())/WIN);
+function itemListings(c){
+  const w = win(), t = Date.now();
+  const pool = ITEMS.filter(i => i.c===c && !i.hidden && i.t <= S.lvl+1);
+  const out = [];
+  for (let k=0; k<5 && pool.length; k++){
+    const d = pool[Math.floor(r01(c,w,k,"i")*pool.length)];
+    const cm = COND[Math.floor(r01(c,w,k,"c")*4)][0];
+    const base = d.base*cm*(.92+r01(c,w,k,"b")*.16);
+    const val = base*wob(d.id,t);
+    const ask = val*(.84+r01(c,w,k,"a")*.32);
+    const lid = `${c}-${w}-${k}`;
+    if (!S.sold.includes(lid)) out.push({lid,id:d.id,cm,base,val,ask});
+  }
+  return out;
+}
+function propListings(){
+  const w = win(), t = Date.now();
+  const pool = PROP.filter(p => p.t <= S.lvl+1);
+  const out = [];
+  for (let k=0; k<4 && pool.length; k++){
+    const d = pool[Math.floor(r01("p",w,k,"i")*pool.length)];
+    const cond = Math.round(20 + r01("p",w,k,"c")*70);
+    const base = d.base*(.88+r01("p",w,k,"b")*.24);
+    const p = {type:d.id,base,cond};
+    const val = propVal(p,t);
+    const ask = val*(.84+r01("p",w,k,"a")*.24);
+    const lid = `p-${w}-${k}`;
+    if (!S.sold.includes(lid)) out.push({lid,...p,val,ask});
+  }
+  return out;
+}
+
+/* ================= actions ================= */
+function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough cash"); return false; } S.cash -= amt; tx(type, desc, -amt); return true; }
+function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
+const A = {
+  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
+  bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0}); b.n++; b.spent+=c; },
+  bizUp(id){ const o=S.biz[id]; if (!o || o.l>=5) return; const c=upCost(id); if (!spend(c,"buy",`Upgraded ${BIZM[id].n} to level ${o.l+1}`)) return; o.l++; o.spent+=c; },
+  bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*.6; o.spent -= o.spent/o.n; o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
+  propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
+  propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
+  propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ p.rented=!p.rented; } },
+  propSell(u){ const i=S.props.findIndex(x=>x.uid===u); if (i<0) return; const p=S.props[i]; if (p.renoUntil>Date.now()) { toast("Wait for the renovation to finish"); return; } const v=propVal(p); if (v > p.paid+p.reno) S.flips++; S.props.splice(i,1); gain(v,"sell",`Sold ${p.name}`); },
+  itemBuy(c,lid){ const L=itemListings(c).find(x=>x.lid===lid); if (!L) return; const d=ITEMM[L.id]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.items.push({uid:uid(),id:L.id,cm:L.cm,base:L.base,at:Date.now(),paid:L.ask}); },
+  itemSell(u){ const i=S.items.findIndex(x=>x.uid===u); if (i<0) return; const it=S.items[i]; const v=itemVal(it); S.items.splice(i,1); gain(v,"sell",`Sold ${it.name||ITEMM[it.id].n}`); },
+  stkBuy(s,f){ const amt = S.cash*f; if (amt < .01) { toast("Not enough cash"); return; } const p=S.stk[s].p; if (!spend(amt,"buy",`Bought ${s}`)) return; const h=S.hold[s]||(S.hold[s]={sh:0,cost:0}); h.sh += amt/p; h.cost += amt; },
+  stkSell(s,f){ const h=S.hold[s]; if (!h || h.sh<=0) return; const sh=h.sh*f, p=S.stk[s].p, v=sh*p, basis=h.cost*f; S.realized += v-basis; h.sh-=sh; h.cost-=basis; if (h.sh < 1e-9 || f>=1) delete S.hold[s]; gain(v,"sell",`Sold ${s} (${signed(v-basis)})`); },
+  bid(id){ const L=S.auc.find(x=>x.id===id); if (!L || Date.now()>=L.end || L.top==="you") return; const amt=nextBid(L); if (amt > S.cash){ toast("Not enough cash for that bid"); return; } L.cur=amt; L.top="you"; L.hist.unshift({w:"you",a:amt,t:Date.now()}); if (L.end-Date.now() < 15000) L.end += 15000; L.nextNpc = Date.now() + 3000 + Math.random()*6000; }
+};
+const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*100)/100;
+
+/* ================= auctions ================= */
+const nextBid = L => L.top ? L.cur + incr(L.cur) : L.cur;
+function incr(c){ const raw=Math.max(10,c*.05), mag=Math.pow(10,Math.floor(Math.log10(raw))); return Math.ceil(raw/mag)*mag; }
+function newLot(t, k){
+  const mystery = Math.random() < .2;
+  const pool = ITEMS.filter(i => !i.hidden && i.t <= S.lvl);
+  const d = pool[Math.floor(Math.random()*pool.length)] || ITEMM.ball;
+  const cm = COND[Math.floor(Math.random()*4)][0];
+  const val = mystery ? Math.max(200, (S.peak*.04)*(.5+Math.random())) : d.base*cm*wob(d.id,t);
+  const start = Math.max(10, Math.round(val*.35));
+  return {id:uid(), mystery, item:mystery?"storage":d.id, cm, val, cur:start, top:null, end:t+(4+Math.random()*7)*MIN+k*45000, npcMax:val*(.78+Math.random()*.4), bidders:2+Math.floor(Math.random()*9), hist:[], nextNpc:t+8000+Math.random()*20000};
+}
+function lotName(L){ return L.mystery ? "Mystery Storage Unit" : ITEMM[L.item].n; }
+function lotIcon(L){ return L.mystery ? "📦" : ITEMM[L.item].e; }
+function auctionsTick(t){
+  let changed=false;
+  while (S.auc.length < 3){ S.auc.push(newLot(t, S.auc.length)); changed=true; }
+  S.auc.forEach(L => {
+    if (t >= L.end) return;
+    if (t >= L.nextNpc){
+      const want = L.top==="you" ? nextBid(L) <= L.npcMax : (L.top===null || L.cur < L.npcMax*.72);
+      if (want && nextBid(L) <= L.npcMax){ const a=nextBid(L); L.cur=a; L.top="npc"; L.hist.unshift({w:"bidder",a,t}); if (L.hist.length>12) L.hist.length=12; changed=true; if (L.end - t < 15000) L.end += 15000; }
+      L.nextNpc = t + (L.top==="you" ? 3000+Math.random()*7000 : 15000+Math.random()*35000);
+    }
+  });
+  S.auc = S.auc.filter(L => {
+    if (t < L.end) return true;
+    // resolve: if you lead but the field would still outbid you, they win
+    const youWin = L.top==="you" && nextBid(L) > L.npcMax;
+    if (youWin && S.cash >= L.cur){
+      S.cash -= L.cur; tx("buy",`Won auction: ${lotName(L)}`,-L.cur); S.aucWins++;
+      let base, cm=L.cm, name;
+      if (L.mystery){ const v = L.val*(.3+Math.random()*1.9); base=v; cm=1; name=`Storage find (${["vintage guitar","antique clock","coin collection","arcade cabinet","signed jersey"][Math.floor(Math.random()*5)]})`; }
+      else base = L.val/wob(L.item,t);
+      S.items.push({uid:uid(),id:L.item,cm,base,at:t,paid:L.cur,name});
+      S.aucLog.unshift({t,n:lotName(L),won:true,a:L.cur,v:L.mystery?base:L.val});
+      toast(L.mystery ? `You won the storage unit. Contents worth ${money(base)}` : `You won ${lotName(L)} for ${money(L.cur)}`, true);
+    } else {
+      const fin = L.top==="you" ? Math.min(L.npcMax, nextBid(L)) : L.cur;
+      S.aucLog.unshift({t,n:lotName(L),won:false,a:fin,why:L.top==="you"&&S.cash<L.cur?"not enough cash":""});
+      if (L.top==="you") toast(`Outbid at the end on ${lotName(L)}`);
+    }
+    if (S.aucLog.length > 10) S.aucLog.length = 10;
+    changed = true; return false;
+  });
+  while (S.auc.length < 3){ S.auc.push(newLot(t, S.auc.length)); changed=true; }
+  return changed;
+}
+
+/* ================= events ================= */
+function ownedBiz(){ return Object.keys(S.biz); }
+function pickBiz(){ const o=ownedBiz(); return o[Math.floor(Math.random()*o.length)]; }
+const EVENTS = [
+  {id:"break", ok:()=>ownedBiz().length>0, make(){
+    const id=pickBiz(), b=BIZM[id], net=Math.max(5,bizNetAt(id,Date.now())), fix=net*1.5;
+    return {icon:"⚠️",title:"Business emergency",text:`Equipment broke down at your ${b.n}. Customers are being turned away until it's fixed.`,choices:[
+      {label:`Repair it now (${money(fix)})`,cost:fix,run(){ spend(fix,"event",`Repair at ${b.n}`); return `Fixed. ${b.n} is running at full speed again.`; }},
+      {label:`Patch it cheap (${money(fix*.3)})`,cost:fix*.3,run(){ spend(fix*.3,"event",`Patch job at ${b.n}`); if (Math.random()<.5) return "The patch held. Nice save."; S.mods.push({b:id,m:.5,from:Date.now(),until:Date.now()+2*H}); return `The patch failed. ${b.n} runs at half revenue for 2 hours.`; }},
+      {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+3*H}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
+    ]};
+  }},
+  {id:"surge", ok:()=>ownedBiz().length>0, make(){
+    const id=pickBiz(), b=BIZM[id], rev=bizRev(id);
+    return {icon:"🔥",title:"Customer surge",text:`A local influencer posted about your ${b.n}. The line is out the door.`,choices:[
+      {label:`Hire temp staff (${money(rev*.4)})`,cost:rev*.4,run(){ spend(rev*.4,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H}); return `${b.n} earns double revenue for the next hour.`; }},
+      {label:"Ride the wave",run(){ const g=rev*.5; gain(g,"event",`Surge sales at ${b.n}`); S.earned+=g; return `Your current staff squeezed out ${money(g)} in extra sales.`; }}
+    ]};
+  }},
+  {id:"down", ok:()=>ownedBiz().length>=2, make(){
+    const ph=perHour(), promo=Math.max(10,ph*.5);
+    return {icon:"📉",title:"Economic downturn",text:"Consumer spending is cooling off. Every business you own will feel it for the next hour.",choices:[
+      {label:`Run a promotion (${money(promo)})`,cost:promo,run(){ spend(promo,"event","Downturn promotion"); S.mods.push({b:"*",m:.9,from:Date.now(),until:Date.now()+H}); return "The promo softened the blow. Revenue dips 10% for an hour."; }},
+      {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H}); return "Revenue drops 30% across your businesses for an hour."; }}
+    ]};
+  }},
+  {id:"deal", ok:()=>S.lvl>=2, make(){
+    const pool=PROP.filter(p=>p.t<=S.lvl); const d=pool[Math.floor(Math.random()*pool.length)];
+    const p={type:d.id,base:d.base*(.9+Math.random()*.2),cond:Math.round(25+Math.random()*30)}; const val=propVal(p), ask=val*.65;
+    return {icon:"🏚️",title:"Distressed property",text:`A motivated seller needs out fast. A ${propCond(p.cond).toLowerCase()} ${d.n.toLowerCase()} worth ${money(val)} is yours for ${money(ask)}.`,choices:[
+      {label:`Buy it (${money(ask)})`,cost:ask,run(){ if(!spend(ask,"buy",`Bought ${d.n} (distressed)`)) return "You couldn't cover it."; S.props.push({uid:uid(),type:d.id,name:d.n,base:p.base,cond:p.cond,rented:false,renoUntil:0,paid:ask,reno:0,at:Date.now()}); return `It's yours. That's ${money(val-ask)} of instant equity.`; }},
+      {label:"Pass",run(){ return "Someone else snapped it up."; }}
+    ]};
+  }},
+  {id:"rumor", ok:()=>S.cash>=50, make(){
+    const x=STK[1+Math.floor(Math.random()*(STK.length-2))]; const amt=S.cash*.25;
+    return {icon:"📰",title:"Market rumor",text:`Word on the street: ${x.n} (${x.s}) may announce a big partnership. Rumors cut both ways.`,choices:[
+      {label:`Buy ${money(amt)} of ${x.s}`,cost:amt,run(){ A.stkBuy(x.s,.25); const up=Math.random()<.58, f=up?1.12+Math.random()*.1:.86-Math.random()*.08; S.stk[x.s].p*=f; S.stk[x.s].hist.push(S.stk[x.s].p); return up?`The deal was real. ${x.s} jumped ${((f-1)*100).toFixed(1)}%.`:`False alarm. ${x.s} fell ${((1-f)*100).toFixed(1)}%.`; }},
+      {label:"Stay out",run(){ return "You sat this one out."; }}
+    ]};
+  }},
+  {id:"offer", ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
+    const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*.6, offer=each*1.7;
+    return {icon:"🤝",title:"Acquisition offer",text:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
+      {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
+      {label:"Decline",run(){ return "You kept the location."; }}
+    ]};
+  }},
+  {id:"yard", ok:()=>S.cash>=30, make(){
+    const price=Math.max(25,Math.min(S.cash*.3, 25*Math.pow(1+S.lvl,2.2)));
+    return {icon:"🔎",title:"Estate sale find",text:`An old watch at an estate sale. The seller wants ${money(price)}. Could be a treasure, could be junk.`,choices:[
+      {label:`Take the gamble (${money(price)})`,cost:price,run(){ if(!spend(price,"buy","Estate sale watch")) return "You couldn't cover it."; const hit=Math.random()<.5, v=price*(hit?2.5+Math.random()*1.5:.3+Math.random()*.3); S.items.push({uid:uid(),id:"storage",cm:1,base:v,at:Date.now(),paid:price,name:hit?"Rare estate watch":"Costume watch"}); return hit?`An appraiser values it at ${money(v)}.`:`It's a costume piece worth about ${money(v)}.`; }},
+      {label:"Walk away",run(){ return "You left it on the table."; }}
+    ]};
+  }},
+  {id:"audit", ok:()=>S.peak>=1e4 && S.cash>100, make(){
+    return {icon:"🧾",title:"Tax audit",text:"The tax office flagged your books. You can settle now or fight it.",choices:[
+      {label:`Settle (${money(S.cash*.02)})`,run(){ const c=S.cash*.02; spend(c,"event","Audit settlement"); return `Settled for ${money(c)}.`; }},
+      {label:"Contest it",run(){ if (Math.random()<.6) return "You won. You owe nothing."; const c=S.cash*.05; spend(c,"event","Audit penalty"); return `You lost and paid ${money(c)}.`; }}
+    ]};
+  }}
+];
+let evOpen=false;
+function maybeEvent(t){
+  if (t < S.nextEv || sheetOpen()) return;
+  const pool = EVENTS.filter(e => e.ok());
+  S.nextEv = t + (6+Math.random()*8)*MIN;
+  if (!pool.length) return;
+  const ev = pool[Math.floor(Math.random()*pool.length)].make();
+  showEvent(ev);
+}
+
+/* ================= UI plumbing ================= */
+let tab = "home", mcat = "biz", needRender = true;
+try { tab = localStorage.getItem("mm-tab") || "home"; mcat = localStorage.getItem("mm-mcat") || "biz"; } catch(e){}
+function toast(msg, em){
+  const r=$("toastroot"); const el=document.createElement("div"); el.className="toast"+(em?" em":""); el.textContent=msg;
+  r.appendChild(el); setTimeout(()=>el.remove(), 3200);
+  [...r.children].slice(0,-1).forEach(c=>c.remove());
+}
+const sheetOpen = () => !!$("sheetroot").firstChild;
+let sheetFn = null, sheetLocked = false;
+function openSheet(fn, locked){ sheetFn=fn; sheetLocked=!!locked; drawSheet(); }
+function closeSheet(){ sheetFn=null; $("sheetroot").innerHTML=""; }
+function drawSheet(){ if (!sheetFn) return; const html = sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
+
+function rowHtml(o){
+  return `<button class="row${o.locked?" locked":""}" ${o.act?`data-act="${o.act}"`:""} ${o.arg!==undefined?`data-arg="${esc(o.arg)}"`:""}>
+    <div class="tile${o.gold?" gold":""}">${o.e}</div>
+    <div class="rmain"><strong>${esc(o.title)}</strong><span>${o.sub}</span></div>
+    <div class="rside">${o.right||""}</div></button>`;
+}
+function kv(pairs){ return `<div class="kv">${pairs.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div>`; }
+
+function sparkSvg(vals, color){
+  if (vals.length < 2) vals = [vals[0]||0, vals[0]||0];
+  const W=320, Hh=120, pad=6, mn=Math.min(...vals), mx=Math.max(...vals), rg=(mx-mn)||Math.max(1,mx*.02);
+  const pts = vals.map((v,i)=>[pad+i*(W-2*pad)/(vals.length-1), Hh-pad-(v-mn)/rg*(Hh-2*pad)]);
+  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const last = pts[pts.length-1], gid="g"+Math.floor(Math.random()*1e6);
+  return `<svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+  ${[.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${Hh*f}" y2="${Hh*f}" stroke="#1f2925" stroke-width="1"/>`).join("")}
+  <path d="${d} L${last[0]} ${Hh} L${pts[0][0]} ${Hh} Z" fill="url(#${gid})"/>
+  <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+  <circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="${color}"/></svg>`;
+}
+
+/* live text bound to the clock */
+const LIVE = {
+  cash: () => money(S.cash),
+  nw: () => money(netWorth()),
+  ph: () => signed(perHour()*24) + "/day",
+  assets: () => money(assetsVal()+bizVal()),
+  nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
+  hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
+  win: () => dur(WIN - Date.now()%WIN),
+  pv: u => { const p=S.props.find(x=>x.uid===u); return p?money(propVal(p)):""; },
+  iv: u => { const i=S.items.find(x=>x.uid===u); return i?money(itemVal(i)):""; },
+  reno: u => { const p=S.props.find(x=>x.uid===u); return p&&p.renoUntil>Date.now()?`Renovating, ${dur(p.renoUntil-Date.now())} left`:""; },
+  auc: id => { const L=S.auc.find(x=>x.id===id); return L?dur(L.end-Date.now()):"Ended"; },
+  port: () => money(stockVal())
+};
+function liveTick(){
+  document.querySelectorAll("[data-live]").forEach(el => {
+    const [k, a] = el.dataset.live.split(":"); const f = LIVE[k]; if (!f) return; const v = f(a); if (el.textContent !== v) el.textContent = v;
+  });
+  const hb = document.querySelector('[data-act="hustle"]'); if (hb) hb.disabled = Date.now()-S.shiftAt < 60000;
+}
+
+/* ================= views ================= */
+function viewHome(){
+  const nm = nextMs(), prev = MS[S.lvl][0];
+  const prog = S.lvl>=MS.length-1 ? 1 : clamp((netWorth()-prev)/(nm[0]-prev),0,1);
+  const hv = S.hist.map(h=>h[1]).concat([netWorth()]);
+  const owned = ownedBiz();
+  const deals = [...itemListings("col"),...itemListings("veh")].filter(l=>ITEMM[l.id].t<=S.lvl&&l.ask<l.val).sort((a,b)=>(a.ask/a.val)-(b.ask/b.val)).slice(0,2);
+  return `
+  <section class="hero">
+    <div class="lbl">Net worth</div>
+    <div class="nw num" data-live="nw">${money(netWorth())}</div>
+    <div class="lvrow"><span class="rank">Lv ${S.lvl+1} · ${MS[S.lvl][1]}</span>
+      <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
+  </section>
+  <div class="stats">
+    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b></div>
+    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b></div>
+    <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
+    <div class="stat"><span class="lbl">Debt</span><b class="num">$0.00</b></div>
+  </div>
+  <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last ${Math.max(1,Math.round((Date.now()-S.hist[0][0])/H))}h</small></div>
+    <div class="card chart">${sparkSvg(hv,"#1fc983")}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
+  <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>One paid shift a minute</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
+  ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
+  <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
+    ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
+  </section>
+  <section class="sec"><div class="sechead"><h2>Recent activity</h2></div>
+    ${S.tx.length?`<div class="list">${S.tx.slice(0,5).map(txRow).join("")}</div>`:`<div class="empty">Your transactions will show up here.</div>`}</section>`;
+}
+function txRow(x){ return `<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(x.desc)}</strong><span>${ago(x.t)}</span></div><div class="rside"><b class="num ${x.amt>=0?"up":""}">${signed(x.amt)}</b><span class="num">${money(x.bal)}</span></div></div>`; }
+
+function viewMarket(){
+  const cats=[["biz","Businesses"],["prop","Real estate"],["veh","Vehicles"],["col","Collectibles"]];
+  let body="";
+  if (mcat==="biz"){
+    body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
+      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · Level ${o.l} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?"next location":"to open"}</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
+  } else if (mcat==="prop"){
+    const L=propListings();
+    body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
+    ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
+      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
+    <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
+    <div class="list">${L.map(l=>{const d=PROPM[l.type],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+  } else {
+    const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
+    body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
+    ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Classics and hypercars gain value; everyday cars lose it.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
+    <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
+    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+  }
+  return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
+}
+
+function viewInvest(){
+  const hv=stockVal(), basis=Object.values(S.hold).reduce((a,h)=>a+h.cost,0);
+  return `<section class="hero"><div class="lbl">Portfolio value</div><div class="nw num" data-live="port">${money(hv)}</div>
+    <div class="lvrow"><span class="pill ${hv-basis>=0?"":"r"}">${hv?signed(hv-basis)+" ("+pct(basis?hv/basis-1:0)+")":"No positions yet"}</span><span class="note">Realized ${signed(S.realized)}</span></div></section>
+  <section class="sec"><div class="sechead"><h2>Markets</h2><small>Prices move every minute</small></div><div class="list">${STK.map(x=>{const st=S.stk[x.s],h=st.hist,ref=h[Math.max(0,h.length-61)]||st.p,ch=st.p/ref-1,own=S.hold[x.s];
+    return rowHtml({e:`<span style="font:800 11px var(--display);color:var(--gold)">${x.s}</span>`,title:x.n,sub:`${x.k} · ${x.risk} risk${own?` · <span class="goldt">${money(own.sh*st.p)} held</span>`:""}`,right:`<b class="num">${money(st.p)}</b><span class="${ch>=0?"up":"down"}">${pct(ch)} 1h</span>`,act:"openStock",arg:x.s});}).join("")}</div></section>
+  <section class="sec"><div class="sechead"><h2>Market news</h2></div>${S.news.length?`<div class="list">${S.news.slice(0,6).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${esc(n.text)}</strong><span>${n.s} · ${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Up":"Down"}</span></div></div>`).join("")}</div>`:`<div class="empty">Big moves will make the news here.</div>`}
+  <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`;
+}
+
+function viewAuctions(){
+  return `<section class="sec" style="margin-top:4px"><div class="sechead"><h2>Live auctions</h2><small>Cash on hand <b class="num em" data-live="cash"></b></small></div>
+  <div class="list">${S.auc.map(L=>{const lead=L.top==="you";return `<div class="card" style="display:flex;flex-direction:column;gap:12px">
+    <div class="shead"><div class="tile ${L.mystery?"gold":""}">${lotIcon(L)}</div><div style="flex:1;min-width:0"><h3 style="font-size:15px">${lotName(L)}</h3><p>${L.mystery?"Contents unknown":condName(L.cm)} · est. ${L.mystery?money(L.val*.3)+" to "+money(L.val*2.2):money(L.val)}</p></div><div class="rside"><span>Ends in</span><b class="timer num" data-live="auc:${L.id}"></b></div></div>
+    <div class="aucbid"><div><div class="lbl">${L.top?"Current bid":"Opening bid"}</div><b class="num">${money(L.cur)}</b></div><div style="text-align:right"><span class="pill ${lead?"":"m"}">${lead?"You're winning":L.top?"Outbid":"No bids"}</span><div class="note" style="margin-top:4px">${L.bidders} bidders watching</div></div></div>
+    <div class="btns"><button class="btn ghost" data-act="openLot" data-arg="${L.id}">Details</button><button class="btn" data-act="bid" data-arg="${L.id}" ${lead||nextBid(L)>S.cash?"disabled":""}>${lead?"Top bid":"Bid "+money(nextBid(L))}</button></div></div>`;}).join("")}</div>
+  <p class="note">Bids in the last 15 seconds add 15 seconds to the clock. You pay only if you win.</p></section>
+  <section class="sec"><div class="sechead"><h2>Results</h2></div>${S.aucLog.length?`<div class="list">${S.aucLog.map(r=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(r.n)}</strong><span>${ago(r.t)}${r.why?" · "+r.why:""}</span></div><div class="rside"><b class="num ${r.won?"up":""}">${money(r.a)}</b><span class="pill ${r.won?"g":"m"}">${r.won?"Won":"Sold to rival"}</span></div></div>`).join("")}</div>`:`<div class="empty">Finished auctions show here.</div>`}</section>`;
+}
+
+function viewProfile(){
+  const got = ACH.filter(a=>S.ach[a[0]]).length;
+  return `<section class="hero"><div class="lbl">Wealth rank</div><div class="nw" style="font-size:clamp(26px,8vw,36px)">${MS[S.lvl][1]}</div><div class="lvrow"><span class="rank">Level ${S.lvl+1} of ${MS.length}</span><span class="note">Playing since ${new Date(S.created).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span></div></section>
+  <div class="stats">
+    <div class="stat"><span class="lbl">Lifetime earnings</span><b class="em num">${money(S.earned)}</b></div>
+    <div class="stat"><span class="lbl">Peak net worth</span><b class="gold num">${money(S.peak)}</b></div>
+    <div class="stat"><span class="lbl">Businesses</span><b class="num">${ownedBiz().reduce((a,id)=>a+S.biz[id].n,0)} locations</b></div>
+    <div class="stat"><span class="lbl">Properties</span><b class="num">${S.props.length}</b></div>
+    <div class="stat"><span class="lbl">Auctions won</span><b class="num">${S.aucWins}</b></div>
+    <div class="stat"><span class="lbl">Shifts worked</span><b class="num">${S.shifts}</b></div>
+  </div>
+  <section class="sec"><div class="sechead"><h2>Milestones</h2></div><div class="ms">${MS.map((m,i)=>`<div class="${S.peak>=m[0]?"got":""}"><b>${m[1]}</b><span class="num">${money(m[0],{whole:true})}</span></div>`).join("")}</div></section>
+  <section class="sec"><div class="sechead"><h2>Achievements</h2><small>${got} of ${ACH.length}</small></div><div class="ach">${ACH.map(a=>`<div class="${S.ach[a[0]]?"got":""}"><b>${a[1]}</b><span>${a[2]}</span></div>`).join("")}</div></section>
+  <section class="sec"><div class="sechead"><h2>Collections</h2><small>+5% business income each</small></div><div class="list">${Object.entries(SETS).map(([k,st])=>{const have=st.ids.filter(id=>S.items.some(i=>i.id===id)).length;return rowHtml({e:ITEMM[st.ids[0]].e,gold:true,title:st.n,sub:st.ids.map(id=>ITEMM[id].n).join(", "),right:`<b class="${have===st.ids.length?"goldt":""}">${have}/${st.ids.length}</b>`});}).join("")}</div></section>
+  <section class="sec"><div class="sechead"><h2>Transaction history</h2><small>${S.tx.length} recent</small></div>${S.tx.length?`<div class="list">${S.tx.slice(0,30).map(txRow).join("")}</div>`:`<div class="empty">Nothing yet.</div>`}</section>
+  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>`;
+}
+
+function render(){
+  const v = {home:viewHome,market:viewMarket,invest:viewInvest,auctions:viewAuctions,profile:viewProfile}[tab]();
+  $("view").innerHTML = v;
+  document.querySelectorAll("#dock button").forEach(b => b.classList.toggle("on", b.dataset.tab===tab));
+  liveTick(); needRender = false;
+}
+
+/* ================= sheets ================= */
+function sheetBiz(id){ return () => {
+  const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, lvl=o?o.l:0;
+  const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
+  return `<div class="shead"><div class="tile">${b.e}</div><div><h3>${b.n}</h3><p>${o?`${n} location${n>1?"s":""} · Level ${lvl} of 5`:"Not owned yet"}</p></div></div>
+  ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
+  ${m!==1?`<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event.</p>`:""}
+  <button class="btn" data-act="bizBuy" data-arg="${id}" ${c>S.cash||n>=25?"disabled":""}>${o?"Open location #"+(n+1):"Open for"} ${money(c)}</button>
+  ${o?`<div class="btns"><button class="btn gold" data-act="bizUp" data-arg="${id}" ${lvl>=5||upCost(id)>S.cash?"disabled":""}>${lvl>=5?"Max level":"Upgrade "+money(upCost(id))}</button><button class="btn ghost" data-act="bizSell" data-arg="${id}">Sell one +${money(o.spent/o.n*.6)}</button></div><p class="note">Upgrades raise revenue 50% per level and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+};}
+function sheetProp(u){ return () => {
+  const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
+  return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
+  ${kv([["Market value",`<span data-live="pv:${u}"></span>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
+  ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
+  <div class="btns"><button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button><button class="btn" data-act="propSell" data-arg="${u}" ${reno?"disabled":""}>Sell ${money(v)}</button></div>
+  <p class="note">Property values follow the economy's cycles. Renovation takes 3 minutes and pauses rent.</p>`;
+};}
+function sheetPListing(lid){ return () => {
+  const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
+  return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRent(p))+"/h"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
+  ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
+};}
+function sheetListing(c,lid){ return () => {
+  const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
+  return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]])}
+  <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
+  ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
+};}
+function sheetItem(u){ return () => {
+  const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
+  return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
+  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]])}
+  <button class="btn" data-act="itemSell" data-arg="${u}">Sell for ${money(v)}</button>`;
+};}
+function sheetStock(s){ return () => {
+  const x=STKM[s], st=S.stk[s], h=S.hold[s], val=h?h.sh*st.p:0, ref=st.hist[Math.max(0,st.hist.length-61)]||st.p;
+  return `<div class="shead"><div class="tile gold" style="font:800 12px var(--display);color:var(--gold)">${s}</div><div><h3>${x.n}</h3><p>${x.k} · ${x.risk} risk</p></div></div>
+  <div class="card chart" style="padding:10px">${sparkSvg(st.hist.slice(-120),st.p>=ref?"#1fc983":"#ff6b62")}<div class="chartfoot"><span>2h ago</span><span>now</span></div></div>
+  ${kv([["Price",money(st.p)],["1h change",`<span class="${st.p>=ref?"up":"down"}">${pct(st.p/ref-1)}</span>`],["You hold",h?money(val):"Nothing"],["Profit / loss",h?`<span class="${val-h.cost>=0?"up":"down"}">${signed(val-h.cost)}</span>`:"—"]])}
+  <div class="lbl">Buy with your cash (${money(S.cash)})</div>
+  <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"Max"]].map(([f,n])=>`<button class="btn" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}>${n}</button>`).join("")}</div>
+  ${h?`<div class="lbl">Sell your position</div><div class="btns three">${[[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn ghost" data-act="stkSell" data-arg="${s}|${f}">${n}</button>`).join("")}</div>`:""}
+  <p class="note">Simulated prices. Returns are never guaranteed.</p>`;
+};}
+function sheetLot(id){ return () => {
+  const L=S.auc.find(x=>x.id===id); if (!L) return null; const lead=L.top==="you";
+  return `<div class="shead"><div class="tile${L.mystery?" gold":""}">${lotIcon(L)}</div><div><h3>${lotName(L)}</h3><p>Ends in <span class="timer num" data-live="auc:${id}"></span></p></div></div>
+  ${kv([["Current bid",money(L.cur)],["Next bid",money(nextBid(L))],["Est. value",L.mystery?"Unknown":money(L.val)],["Bidders",L.bidders]])}
+  <button class="btn" data-act="bid" data-arg="${id}" ${lead||nextBid(L)>S.cash?"disabled":""}>${lead?"You have the top bid":"Bid "+money(nextBid(L))}</button>
+  <div class="lbl">Bid history</div>${L.hist.length?`<div class="lines">${L.hist.map(b=>`<div><span>${b.w==="you"?"You":"Rival bidder"} · ${ago(b.t)}</span><b class="num">${money(b.a)}</b></div>`).join("")}</div>`:`<p class="note">No bids yet.</p>`}`;
+};}
+function showEvent(ev){
+  S.evs++; let result=null;
+  openSheet(() => result ? `<div class="welcome">${esc(ev.title.toUpperCase())}</div><p class="evtext" style="text-align:center">${esc(result)}</p><button class="btn" data-act="close">Continue</button>`
+    : `<div class="shead"><div class="tile gold">${ev.icon}</div><div><h3>${esc(ev.title)}</h3><p>Decision needed</p></div></div><p class="evtext">${esc(ev.text)}</p>
+       <div class="list">${ev.choices.map((c,i)=>`<button class="btn ${i===0?"":"ghost"}" data-act="evc" data-arg="${i}" ${c.cost&&c.cost>S.cash?"disabled":""}>${esc(c.label)}</button>`).join("")}</div>`, true);
+  evChoose = i => { result = ev.choices[i].run(); save(); needRender = true; drawSheet(); };
+}
+let evChoose = null;
+function showWelcome(inc, gap){
+  if (Math.abs(inc.total) < .01) return;
+  openSheet(() => `<div class="welcome">WELCOME BACK</div>
+    <div class="big num ${inc.total>=0?"up":"down"}">${signed(inc.total)}</div>
+    <p class="sub">You ${inc.total>=0?"earned":"spent"} this while you were away for ${dur(gap)}${gap>CAP?" (capped at 24 hours)":""}.</p>
+    <div class="lines">${inc.lines.map(([n,a])=>`<div><span>${esc(n)}</span><b class="num ${a>=0?"up":"down"}">${signed(a)}</b></div>`).join("")}</div>
+    <button class="btn" data-act="close">Collect</button>`, true);
+}
+
+/* ================= input ================= */
+let resetArm = 0;
+document.addEventListener("click", e => {
+  const tb = e.target.closest("[data-tab]");
+  if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const act = el.dataset.act, arg = el.dataset.arg;
+  if (act==="scrim"){ if (e.target===el && !sheetLocked) closeSheet(); return; }
+  const run = fn => { fn(); progress(); save(); render(); drawSheet(); };
+  switch(act){
+    case "close": closeSheet(); render(); break;
+    case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
+    case "hustle": run(A.hustle); break;
+    case "openBiz": openSheet(sheetBiz(arg)); break;
+    case "openProp": openSheet(sheetProp(arg)); break;
+    case "openPListing": openSheet(sheetPListing(arg)); break;
+    case "openListing": { const [c,l]=arg.split("|"); openSheet(sheetListing(c,l)); break; }
+    case "openItem": openSheet(sheetItem(arg)); break;
+    case "openStock": openSheet(sheetStock(arg)); break;
+    case "openLot": openSheet(sheetLot(arg)); break;
+    case "bizBuy": run(()=>A.bizBuy(arg)); break;
+    case "bizUp": run(()=>A.bizUp(arg)); break;
+    case "bizSell": run(()=>A.bizSell(arg)); if (!S.biz[arg]) closeSheet(); break;
+    case "propBuy": run(()=>A.propBuy(arg)); { const p=S.props[S.props.length-1]; if (p && Date.now()-p.at<2000) openSheet(sheetProp(p.uid)); } break;
+    case "propReno": run(()=>A.propReno(arg)); break;
+    case "propRent": run(()=>A.propRent(arg)); break;
+    case "propSell": run(()=>A.propSell(arg)); break;
+    case "itemBuy": { const [c,l]=arg.split("|"); run(()=>A.itemBuy(c,l)); const i=S.items[S.items.length-1]; if (i && Date.now()-i.at<2000) openSheet(sheetItem(i.uid)); break; }
+    case "itemSell": run(()=>A.itemSell(arg)); break;
+    case "stkBuy": { const [s,f]=arg.split("|"); run(()=>A.stkBuy(s,+f)); break; }
+    case "stkSell": { const [s,f]=arg.split("|"); run(()=>A.stkSell(s,+f)); break; }
+    case "bid": run(()=>A.bid(arg)); break;
+    case "evc": if (evChoose) evChoose(+arg); break;
+    case "reset":
+      if (Date.now()-resetArm < 4000){ S = fresh(); auctionsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
+      else { resetArm = Date.now(); el.textContent = "Tap again to erase everything"; setTimeout(()=>{ const b=$("resetbtn"); if (b) b.textContent="Reset game"; }, 4000); }
+      break;
+  }
+});
+
+/* ================= loop ================= */
+function boot(){
+  const saved = load(), t = Date.now();
+  S = saved || fresh();
+  const gap = t - S.last;
+  const r = advance(t);
+  if (saved && gap > 60000) showWelcome(r.inc, gap);
+  save(); render();
+}
+function tick(){
+  const t = Date.now(), gap = t - S.last;
+  const r = advance(t);
+  if (gap > 5*MIN && !sheetOpen()) showWelcome(r.inc, gap);
+  if (r.changed && (tab==="invest" || tab==="auctions")) needRender = true;
+  if (win(t) !== win(t-1000) && (tab==="market"||tab==="home")) needRender = true;
+  maybeEvent(t);
+  if (needRender) render(); else liveTick();
+  if (sheetOpen() && r.changed) drawSheet(); else if (sheetOpen()) liveTick();
+  if (t % 5000 < 1000) save();
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) { advance(Date.now()); save(); } else tick(); });
+addEventListener("pagehide", () => { advance(Date.now()); save(); });
+boot();
+setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
