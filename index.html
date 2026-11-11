@@ -80,6 +80,8 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .rside{text-align:right;display:flex;flex-direction:column;gap:2px;flex:none}
 .rside b{font-weight:800}
 .rside span{font-size:12px;color:var(--muted)}
+.rmain .parts{font-size:12.5px;line-height:1.5}
+.rmain .parts b{font-weight:800}
 .up{color:var(--em)!important}.down{color:var(--red)!important}.goldt{color:var(--gold)!important}
 .pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:rgba(31,201,131,.14);color:var(--em)}
 .pill.g{background:rgba(228,185,91,.15);color:var(--gold)}
@@ -415,13 +417,15 @@ function advance(t){
   const inc = incomeBetween(from, t);
   credit(inc.total);
   S.pending += inc.total;
+  S.pendParts = S.pendParts || {};
+  inc.lines.forEach(([n,a]) => { S.pendParts[n] = (S.pendParts[n]||0) + a; });
   S.last = t;
   S.mods = S.mods.filter(m => m.until > t);
   { const w = "-" + win(t) + "-"; S.sold = S.sold.filter(l => l.includes(w)); }
   S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t && p.cond < 100){ p.cond = 100; toast(`${p.name} renovation finished`, true); } });
   const sc = stepStocks(t);
   const ac = auctionsTick(t);
-  if (t - S.pendingAt >= 5*MIN){ if (Math.abs(S.pending) >= .01) tx("income","Passive income",S.pending); S.pending=0; S.pendingAt=t; }
+  if (t - S.pendingAt >= 5*MIN){ if (Math.abs(S.pending) >= .01){ tx("income","Passive income",S.pending); S.tx[0].parts = Object.entries(S.pendParts||{}).filter(p=>Math.abs(p[1])>=.01).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])); } S.pending=0; S.pendParts={}; S.pendingAt=t; }
   progress();
   sample(t);
   return {inc, from, changed: sc || ac};
@@ -714,7 +718,7 @@ function viewHome(){
   <section class="sec"><div class="sechead"><h2>Recent activity</h2></div>
     ${S.tx.length?`<div class="list">${S.tx.slice(0,5).map(txRow).join("")}</div>`:`<div class="empty">Your transactions will show up here.</div>`}</section>`;
 }
-function txRow(x){ return `<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(x.desc)}</strong><span>${ago(x.t)}</span></div><div class="rside"><b class="num ${x.amt>=0?"up":""}">${signed(x.amt)}</b><span class="num">${money(x.bal)}</span></div></div>`; }
+function txRow(x){ return `<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(x.desc)}</strong>${x.parts&&x.parts.length?`<span class="parts">${x.parts.map(([n,a])=>`${esc(n)} <b class="${a>=0?"up":"down"}">${signed(a)}</b>`).join("<br>")}</span>`:""}<span>${ago(x.t)}</span></div><div class="rside"><b class="num ${x.amt>=0?"up":""}">${signed(x.amt)}</b><span class="num">${money(x.bal)}</span></div></div>`; }
 
 function viewMarket(){
   const cats=[["mine","My stuff"],["biz","Businesses"],["prop","Real estate"],["veh","Vehicles"],["col","Collectibles"]];
