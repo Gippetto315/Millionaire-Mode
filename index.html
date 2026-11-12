@@ -572,7 +572,7 @@ function auctionsTick(t){
 function ownedBiz(){ return Object.keys(S.biz); }
 function pickBiz(){ const o=ownedBiz(); return o[Math.floor(Math.random()*o.length)]; }
 const EVENTS = [
-  {id:"break", ok:()=>ownedBiz().length>0, make(){
+  {id:"break", w:1, bad:1, ok:()=>ownedBiz().length>0, make(){
     const id=pickBiz(), b=BIZM[id], net=Math.max(5,bizNetAt(id,Date.now())), fix=net*1.5;
     return {icon:"⚠️",title:"Business emergency",text:`Equipment broke down at your ${b.n}. Customers are being turned away until it's fixed.`,choices:[
       {label:`Repair it now (${money(fix)})`,cost:fix,run(){ spend(fix,"event",`Repair at ${b.n}`); return `Fixed. ${b.n} is running at full speed again.`; }},
@@ -580,21 +580,21 @@ const EVENTS = [
       {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+3*H}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
     ]};
   }},
-  {id:"surge", ok:()=>ownedBiz().length>0, make(){
+  {id:"surge", w:3, ok:()=>ownedBiz().length>0, make(){
     const id=pickBiz(), b=BIZM[id], rev=bizRev(id);
     return {icon:"🔥",title:"Customer surge",text:`A local influencer posted about your ${b.n}. The line is out the door.`,choices:[
       {label:`Hire temp staff (${money(rev*.4)})`,cost:rev*.4,run(){ spend(rev*.4,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H}); return `${b.n} earns double revenue for the next hour.`; }},
       {label:"Ride the wave",run(){ const g=rev*.5; gain(g,"event",`Surge sales at ${b.n}`); S.earned+=g; return `Your current staff squeezed out ${money(g)} in extra sales.`; }}
     ]};
   }},
-  {id:"down", ok:()=>ownedBiz().length>=2, make(){
+  {id:"down", w:1, bad:1, ok:()=>ownedBiz().length>=2, make(){
     const ph=perHour(), promo=Math.max(10,ph*.5);
     return {icon:"📉",title:"Economic downturn",text:"Consumer spending is cooling off. Every business you own will feel it for the next hour.",choices:[
       {label:`Run a promotion (${money(promo)})`,cost:promo,run(){ spend(promo,"event","Downturn promotion"); S.mods.push({b:"*",m:.9,from:Date.now(),until:Date.now()+H}); return "The promo softened the blow. Revenue dips 10% for an hour."; }},
       {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H}); return "Revenue drops 30% across your businesses for an hour."; }}
     ]};
   }},
-  {id:"deal", ok:()=>S.lvl>=2, make(){
+  {id:"deal", w:3, ok:()=>S.lvl>=2, make(){
     const pool=PROP.filter(p=>p.t<=S.lvl); const d=pool[Math.floor(Math.random()*pool.length)];
     const p={type:d.id,base:d.base*(.9+Math.random()*.2),cond:Math.round(25+Math.random()*30)}; const val=propVal(p), ask=val*.65;
     return {icon:"🏚️",title:"Distressed property",text:`A motivated seller needs out fast. A ${propCond(p.cond).toLowerCase()} ${d.n.toLowerCase()} worth ${money(val)} is yours for ${money(ask)}.`,choices:[
@@ -602,21 +602,21 @@ const EVENTS = [
       {label:"Pass",run(){ return "Someone else snapped it up."; }}
     ]};
   }},
-  {id:"rumor", ok:()=>S.lvl>=1 && S.cash>=200, make(){
+  {id:"rumor", w:2, ok:()=>S.lvl>=1 && S.cash>=200, make(){
     const x=STK[1+Math.floor(Math.random()*(STK.length-2))]; const amt=S.cash*.25;
     return {icon:"📰",title:"Market rumor",text:`Word on the street: ${x.n} (${x.s}) may announce a big partnership. Rumors cut both ways.`,choices:[
       {label:`Buy ${money(amt)} of ${x.s}`,cost:amt,run(){ A.stkBuy(x.s,.25); const up=Math.random()<.58, f=up?1.12+Math.random()*.1:.86-Math.random()*.08; S.stk[x.s].p*=f; S.stk[x.s].hist.push(S.stk[x.s].p); return up?`The deal was real. ${x.s} jumped ${((f-1)*100).toFixed(1)}%.`:`False alarm. ${x.s} fell ${((1-f)*100).toFixed(1)}%.`; }},
       {label:"Stay out",run(){ return "You sat this one out."; }}
     ]};
   }},
-  {id:"offer", ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
+  {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
     const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*.6, offer=each*1.7;
     return {icon:"🤝",title:"Acquisition offer",text:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
       {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
       {label:"Decline",run(){ return "You kept the location."; }}
     ]};
   }},
-  {id:"audit", ok:()=>S.peak>=1e4 && S.cash>100, make(){
+  {id:"audit", w:1, bad:1, ok:()=>S.peak>=1e4 && S.cash>100, make(){
     return {icon:"🧾",title:"Tax audit",text:"The tax office flagged your books. You can settle now or fight it.",choices:[
       {label:`Settle (${money(S.cash*.02)})`,run(){ const c=S.cash*.02; spend(c,"event","Audit settlement"); return `Settled for ${money(c)}.`; }},
       {label:"Contest it",run(){ if (Math.random()<.6) return "You won. You owe nothing."; const c=S.cash*.05; spend(c,"event","Audit penalty"); return `You lost and paid ${money(c)}.`; }}
@@ -626,10 +626,14 @@ const EVENTS = [
 let evOpen=false;
 function maybeEvent(t){
   if (t < S.nextEv || sheetOpen()) return;
-  const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv);
-  S.nextEv = t + (12+Math.random()*13)*MIN;
+  /* bad luck is rare: never twice in a row, and at most one mishap every 2-4 hours */
+  const badOk = !S.lastBad || t - S.lastBad > (2+Math.random()*2)*H;
+  const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv && (!e.bad || badOk));
+  S.nextEv = t + (15+Math.random()*15)*MIN;
   if (!pool.length) return;
-  const pk = pool[Math.floor(Math.random()*pool.length)]; S.lastEv = pk.id;
+  let r = Math.random()*pool.reduce((a,e)=>a+e.w,0), pk = pool[0];
+  for (const e of pool){ if ((r-=e.w) < 0){ pk=e; break; } }
+  S.lastEv = pk.id; if (pk.bad) S.lastBad = t;
   const ev = pk.make();
   showEvent(ev);
 }
