@@ -808,6 +808,10 @@ function viewProfile(){
   <section class="sec"><div class="sechead"><h2>Achievements</h2><small>${got} of ${ACH.length}</small></div><div class="ach">${ACH.map(a=>`<div class="${S.ach[a[0]]?"got":""}"><b>${a[1]}</b><span>${a[2]}</span></div>`).join("")}</div></section>
   <section class="sec"><div class="sechead"><h2>Collections</h2><small>+5% business income each</small></div><div class="list">${Object.entries(SETS).map(([k,st])=>{const have=st.ids.filter(id=>S.items.some(i=>i.id===id)).length;return rowHtml({e:ITEMM[st.ids[0]].e,gold:true,title:st.n,sub:st.ids.map(id=>ITEMM[id].n).join(", "),right:`<b class="${have===st.ids.length?"goldt":""}">${have}/${st.ids.length}</b>`});}).join("")}</div></section>
   <section class="sec"><div class="sechead"><h2>Transaction history</h2><small>${S.tx.length} recent</small></div>${S.tx.length?`<div class="list">${S.tx.slice(0,30).map(txRow).join("")}</div>`:`<div class="empty">Nothing yet.</div>`}</section>
+  <section class="sec"><div class="sechead"><h2>Backup &amp; restore</h2></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--muted);font-size:13px;margin:0">Copy a backup code and paste it somewhere safe, like Notes. If you delete and re-add the app, paste the code here and tap Restore to get everything back.</p>
+  <textarea id="bkt" rows="3" placeholder="Paste a backup code here to restore" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;resize:vertical"></textarea>
+  <div class="btns"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
   <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>`;
 }
 
@@ -1005,6 +1009,16 @@ document.addEventListener("click", e => {
     case "evc": if (evChoose) evChoose(+arg); break;
     case "help": openHelp(); break;
     case "nwinfo": openSheet(sheetNW()); break;
+    case "bkcopy": { advance(Date.now()); const code = "MM1:" + btoa(unescape(encodeURIComponent(JSON.stringify(S)))); const ta=$("bkt"); ta.value = code;
+      const done = () => toast("Backup copied. Paste it in Notes.", true);
+      try { navigator.clipboard.writeText(code).then(done, () => { ta.select(); toast("Press and hold the code, then tap Copy"); }); } catch(_) { ta.select(); toast("Press and hold the code, then tap Copy"); } break; }
+    case "bkrest": {
+      const raw = ($("bkt").value||"").trim();
+      let data = null; try { if (raw.startsWith("MM1:")) data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(4))))); } catch(_) {}
+      if (!data || data.v !== 1){ toast("That code didn't work. Copy the whole thing and try again."); break; }
+      if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
+      else { resetArm = Date.now(); el.textContent = "Tap again to replace this game"; setTimeout(()=>{ const b=$("bkrest"); if (b) b.textContent="Restore"; }, 4000); }
+      break; }
     case "gall": openGuide(); break;
     case "gnext": gStep++; drawSheet(); break;
     case "gback": gStep--; drawSheet(); break;
