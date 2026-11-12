@@ -64,7 +64,8 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .stat b{font:700 18px/1.15 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat b.em{color:var(--em)}
-.stat .unit{font-size:12px;color:var(--muted);font-weight:700;margin-top:-2px}.stat b.gold{color:var(--gold)}
+.stat .unit{font-size:12px;color:var(--muted);font-weight:700;margin-top:-2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .unit b{font:800 12px var(--body);color:#c48a22}.stat b.gold{color:var(--gold)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
 .chart svg{display:block;width:100%;height:120px}
 .chartfoot{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:6px}
@@ -673,6 +674,7 @@ const LIVE = {
   cash: () => money(S.cash),
   nw: () => money(netWorth()),
   ph: () => signed(perHour()*24),
+  pm: () => money(perHour()/60),
   assets: () => money(assetsVal()+bizVal()),
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
@@ -706,7 +708,7 @@ function viewHome(){
   </section>
   <div class="stats">
     <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b></div>
-    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span></div>
+    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
     <div class="stat"><span class="lbl">Debt</span><b class="num">$0.00</b></div>
   </div>
