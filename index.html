@@ -80,6 +80,8 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .rside{text-align:right;display:flex;flex-direction:column;gap:2px;flex:none}
 .rside b{font-weight:800}
 .rside span{font-size:12px;color:var(--muted)}
+.sprow{display:flex;align-items:center;gap:10px;text-align:right}
+.mini{width:40px;height:22px;flex:none}
 .rmain .parts{font-size:12.5px;line-height:1.5}
 .rmain .parts b{font-weight:800}
 .up{color:var(--em)!important}.down{color:var(--red)!important}.goldt{color:var(--gold)!important}
@@ -753,13 +755,25 @@ function viewMarket(){
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
 
+function miniSpark(vals){
+  const v=vals.slice(-60); if (v.length<2) return "";
+  const mn=Math.min(...v), mx=Math.max(...v), rg=(mx-mn)||1, up=v[v.length-1]>=v[0], c=up?"#1fc983":"#ff6b62";
+  const d=v.map((x,i)=>(i?"L":"M")+(i*56/(v.length-1)).toFixed(1)+" "+(22-(x-mn)/rg*20).toFixed(1)).join(" ");
+  return `<svg class="mini" viewBox="0 0 56 24" aria-hidden="true"><path d="${d}" fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+}
+const tkr = s => `<span style="font:800 11px var(--display);color:var(--gold)">${s}</span>`;
 function viewInvest(){
-  const hv=stockVal(), basis=Object.values(S.hold).reduce((a,h)=>a+h.cost,0);
-  return `<section class="hero"><div class="lbl">Portfolio value</div><div class="nw num" data-live="port">${money(hv)}</div>
-    <div class="lvrow"><span class="pill ${hv-basis>=0?"":"r"}">${hv?signed(hv-basis)+" ("+pct(basis?hv/basis-1:0)+")":"No positions yet"}</span><span class="note">Realized ${signed(S.realized)}</span></div></section>
-  <section class="sec"><div class="sechead"><h2>Markets</h2><small>Prices move every minute</small></div><div class="list">${STK.map(x=>{const st=S.stk[x.s],h=st.hist,ref=h[Math.max(0,h.length-61)]||st.p,ch=st.p/ref-1,own=S.hold[x.s];
-    return rowHtml({e:`<span style="font:800 11px var(--display);color:var(--gold)">${x.s}</span>`,title:x.n,sub:`${x.k} · ${x.risk} risk${own?` · <span class="goldt">${money(own.sh*st.p)} held</span>`:""}`,right:`<b class="num">${money(st.p)}</b><span class="${ch>=0?"up":"down"}">${pct(ch)} 1h</span>`,act:"openStock",arg:x.s});}).join("")}</div></section>
-  <section class="sec"><div class="sechead"><h2>Market news</h2></div>${S.news.length?`<div class="list">${S.news.slice(0,6).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${esc(n.text)}</strong><span>${n.s} · ${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Up":"Down"}</span></div></div>`).join("")}</div>`:`<div class="empty">Big moves will make the news here.</div>`}
+  const hv=stockVal(), basis=Object.values(S.hold).reduce((a,h)=>a+h.cost,0), mine=STK.filter(x=>S.hold[x.s]), pl=hv-basis;
+  return `<section class="hero"><div class="lbl">Your stocks are worth</div><div class="nw num" data-live="port">${money(hv)}</div>
+    <div class="lvrow">${hv?`<span class="pill ${pl>=0?"":"r"}">${pl>=0?"Up":"Down"} ${money(Math.abs(pl))} (${pct(basis?hv/basis-1:0)})</span>`:`<span class="pill m">You don't own any stocks yet</span>`}${S.realized?`<span class="note">Locked-in profit from sales: ${signed(S.realized)}</span>`:""}</div></section>
+  <section class="sec"><div class="sechead"><h2>What you own</h2><small>${mine.length} of ${STK.length}</small></div>
+    ${mine.length?`<div class="list">${mine.map(x=>{const st=S.stk[x.s],h=S.hold[x.s],v=h.sh*st.p,g=v-h.cost;
+      return rowHtml({e:tkr(x.s),title:x.n,sub:`You paid ${money(h.cost)}`,right:`<b class="num">${money(v)}</b><span class="${g>=0?"up":"down"}">${signed(g)} (${pct(h.cost?v/h.cost-1:0)})</span>`,act:"openStock",arg:x.s});}).join("")}</div>`
+    :`<div class="empty">Tap any stock below to see its chart and buy some. It'll show up here with your profit or loss.</div>`}</section>
+  <section class="sec"><div class="sechead"><h2>All stocks</h2><small>Prices change every minute</small></div><div class="list">${STK.map(x=>{const st=S.stk[x.s],hh=st.hist,ref=hh[Math.max(0,hh.length-61)]||st.p,ch=st.p/ref-1,own=S.hold[x.s];
+    return rowHtml({e:tkr(x.s),title:x.n,sub:own?`<span class="pill g">You own this</span>`:`${x.risk} risk`,right:`<div class="sprow">${miniSpark(hh)}<div><b class="num">${money(st.p)}</b><span class="${ch>=0?"up":"down"}" style="display:block">${pct(ch)} 1h</span></div></div>`,act:"openStock",arg:x.s});}).join("")}</div>
+    <p class="note">Price is the cost of one share. The percentage and little chart show how it moved in the last hour (1h). Tap a stock for its full chart and risk level.</p></section>
+  <section class="sec"><div class="sechead"><h2>Market news</h2></div>${S.news.length?`<div class="list">${S.news.slice(0,6).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${esc(n.text)}</strong><span>${n.s} · ${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Up":"Down"}</span></div></div>`).join("")}</div>`:`<div class="empty">Big price moves will make the news here.</div>`}
   <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`;
 }
 
@@ -902,6 +916,7 @@ const GUIDE = [
     "<b>Vehicles and collectibles</b>: buy below value and sell higher. Everyday cars lose value; classics and watches gain.",
     "New listings show up every <b>20 minutes</b>."]},
   {tab:"invest",e:"📈",t:"Invest",p:"Stocks, funds and crypto. All fictional.",l:[
+    "<b>What you own</b> is at the top, with your profit or loss on each one. <b>All stocks</b> is below.",
     "Prices move <b>every minute</b>, even while you're away.",
     "Tap one to see its chart. The <b>10%, 25%, 50% and All</b> buttons mean how much of your cash to spend, and each shows the dollar amount.",
     "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
