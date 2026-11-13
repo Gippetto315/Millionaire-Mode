@@ -1054,7 +1054,7 @@ function viewAuctions(){
 
 function viewProfile(){
   const got = ACH.filter(a=>S.ach[a[0]]).length;
-  return `<section class="hero"><div class="lbl">Wealth rank</div><div class="nw" style="font-size:clamp(26px,8vw,36px)">${MS[S.lvl][1]}</div><div class="lvrow"><span class="rank">Level ${S.lvl+1} of ${MS.length}</span><span class="note">Playing since ${new Date(S.created).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span></div></section>
+  return `<section class="hero"><div class="lbl">Wealth rank</div><div class="nw" style="font-size:clamp(26px,8vw,36px)">${MS[S.lvl][1]}</div><div class="lvrow"><span class="rank">Level ${S.lvl+1} of ${MS.length}</span><span class="note" data-act="cheatopen">Playing since ${new Date(S.created).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span></div></section>
   <div class="stats">
     <div class="stat"><span class="lbl">Lifetime earnings</span><b class="em num">${money(S.earned)}</b></div>
     <div class="stat"><span class="lbl">Peak net worth</span><b class="gold num">${money(S.peak)}</b></div>
@@ -1252,9 +1252,11 @@ function guideSeen(){ try { return localStorage.getItem("mm-guide") === "1"; } c
 function markGuide(){ try { localStorage.setItem("mm-guide","1"); } catch(e){} }
 
 /* ================= input ================= */
+let chtVal = "";
+function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
-document.addEventListener("input", e => { if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
@@ -1347,6 +1349,10 @@ document.addEventListener("click", e => {
       if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); settleRoom(); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
       else { resetArm = Date.now(); el.textContent = "Tap again to replace this game"; setTimeout(()=>{ const b=$("bkrest"); if (b) b.textContent="Restore"; }, 4000); }
       break; }
+    case "cheatopen": chtVal = ""; openSheet(sheetCheat()); break;
+    case "cheat": { const c = ($("chtc").value||"").trim().toLowerCase();
+      if (c === "bigdaddy"){ gain(10000,"income","Cheat code"); chtVal = ""; progress(); save(); closeSheet(); render(); toast("+$10,000. Spend it wisely.", true); }
+      else toast(c ? "That code doesn't work" : "Type a code first"); break; }
     case "gall": openGuide(); break;
     case "gnext": gStep++; drawSheet(); break;
     case "gback": gStep--; drawSheet(); break;
