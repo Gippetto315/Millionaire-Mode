@@ -1,5 +1,7 @@
 # Millionaire Mode
 
+## ▶️ Play: https://gippetto315.github.io/Millionaire-Mode/
+
 Start with $100. Build an empire. Become a billionaire.
 
-A single-page tycoon game for iPhone. Progress saves on the device.
+To put it on your iPhone: open the link above in Safari, tap Share, then Add to Home Screen.
