@@ -622,30 +622,37 @@ const RIVALS = {
 const RKEYS = Object.keys(RIVALS);
 const FAR = 1e15;
 function itemCat(d, mystery){ if (mystery) return "box"; if (d.c==="veh") return "veh"; if (d.set==="watch") return "watch"; if (d.id==="paint") return "art"; if (d.id==="fossil") return "vint"; const m=/^g-([a-z]+)-/.exec(d.id); return m ? m[1] : "misc"; }
-function pickRivals(cat, head){
-  const R = Math.random, n = head ? 3+Math.floor(R()*3) : [1,2,2,3,3,3,4,4,5][Math.floor(R()*9)];
-  const pool = RKEYS.filter(k => !RIVALS[k].rare || head || R() < .12), out = [];
+function pickRivals(cat, head, sec){
+  const R = Math.random, n = head ? 3+Math.floor(R()*3) : sec==="priv" ? 2+Math.floor(R()*3) : [1,2,2,3,3,3,4,4,5][Math.floor(R()*9)];
+  let pool = RKEYS.filter(k => !RIVALS[k].rare || head || (sec==="priv" ? R() < .5 : sec==="main" && R() < .12));
+  if (sec==="bin") pool = pool.filter(k => RIVALS[k].lo < .8 && !RIVALS[k].rare);
+  if (sec==="priv") pool = pool.filter(k => RIVALS[k].hi >= .95);
+  const out = [];
   const lovers = pool.filter(k => RIVALS[k].love && RIVALS[k].love.test(cat));
   if (lovers.length && R() < .55) out.push(lovers[Math.floor(R()*lovers.length)]);
   while (out.length < n){ const k = pool[Math.floor(R()*pool.length)]; if (!out.includes(k)) out.push(k); }
   return out;
 }
 function rivalMax(k, cat, ref){ const v = RIVALS[k], R = Math.random(); return v.love && v.love.test(cat) ? ref*(v.llo+(v.lhi-v.llo)*R) : ref*(v.lo+(v.hi-v.lo)*R); }
-function step(c){ const raw=c*.03; if (raw<=2.5) return 2.5; const mag=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/mag; return (m<=1?1:m<=2.5?2.5:m<=5?5:10)*mag; }
+function step(c){ const raw=c*.04; if (raw<=2.5) return 2.5; const mag=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/mag; return (m<=1?1:m<=2.5?2.5:m<=5?5:10)*mag; }
 function nice(x){ if (x<10) return Math.max(1,Math.round(x)); const mag=Math.pow(10,Math.floor(Math.log10(x))-1); return Math.round(x/mag)*mag; }
-function newLot(t, head){
-  const R = Math.random, mystery = !head && R() < .18;
-  let pool = ITEMS.filter(i => !i.hidden && (head ? i.t === Math.min(8,S.lvl+1) : i.t <= S.lvl));
+const SECS = {bin:{n:"Bargain Bin",d:"Below your rank. Cheap lots and quick flips.",q:1}, main:{n:"Main Floor",d:"Lots at your rank. Fair fights.",q:2}, priv:{n:"Private Sale",d:"Above your rank. Big money and big spenders.",q:1}};
+function secTiers(sec){ const l = S.lvl; return sec==="bin" ? [0, Math.max(0,l-2)] : sec==="priv" ? [Math.min(8,l+1), Math.min(8,l+2)] : [Math.max(0,l-1), l]; }
+function newLot(t, head, sec){
+  sec = head ? "priv" : (sec || "main");
+  const R = Math.random, mystery = !head && sec==="main" && R() < .2, [a,b] = head ? [Math.min(8,S.lvl+1),Math.min(8,S.lvl+1)] : secTiers(sec);
+  let pool = ITEMS.filter(i => !i.hidden && i.t >= a && i.t <= b);
+  if (sec==="bin" && S.lvl < 2){ pool = ITEMS.filter(i => !i.hidden && i.t === 0).sort((x,y)=>x.base-y.base); pool = pool.slice(0, Math.ceil(pool.length/2)); }
   if (!pool.length) pool = ITEMS.filter(i => !i.hidden && i.t <= S.lvl+1);
   const d = pool[Math.floor(R()*pool.length)];
   const cm = head ? COND[3][0] : COND[Math.floor(R()*4)][0];
   let val, ref, lo, hi;
   if (mystery){ ref = Math.max(200, S.peak*.04*(.5+R())); val = ref*(.3+R()*1.9); lo = nice(ref*.3); hi = nice(ref*2.2); }
   else { val = d.base*cm*wob(d.id,t); ref = val; lo = nice(val*(.6+.3*R())); hi = nice(val*(1.08+.5*R())); }
-  const cat = itemCat(d, mystery), ks = pickRivals(cat, head);
-  return {id:uid(), mystery, head:!!head, item:mystery?"storage":d.id, cm, val, lo, hi, cat, appr:false,
+  const cat = itemCat(d, mystery), ks = pickRivals(cat, head, sec), light = !head && R() < .18;
+  return {id:uid(), sec, mystery, head:!!head, item:mystery?"storage":d.id, cm, val, lo, hi, cat, appr:false,
     fee:Math.max(5, nice((lo+hi)/2*.03)), open:Math.max(5, nice(lo*.45)),
-    rivals:ks.map(k => ({k, max:rivalMax(k,cat,ref)})), exp:t+(head?30:5+R()*6)*MIN};
+    light, rivals:ks.map(k => ({k, max:rivalMax(k,cat,ref)*(light?.55+.25*R():1)})), exp:t+(head?30:5+R()*6)*MIN};
 }
 function lotName(L){ return L.mystery ? "Mystery Storage Unit" : ITEMM[L.item].n; }
 function lotIcon(L){ return L.mystery ? "📦" : ITEMM[L.item].e; }
@@ -653,12 +660,16 @@ function lotsTick(t){
   let ch = false;
   if (!S.lots){ S.lots = []; delete S.auc; }
   if (!S.nextHead) S.nextHead = t + (25+Math.random()*20)*MIN;
+  if (!S.secNext || typeof S.secNext !== "object") S.secNext = {};
+  S.lots.forEach(L => { if (!L.sec) L.sec = L.head ? "priv" : "main"; });
   const n0 = S.lots.length; S.lots = S.lots.filter(L => L.exp > t); if (S.lots.length !== n0) ch = true;
-  if (t >= S.nextHead && !S.lots.some(L => L.head)){ S.lots.unshift(newLot(t, true)); S.nextHead = t + (2.5+Math.random()*1.5)*H; ch = true; toast("A headline lot just arrived at the auction house"); }
-  const normal = () => S.lots.filter(L => !L.head).length;
-  if (!S.lotInit){ while (normal() < 3) S.lots.push(newLot(t, false)); S.lotInit = 1; S.nextLot = t + (3+Math.random()*2)*MIN; ch = true; }
-  while (normal() < 3 && t >= S.nextLot){ S.lots.push(newLot(t, false)); S.nextLot = Math.max(S.nextLot, t-10*MIN) + (3+Math.random()*2)*MIN; ch = true; }
-  if (normal() >= 3 && S.nextLot < t) S.nextLot = t + (3+Math.random()*2)*MIN;
+  if (t >= S.nextHead && !S.lots.some(L => L.head)){ S.lots.unshift(newLot(t, true)); S.nextHead = t + (2.5+Math.random()*1.5)*H; ch = true; toast("A headline lot just arrived in Private Sale"); }
+  Object.keys(SECS).forEach(sec => {
+    const have = () => S.lots.filter(L => L.sec===sec && !L.head).length, gap = sec==="priv" ? [6,4] : [3,2];
+    if (S.secNext[sec] === undefined){ while (have() < SECS[sec].q) S.lots.push(newLot(t, false, sec)); S.secNext[sec] = t + (gap[0]+Math.random()*gap[1])*MIN; ch = true; }
+    while (have() < SECS[sec].q && t >= S.secNext[sec]){ S.lots.push(newLot(t, false, sec)); S.secNext[sec] = Math.max(S.secNext[sec], t-10*MIN) + (gap[0]+Math.random()*gap[1])*MIN; ch = true; }
+    if (have() >= SECS[sec].q && S.secNext[sec] < t) S.secNext[sec] = t + (gap[0]+Math.random()*gap[1])*MIN;
+  });
   return ch;
 }
 function appraise(id){
@@ -669,12 +680,12 @@ function appraise(id){
 function enterRoom(id){
   const L = S.lots.find(x => x.id===id); if (!L || S.room) return; const t = Date.now();
   S.lots = S.lots.filter(x => x.id!==id);
-  S.room = Object.assign({}, L, {cur:L.open, top:null, stage:0, quiet:t, npcAt:t+3500+Math.random()*3000, bids:0, done:null,
+  S.room = Object.assign({}, L, {cur:L.open, top:null, stage:0, quiet:t, npcAt:t+2500+Math.random()*2000, bids:0, done:null,
     rivals:L.rivals.map(r => ({k:r.k, max:r.max, out:false})), log:[`Bidding opens at ${money(L.open)}.`]});
 }
-const stageOf = (R,t) => { const q = t - R.quiet; return q < 6000 ? 0 : q < 10000 ? 1 : q < 14000 ? 2 : 3; };
+const stageOf = (R,t) => { const q = t - R.quiet; return q < 4500 ? 0 : q < 7500 ? 1 : q < 10500 ? 2 : 3; };
 function rlog(R, s){ R.log.unshift(s); if (R.log.length > 7) R.log.length = 7; }
-function dropWeak(R, need){ let ch=false; R.rivals.forEach(r => { if (!r.out && r.k!==R.top && r.max < need){ r.out = true; rlog(R, `${RIVALS[r.k].n} is out.`); ch = true; } }); return ch; }
+function dropWeak(R, need){ let ch=false; R.rivals.forEach(r => { if (r.out || r.k===R.top) return; if (r.max < need || (need > r.max*.9 && Math.random() < .15)){ r.out = true; rlog(R, `${RIVALS[r.k].n} ${r.max < need ? "is out" : "shakes their head"}.`); ch = true; } }); return ch; }
 function roomStep(t){
   const R = S.room; if (!R || R.done) return false; let ch = false;
   if (t >= (R.npcAt||0)){
@@ -687,7 +698,7 @@ function roomStep(t){
       if (big) amt = R.cur+3*inc;
       R.cur = amt; R.top = r.k; R.quiet = t; R.stage = 0; R.bids++;
       rlog(R, `${RIVALS[r.k].n} ${big?"jumps to":"bids"} ${money(amt)}.`); if (Math.random() < .22) rlog(R, `${RIVALS[r.k].e} "${RIVALS[r.k].q}"`); sfx("bid"); ch = true;
-      R.npcAt = t + (2800 + Math.random()*3200) * (RIVALS[r.k].spd||1);
+      R.npcAt = t + (1800 + Math.random()*2400) * (RIVALS[r.k].spd||1);
     } else R.npcAt = FAR;
   }
   const st = stageOf(R,t);
@@ -704,7 +715,7 @@ function roomBid(kind){
   if (k>0) R.rivals.forEach(r => { if (r.out) return;
     let p = RIVALS[r.k].fold * clamp((amt/r.max-.45)/.5,0,1) * (k===2?1:.35); if (RIVALS[r.k].love && RIVALS[r.k].love.test(R.cat)) p *= .3;
     if (Math.random() < p){ r.out = true; rlog(R, `${RIVALS[r.k].n} folds.`); } });
-  R.npcAt = t + (k===2 ? 5000+Math.random()*5000 : k===1 ? 3000+Math.random()*3000 : 1800+Math.random()*2200);
+  R.npcAt = t + ((k===2 ? 3500+Math.random()*4500 : k===1 ? 2200+Math.random()*2800 : 1500+Math.random()*2000) * (R.light ? 1.6 : 1));
 }
 function finishRoom(t){
   const R = S.room, name = lotName(R);
@@ -921,7 +932,7 @@ const LIVE = {
   reno: u => { const p=S.props.find(x=>x.uid===u); return p&&p.renoUntil>Date.now()?`Renovating, ${dur(p.renoUntil-Date.now())} left`:""; },
   lot: id => { const L=S.lots.find(x=>x.id===id); return L?dur(L.exp-Date.now()):"Gone"; },
   head: () => dur(S.nextHead-Date.now()),
-  nlot: () => dur(S.nextLot-Date.now()),
+  nlot: sec => dur((S.secNext||{})[sec]-Date.now()),
   port: () => money(stockVal()),
   offx: u => { const th=thingOf(u); return th&&th.ls&&th.ls.off?dur(th.ls.off.exp-Date.now()):""; }
 };
@@ -1029,12 +1040,15 @@ function lotCard(L){
 }
 function viewAuctions(){
   const head = S.lots.some(L=>L.head);
+  const sect = sec => { const ls = S.lots.filter(L=>L.sec===sec).sort((a,b)=>(b.head?1:0)-(a.head?1:0)), short = ls.filter(L=>!L.head).length < SECS[sec].q;
+    return `<section class="sec"><div class="sechead"><h2>${SECS[sec].n}</h2><small>${SECS[sec].d}</small></div>
+    ${ls.length?`<div class="list">${ls.map(lotCard).join("")}</div>`:""}
+    ${short?`<div class="empty">Next ${SECS[sec].n.toLowerCase()} lot in <b class="num goldt" data-live="nlot:${sec}">${dur(S.secNext[sec]-Date.now())}</b></div>`:""}
+    ${sec==="priv"&&!head?`<p class="note">Next headline lot in <b class="num goldt" data-live="head"></b>. Rare, top-condition pieces.</p>`:""}</section>`; };
   return `<section class="sec" style="margin-top:4px"><div class="sechead"><h2>Auction house</h2><small>Cash <b class="num em" data-live="cash"></b></small></div>
   ${S.room?`<button class="btn gold" data-act="roomBack">Back to the live auction</button>`:""}
-  ${S.lots.length?`<div class="list">${S.lots.map(lotCard).join("")}</div>`:`<div class="empty">The floor is clear.</div>`}
-  ${S.lots.filter(L=>!L.head).length<3?`<p class="note">Next lot arrives in <b class="num goldt" data-live="nlot"></b>.</p>`:""}
-  ${head?"":`<p class="note">Next headline lot in <b class="num goldt" data-live="head"></b>. Headline lots are rare, top-condition pieces.</p>`}
-  <p class="note">The auction starts when you enter the room and takes about a minute. The estimate is a guess, so the true value is only revealed after the gavel. You pay only if you win.</p></section>
+  <p class="note">Pick a lot and enter the room. The auction starts then and takes a minute or two. The estimate is a guess; the true value shows after the gavel. You pay only if you win.</p></section>
+  ${sect("bin")}${sect("main")}${sect("priv")}
   <section class="sec"><div class="sechead"><h2>Results</h2></div>${S.aucLog.length?`<div class="list">${S.aucLog.map(r=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(r.n)}</strong><span>${ago(r.t)}${r.v?` · worth ${money(r.v)}`:""}</span></div><div class="rside"><b class="num ${r.won?"up":""}">${money(r.a)}</b><span class="pill ${r.won?(r.verdict==="You overpaid"?"r":"g"):"m"}">${r.won?(r.verdict||"Won"):"Sold to rival"}</span></div></div>`).join("")}</div>`:`<div class="empty">Finished auctions show here, with what each lot was really worth.</div>`}</section>`;
 }
 
@@ -1151,7 +1165,7 @@ function sheetRoom(){ return () => {
   const b = (k,name,add) => `<button class="btn stk${k===2?" gold":""}" data-act="rbid" data-arg="${k}" ${R.cur+add>S.cash?"disabled":""}><span>${name}</span><small>${money(R.cur+add)}</small></button>`;
   return `${top}
   <div class="bidbox${lead?" lead":R.top?" behind":""}"><span class="lbl">${R.top?"Current bid":"Opening bid"}</span><b class="num">${money(R.cur)}</b><span class="pill ${lead?"":R.top?"r":"m"}">${lead?"You lead":R.top?RIVALS[R.top].n+" leads":"No bids yet"}</span></div>
-  <div class="call s${R.stage}"><i></i><i></i><i></i><span>${call}</span></div>
+  <div class="call s${R.stage}"><i></i><i></i><i></i><span>${call}</span></div>${R.light?`<p class="note" style="text-align:center;margin:-6px 0 0">The room feels quiet tonight...</p>`:""}
   <div class="rivals">${R.rivals.map(r=>`<span class="rv${r.out?" out":""}${R.top===r.k?" top":""}">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>
   ${lead?`<button class="btn" disabled>You have the top bid</button>`:!R.top?`<button class="btn" data-act="rbid" data-arg="0" ${R.cur>S.cash?"disabled":""}>Open at ${money(R.cur)}</button>`:`<div class="btns three">${b(0,"Nudge",inc)}${b(1,"Raise",3*inc)}${b(2,"Jump",8*inc)}</div>`}
   <p class="note" style="text-align:center">A nudge gets a fast answer. A jump costs more, but it can scare rivals out of the room. Cash: <b class="num em" data-live="cash">${money(S.cash)}</b></p>
@@ -1214,7 +1228,7 @@ const GUIDE = [
     "Tap one to see its chart. Spend a slice of your cash with <b>10%, 25%, 50% or All</b>, or <b>type any dollar amount</b>.",
     "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
   {tab:"auctions",e:"🔨",t:"Auctions",p:"Bid against rival buyers.",l:[
-    "Pick a lot and <b>enter the room</b>. The auction starts right then and takes a minute or two.",
+    "Three sections: <b>Bargain Bin</b> for cheap flips, <b>Main Floor</b> for lots at your rank, and <b>Private Sale</b> for big-money pieces above your rank. Pick a lot and <b>enter the room</b>.",
     "<b>Nudge, Raise or Jump.</b> Small bids get fast answers. A jump costs more but can scare rivals out.",
     "After the last bid the auctioneer calls <b>going once, going twice, SOLD</b>. Any new bid resets the call.",
     "<b>30 rival bidders</b>, each with a style. Bargain hunters quit early, specialists overpay for what they love (Sneakerhead Sam and sneakers, Grandma Rose and antiques), and big spenders like The Whale rarely lose. Each lot shows who's in the room.",
