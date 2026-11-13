@@ -104,6 +104,10 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .btns .btn{min-height:46px;padding:0 8px;font-size:14px}
 .btn.stk{flex-direction:column;gap:1px;min-height:56px;line-height:1.1}
 .btn.stk small{font-size:11.5px;font-weight:700;opacity:.75}
+.amtrow{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:4px 4px 4px 14px}
+.amtrow .dollar{font:800 18px var(--display);color:var(--muted)}
+.amtrow input{flex:1;min-width:0;background:none;border:0;color:var(--text);font:700 17px var(--body);padding:10px 0;outline:none}
+.amtrow .btn{width:auto;min-height:44px;padding:0 20px}
 .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-2px;padding:2px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:10px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:800;font-size:13.5px}
@@ -156,8 +160,25 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .ms div.got b{color:var(--em)}
 .ms div span{color:var(--muted)}
 .timer{font-weight:800;color:var(--gold)}
-.aucbid{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
-.aucbid b{font:700 20px/1.1 var(--display)}
+.scrim.still,.scrim.still .sheet{animation:none}
+.lot{display:flex;flex-direction:column;gap:12px}
+.lot.head{border-color:var(--gold-deep);background:linear-gradient(180deg,#1f1a0d,var(--surface))}
+.bidbox{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px;border-radius:16px;background:var(--surface2);border:1px solid var(--line)}
+.bidbox b{font:800 clamp(28px,9vw,36px)/1 var(--display)}
+.bidbox.lead{border-color:var(--em-deep)}.bidbox.behind{border-color:rgba(255,107,98,.45)}
+.call{display:flex;align-items:center;justify-content:center;gap:8px;font:700 14px var(--display);color:var(--muted);min-height:22px}
+.call i{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+.call span{margin-left:4px}
+.call.s1 i:nth-child(1),.call.s2 i:nth-child(-n+2){background:var(--gold)}
+.call.s1 span,.call.s2 span{color:var(--gold)}
+.rivals{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.rv{font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
+.rv.out{opacity:.4;text-decoration:line-through}.rv.top{border-color:var(--red);color:var(--red)}
+.sold{font:800 42px/1 var(--display);color:var(--gold);letter-spacing:.06em;transform:rotate(-6deg);border:4px solid var(--gold);border-radius:12px;padding:8px 18px;align-self:center;animation:stamp .35s cubic-bezier(.2,1.6,.4,1)}
+.scrim.still .sold{animation:none}
+@keyframes stamp{from{transform:rotate(-6deg) scale(2.2);opacity:0}}
+.rlog{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dim);min-height:108px}
+.rlog div:first-child{color:var(--text);font-weight:700}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes drop{from{transform:translate(-50%,-20px);opacity:0}}
@@ -246,14 +267,14 @@ const PROP = [
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
-  {id:"hatch",c:"veh",n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-.0012,carry:.00012},
-  {id:"sedan",c:"veh",n:"Family Sedan",e:"🚙",t:2,base:24000,a:-.0008,carry:.00012},
-  {id:"coupe",c:"veh",n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-.0004,carry:.00015},
-  {id:"lux",c:"veh",n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-.0006,carry:.00015},
-  {id:"classic",c:"veh",n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
-  {id:"super",c:"veh",n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
-  {id:"hyper",c:"veh",n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
-  {id:"proto",c:"veh",n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
+  {id:"hatch",c:"veh",vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-.0012,carry:.00012},
+  {id:"sedan",c:"veh",vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-.0008,carry:.00012},
+  {id:"coupe",c:"veh",vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-.0004,carry:.00015},
+  {id:"lux",c:"veh",vb:6,n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-.0006,carry:.00015},
+  {id:"classic",c:"veh",vb:6,n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
+  {id:"super",c:"veh",vb:10,n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
+  {id:"hyper",c:"veh",vb:10,n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
+  {id:"proto",c:"veh",vb:10,n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
   {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0,hidden:true},
   {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0,hidden:true},
   {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0,hidden:true},
@@ -332,7 +353,7 @@ let S;
 function fresh(){
   const t = Date.now(), stk = {};
   STK.forEach(x => { stk[x.s] = {n: Math.floor(t/MIN) - 120, p: x.p, hist: []}; });
-  return {v:1,cash:100,created:t,last:t,peak:100,lvl:0,earned:0,biz:{},props:[],items:[],hold:{},stk,auc:[],aucLog:[],mods:[],sold:[],ach:{},tx:[],hist:[[t,100]],nextEv:t+5*MIN,shifts:0,shiftAt:0,news:[],realized:0,flips:0,aucWins:0,evs:0,pending:0,pendingAt:t};
+  return {v:1,cash:100,created:t,last:t,peak:100,lvl:0,earned:0,biz:{},props:[],items:[],hold:{},stk,lots:[],room:null,nextHead:0,lotInit:0,nextLot:0,aucLog:[],mods:[],sold:[],ach:{},tx:[],hist:[[t,100]],nextEv:t+5*MIN,shifts:0,shiftAt:0,news:[],realized:0,flips:0,aucWins:0,evs:0,pending:0,pendingAt:t};
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 function load(){ try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v === 1) return j; } catch(e){} return null; }
@@ -342,7 +363,9 @@ function tx(type, desc, amt){ S.tx.unshift({t:Date.now(),type,desc,amt,bal:S.cas
 const bizMult = l => 1 + .5*l, expMult = l => 1 + .3*l;
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
-function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*o.n*bizMult(o.l)*setBonus() : 0; }
+function vehBonus(){ return 1 + S.items.reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
+const hasRide = () => S.items.some(i => ITEMM[i.id].c==="veh");
+function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*o.n*bizMult(o.l)*setBonus()*vehBonus() : 0; }
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*o.n*expMult(o.l) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
@@ -427,7 +450,7 @@ function advance(t){
   { const w = "-" + win(t) + "-"; S.sold = S.sold.filter(l => l.includes(w)); }
   S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t && p.cond < 100){ p.cond = 100; toast(`${p.name} renovation finished`, true); } });
   const sc = stepStocks(t);
-  const ac = auctionsTick(t);
+  const ac = lotsTick(t) | listingsTick(t);
   if (t - S.pendingAt >= 5*MIN){ if (Math.abs(S.pending) >= .01){ tx("income","Passive income",S.pending); S.tx[0].parts = Object.entries(S.pendParts||{}).filter(p=>Math.abs(p[1])>=.01).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])); } S.pending=0; S.pendParts={}; S.pendingAt=t; }
   progress();
   sample(t);
@@ -504,6 +527,8 @@ const A = {
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0}); b.n++; b.spent+=c; },
   bizUp(id){ const o=S.biz[id]; if (!o || o.l>=5) return; const c=upCost(id); if (!spend(c,"buy",`Upgraded ${BIZM[id].n} to level ${o.l+1}`)) return; o.l++; o.spent+=c; },
+  bizBuyN(id,k){ for (let i=0;i<k;i++){ const o=S.biz[id]; if ((o?o.n:0)>=25 || unitCost(id)>S.cash+1e-6) break; A.bizBuy(id); } },
+  bizSellN(id,k){ for (let i=0;i<k && S.biz[id];i++) A.bizSell(id); },
   bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*.6; o.spent -= o.spent/o.n; o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
@@ -512,60 +537,223 @@ const A = {
   itemBuy(c,lid){ const L=itemListings(c).find(x=>x.lid===lid); if (!L) return; const d=ITEMM[L.id]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.items.push({uid:uid(),id:L.id,cm:L.cm,base:L.base,at:Date.now(),paid:L.ask}); },
   itemSell(u){ const i=S.items.findIndex(x=>x.uid===u); if (i<0) return; const it=S.items[i]; const v=itemVal(it); S.items.splice(i,1); gain(v,"sell",`Sold ${it.name||ITEMM[it.id].n}`); },
   stkBuy(s,f){ const amt = S.cash*f; if (amt < .01) { toast("Not enough cash"); return; } const p=S.stk[s].p; if (!spend(amt,"buy",`Bought ${s}`)) return; const h=S.hold[s]||(S.hold[s]={sh:0,cost:0}); h.sh += amt/p; h.cost += amt; },
-  stkSell(s,f){ const h=S.hold[s]; if (!h || h.sh<=0) return; const sh=h.sh*f, p=S.stk[s].p, v=sh*p, basis=h.cost*f; S.realized += v-basis; h.sh-=sh; h.cost-=basis; if (h.sh < 1e-9 || f>=1) delete S.hold[s]; gain(v,"sell",`Sold ${s} (${signed(v-basis)})`); },
-  bid(id, add){ const L=S.auc.find(x=>x.id===id); if (!L || Date.now()>=L.end || L.top==="you") return; const amt=myBid(L, add); if (amt > S.cash){ toast("Not enough cash for that bid"); return; } L.cur=amt; L.top="you"; L.hist.unshift({w:"you",a:amt,t:Date.now()}); if (L.end-Date.now() < 15000) L.end += 15000; L.nextNpc = Date.now() + 3000 + Math.random()*6000; }
+  stkSell(s,f){ const h=S.hold[s]; if (!h || h.sh<=0) return; const sh=h.sh*f, p=S.stk[s].p, v=sh*p, basis=h.cost*f; S.realized += v-basis; h.sh-=sh; h.cost-=basis; if (h.sh < 1e-9 || f>=1) delete S.hold[s]; gain(v,"sell",`Sold ${s} (${signed(v-basis)})`); }
 };
-const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*100)/100;
+const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*(hasRide()?2:1)*100)/100;
 
-/* ================= auctions ================= */
-const nextBid = L => L.top ? L.cur + incr(L.cur) : L.cur;
-const MINRAISE = 2.5;
-const myBid = (L, add) => L.top ? L.cur + (add || MINRAISE) : L.cur;
-function incr(c){ const raw=Math.max(10,c*.05), mag=Math.pow(10,Math.floor(Math.log10(raw))); return Math.ceil(raw/mag)*mag; }
-function newLot(t, k){
-  const mystery = Math.random() < .2;
-  const pool = ITEMS.filter(i => !i.hidden && i.t <= S.lvl);
-  const d = pool[Math.floor(Math.random()*pool.length)] || ITEMM.ball;
-  const cm = COND[Math.floor(Math.random()*4)][0];
-  const val = mystery ? Math.max(200, (S.peak*.04)*(.5+Math.random())) : d.base*cm*wob(d.id,t);
-  const start = Math.max(10, Math.round(val*.35));
-  return {id:uid(), mystery, item:mystery?"storage":d.id, cm, val, cur:start, top:null, end:t+(4+Math.random()*7)*MIN+k*45000, npcMax:val*(.78+Math.random()*.4), bidders:2+Math.floor(Math.random()*9), hist:[], nextNpc:t+8000+Math.random()*20000};
+/* ================= auctions: live room ================= */
+const RIVALS = {
+  flip:{n:"The Flipper",e:"🤑",lo:.74,hi:.9,fold:.7,spd:1,q:"I need room to resell."},
+  deal:{n:"The Dealer",e:"🕶️",lo:.9,hi:1.02,fold:.28,spd:1,q:"I know what this is worth."},
+  rook:{n:"The Rookie",e:"🙋",lo:.6,hi:1.3,fold:.5,spd:.8,jump:.2,q:"Is this how it works?"},
+  coll:{n:"The Collector",e:"🧐",lo:.72,hi:.96,love:/watch|gem|art|comic/,llo:1.02,lhi:1.32,fold:.15,spd:1.2,q:"It completes my set."},
+  whale:{n:"The Whale",e:"🐋",lo:1.06,hi:1.46,fold:.04,spd:1.4,jump:.5,rare:1,q:"Price is no object."},
+  rose:{n:"Grandma Rose",e:"👵",lo:.5,hi:.8,love:/vint|wood/,llo:1,lhi:1.25,fold:.3,spd:1.6,q:"My late husband had one just like it."},
+  tyler:{n:"Tech Bro Tyler",e:"💻",lo:.7,hi:1,love:/kicks|comic/,llo:.95,lhi:1.3,fold:.6,spd:.6,jump:.35,q:"Easy money."},
+  baron:{n:"The Oil Baron",e:"🛢️",lo:1,hi:1.35,fold:.1,spd:1.3,jump:.4,rare:1,q:"Put it on my tab."},
+  carl:{n:"Coupon Carl",e:"✂️",lo:.45,hi:.7,fold:.9,spd:.5,q:"Any discount for cash?"},
+  pawn:{n:"The Pawn Shop Guy",e:"🏪",lo:.55,hi:.8,fold:.8,spd:.9,q:"Best I can do."},
+  sam:{n:"Sneakerhead Sam",e:"👟",lo:.6,hi:.85,love:/kicks/,llo:1.05,lhi:1.4,fold:.25,spd:.7,jump:.2,q:"These are grails."},
+  kev:{n:"Comic Kid Kev",e:"🦸",lo:.5,hi:.8,love:/comic/,llo:1,lhi:1.3,fold:.35,spd:.7,q:"First appearance!"},
+  ashford:{n:"Lady Ashford",e:"💎",lo:.75,hi:.95,love:/gem|watch/,llo:1,lhi:1.3,fold:.2,spd:1.3,q:"How charming."},
+  curator:{n:"The Museum Curator",e:"🏛️",lo:.7,hi:.95,love:/art|vint/,llo:.95,lhi:1.25,fold:.25,spd:1.6,q:"For the permanent collection."},
+  hank:{n:"Hedge Fund Hank",e:"📈",lo:.85,hi:1.1,fold:.35,spd:.8,jump:.3,q:"Diversifying."},
+  influ:{n:"The Influencer",e:"🤳",lo:.7,hi:1.2,fold:.55,spd:.6,jump:.3,q:"Hold on, I'm going live."},
+  sal:{n:"Sports Nut Sal",e:"🏟️",lo:.6,hi:.85,love:/sig/,llo:1,lhi:1.3,fold:.3,spd:.8,q:"I was at that game!"},
+  wood:{n:"The Woodworker",e:"🪵",lo:.55,hi:.8,love:/wood/,llo:1,lhi:1.25,fold:.35,spd:1.2,q:"Look at that grain."},
+  rita:{n:"Retro Rita",e:"📻",lo:.6,hi:.85,love:/vint/,llo:1,lhi:1.3,fold:.3,spd:1,q:"They don't make them like this anymore."},
+  carlos:{n:"Car Guy Carlos",e:"🏎️",lo:.6,hi:.85,love:/veh/,llo:1,lhi:1.25,fold:.3,spd:.9,jump:.2,q:"Listen to that engine."},
+  hunter:{n:"The Antique Hunter",e:"🔍",lo:.8,hi:1.05,love:/vint|wood|art/,llo:.95,lhi:1.15,fold:.35,spd:1.3,q:"Hm. Interesting."},
+  lawyer:{n:"The Lawyer",e:"⚖️",lo:.8,hi:1,fold:.4,spd:1.4,q:"Objection."},
+  lotto:{n:"The Lottery Winner",e:"🎰",lo:.5,hi:1.5,fold:.5,spd:.6,jump:.45,q:"I'm feeling lucky!"},
+  oliver:{n:"Old Money Oliver",e:"🎩",lo:.95,hi:1.2,fold:.1,spd:1.6,q:"Quite."},
+  bargain:{n:"The Bargain Hunter",e:"🏷️",lo:.5,hi:.75,fold:.85,spd:.7,q:"Not a penny more."},
+  spec:{n:"The Speculator",e:"🎲",lo:.75,hi:1.05,fold:.5,spd:.9,jump:.2,q:"It'll be worth double next year."},
+  phone:{n:"The Phone Bidder",e:"📞",lo:.8,hi:1.3,fold:.2,spd:1.5,q:"(whispers into the phone)"},
+  celeb:{n:"The Celebrity",e:"🌟",lo:.9,hi:1.4,fold:.3,spd:1,jump:.4,rare:1,q:"Do you know who I am?"},
+  founder:{n:"The Startup Founder",e:"🚀",lo:.7,hi:1.15,fold:.6,spd:.7,jump:.35,q:"We're pre-revenue, but sure."},
+  snob:{n:"The Watch Snob",e:"⌚",lo:.6,hi:.85,love:/watch/,llo:1.05,lhi:1.35,fold:.2,spd:1.2,q:"The movement is exquisite."}
+};
+const RKEYS = Object.keys(RIVALS);
+const FAR = 1e15;
+function itemCat(d, mystery){ if (mystery) return "box"; if (d.c==="veh") return "veh"; if (d.set==="watch") return "watch"; if (d.id==="paint") return "art"; if (d.id==="fossil") return "vint"; const m=/^g-([a-z]+)-/.exec(d.id); return m ? m[1] : "misc"; }
+function pickRivals(cat, head){
+  const R = Math.random, n = head ? 3+Math.floor(R()*3) : [1,2,2,3,3,3,4,4,5][Math.floor(R()*9)];
+  const pool = RKEYS.filter(k => !RIVALS[k].rare || head || R() < .12), out = [];
+  const lovers = pool.filter(k => RIVALS[k].love && RIVALS[k].love.test(cat));
+  if (lovers.length && R() < .55) out.push(lovers[Math.floor(R()*lovers.length)]);
+  while (out.length < n){ const k = pool[Math.floor(R()*pool.length)]; if (!out.includes(k)) out.push(k); }
+  return out;
+}
+function rivalMax(k, cat, ref){ const v = RIVALS[k], R = Math.random(); return v.love && v.love.test(cat) ? ref*(v.llo+(v.lhi-v.llo)*R) : ref*(v.lo+(v.hi-v.lo)*R); }
+function step(c){ const raw=c*.03; if (raw<=2.5) return 2.5; const mag=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/mag; return (m<=1?1:m<=2.5?2.5:m<=5?5:10)*mag; }
+function nice(x){ if (x<10) return Math.max(1,Math.round(x)); const mag=Math.pow(10,Math.floor(Math.log10(x))-1); return Math.round(x/mag)*mag; }
+function newLot(t, head){
+  const R = Math.random, mystery = !head && R() < .18;
+  let pool = ITEMS.filter(i => !i.hidden && (head ? i.t === Math.min(8,S.lvl+1) : i.t <= S.lvl));
+  if (!pool.length) pool = ITEMS.filter(i => !i.hidden && i.t <= S.lvl+1);
+  const d = pool[Math.floor(R()*pool.length)];
+  const cm = head ? COND[3][0] : COND[Math.floor(R()*4)][0];
+  let val, ref, lo, hi;
+  if (mystery){ ref = Math.max(200, S.peak*.04*(.5+R())); val = ref*(.3+R()*1.9); lo = nice(ref*.3); hi = nice(ref*2.2); }
+  else { val = d.base*cm*wob(d.id,t); ref = val; lo = nice(val*(.6+.3*R())); hi = nice(val*(1.08+.5*R())); }
+  const cat = itemCat(d, mystery), ks = pickRivals(cat, head);
+  return {id:uid(), mystery, head:!!head, item:mystery?"storage":d.id, cm, val, lo, hi, cat, appr:false,
+    fee:Math.max(5, nice((lo+hi)/2*.03)), open:Math.max(5, nice(lo*.45)),
+    rivals:ks.map(k => ({k, max:rivalMax(k,cat,ref)})), exp:t+(head?30:5+R()*6)*MIN};
 }
 function lotName(L){ return L.mystery ? "Mystery Storage Unit" : ITEMM[L.item].n; }
 function lotIcon(L){ return L.mystery ? "📦" : ITEMM[L.item].e; }
-function auctionsTick(t){
-  let changed=false;
-  while (S.auc.length < 3){ S.auc.push(newLot(t, S.auc.length)); changed=true; }
-  S.auc.forEach(L => {
-    if (t >= L.end) return;
-    if (t >= L.nextNpc){
-      const want = L.top==="you" ? nextBid(L) <= L.npcMax : (L.top===null || L.cur < L.npcMax*.72);
-      if (want && nextBid(L) <= L.npcMax){ const a=nextBid(L); L.cur=a; L.top="npc"; L.hist.unshift({w:"bidder",a,t}); if (L.hist.length>12) L.hist.length=12; changed=true; if (L.end - t < 15000) L.end += 15000; }
-      L.nextNpc = t + (L.top==="you" ? 3000+Math.random()*7000 : 15000+Math.random()*35000);
+function lotsTick(t){
+  let ch = false;
+  if (!S.lots){ S.lots = []; delete S.auc; }
+  if (!S.nextHead) S.nextHead = t + (25+Math.random()*20)*MIN;
+  const n0 = S.lots.length; S.lots = S.lots.filter(L => L.exp > t); if (S.lots.length !== n0) ch = true;
+  if (t >= S.nextHead && !S.lots.some(L => L.head)){ S.lots.unshift(newLot(t, true)); S.nextHead = t + (2.5+Math.random()*1.5)*H; ch = true; toast("A headline lot just arrived at the auction house"); }
+  const normal = () => S.lots.filter(L => !L.head).length;
+  if (!S.lotInit){ while (normal() < 3) S.lots.push(newLot(t, false)); S.lotInit = 1; S.nextLot = t + (3+Math.random()*2)*MIN; ch = true; }
+  while (normal() < 3 && t >= S.nextLot){ S.lots.push(newLot(t, false)); S.nextLot = Math.max(S.nextLot, t-10*MIN) + (3+Math.random()*2)*MIN; ch = true; }
+  if (normal() >= 3 && S.nextLot < t) S.nextLot = t + (3+Math.random()*2)*MIN;
+  return ch;
+}
+function appraise(id){
+  const L = S.lots.find(x => x.id===id); if (!L || L.appr || L.mystery) return;
+  if (!spend(L.fee,"buy",`Appraisal: ${lotName(L)}`)) return;
+  L.appr = true; L.lo = nice(L.val*(.93+.05*Math.random())); L.hi = nice(L.val*(1.02+.06*Math.random()));
+}
+function enterRoom(id){
+  const L = S.lots.find(x => x.id===id); if (!L || S.room) return; const t = Date.now();
+  S.lots = S.lots.filter(x => x.id!==id);
+  S.room = Object.assign({}, L, {cur:L.open, top:null, stage:0, quiet:t, npcAt:t+3500+Math.random()*3000, bids:0, done:null,
+    rivals:L.rivals.map(r => ({k:r.k, max:r.max, out:false})), log:[`Bidding opens at ${money(L.open)}.`]});
+}
+const stageOf = (R,t) => { const q = t - R.quiet; return q < 6000 ? 0 : q < 10000 ? 1 : q < 14000 ? 2 : 3; };
+function rlog(R, s){ R.log.unshift(s); if (R.log.length > 7) R.log.length = 7; }
+function dropWeak(R, need){ let ch=false; R.rivals.forEach(r => { if (!r.out && r.k!==R.top && r.max < need){ r.out = true; rlog(R, `${RIVALS[r.k].n} is out.`); ch = true; } }); return ch; }
+function roomStep(t){
+  const R = S.room; if (!R || R.done) return false; let ch = false;
+  if (t >= (R.npcAt||0)){
+    const inc = step(R.cur), need = R.top ? R.cur+inc : R.cur;
+    if (dropWeak(R, need)) ch = true;
+    const el = R.rivals.filter(r => !r.out && r.k!==R.top);
+    if (el.length){
+      const r = el[Math.floor(Math.random()*el.length)]; let amt = need;
+      const jp = RIVALS[r.k].jump||0, big = R.top && Math.random() < jp && R.cur+3*inc <= r.max;
+      if (big) amt = R.cur+3*inc;
+      R.cur = amt; R.top = r.k; R.quiet = t; R.stage = 0; R.bids++;
+      rlog(R, `${RIVALS[r.k].n} ${big?"jumps to":"bids"} ${money(amt)}.`); if (Math.random() < .22) rlog(R, `${RIVALS[r.k].e} "${RIVALS[r.k].q}"`); sfx("bid"); ch = true;
+      R.npcAt = t + (2800 + Math.random()*3200) * (RIVALS[r.k].spd||1);
+    } else R.npcAt = FAR;
+  }
+  const st = stageOf(R,t);
+  if (st !== R.stage){ R.stage = st; ch = true;
+    if (st===1){ rlog(R,"Going once..."); sfx("call"); } else if (st===2){ rlog(R,"Going twice..."); sfx("call"); } else if (st===3) finishRoom(t); }
+  return ch;
+}
+function roomBid(kind){
+  const R = S.room; if (!R || R.done || R.top==="you") return; const t = Date.now(), inc = step(R.cur);
+  const k = R.top ? kind : 0, add = !R.top ? 0 : k===2 ? 8*inc : k===1 ? 3*inc : inc, amt = R.cur+add;
+  if (amt > S.cash){ toast("Not enough cash for that bid"); return; }
+  R.cur = amt; R.top = "you"; R.quiet = t; R.stage = 0; R.bids++; rlog(R, `You bid ${money(amt)}${k===2?". The room goes quiet":""}.`); sfx("you");
+  dropWeak(R, amt+step(amt));
+  if (k>0) R.rivals.forEach(r => { if (r.out) return;
+    let p = RIVALS[r.k].fold * clamp((amt/r.max-.45)/.5,0,1) * (k===2?1:.35); if (RIVALS[r.k].love && RIVALS[r.k].love.test(R.cat)) p *= .3;
+    if (Math.random() < p){ r.out = true; rlog(R, `${RIVALS[r.k].n} folds.`); } });
+  R.npcAt = t + (k===2 ? 5000+Math.random()*5000 : k===1 ? 3000+Math.random()*3000 : 1800+Math.random()*2200);
+}
+function finishRoom(t){
+  const R = S.room, name = lotName(R);
+  if (R.top==="you"){
+    const pay = Math.min(R.cur, S.cash); S.cash -= pay; tx("buy",`Won auction: ${name}`,-pay); S.aucWins++;
+    const nm = R.mystery ? `Storage find (${["vintage guitar","antique clock","coin collection","arcade cabinet","signed jersey","crate of vinyl","old safe"][Math.floor(Math.random()*7)]})` : undefined;
+    S.items.push({uid:uid(), id:R.item, cm:R.mystery?1:R.cm, base:R.val/wob(R.item,t), at:t, paid:pay, name:nm});
+    const q = pay/R.val, verdict = q<=.8 ? "You stole it" : q<=1 ? "Good buy" : q<=1.15 ? "Fair price" : "You overpaid";
+    R.done = {won:true, pay, val:R.val, verdict, good:q<=1};
+    S.aucLog.unshift({t, n:name, won:true, a:pay, v:R.val, verdict});
+    sfx("gavel"); sfx(q<=1 ? "win" : "");
+  } else if (R.top){
+    R.done = {won:false, to:R.top, pay:R.cur, val:R.val};
+    S.aucLog.unshift({t, n:name, won:false, a:R.cur, v:R.val}); sfx("gavel");
+  } else R.done = {passed:true};
+  rlog(R, R.top ? "SOLD!" : "No bids. Lot withdrawn.");
+  if (S.aucLog.length > 12) S.aucLog.length = 12;
+}
+/* the app was closed mid-auction: play it out from where it stopped, without the player */
+function settleRoom(){
+  const R = S.room; if (!R) return;
+  if (!R.done){ let t = R.quiet, g = 0; while (!R.done && g++ < 2000){ t += 500; roomStep(t); } const d = R.done;
+    if (d && d.won) toast(`While you were out: you won ${lotName(R)} for ${money(d.pay)}`, true); else if (d && d.to) toast(`While you were out: ${lotName(R)} sold to ${RIVALS[d.to].n}`); }
+  S.room = null;
+}
+function leaveRoom(){
+  const R = S.room; if (!R) return;
+  if (!R.done){ if (R.top==="you") return; if (R.top) S.aucLog.unshift({t:Date.now(), n:lotName(R), won:false, a:R.cur, v:R.val}); }
+  S.room = null; closeSheet();
+}
+let AC = null;
+function sfxInit(){ try { AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if (AC.state==="suspended") AC.resume(); } catch(e){} }
+function sfx(k){ if (!AC || !k) return; try { const t0 = AC.currentTime;
+  const tone = (f,d,at,type,g) => { const o=AC.createOscillator(), v=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f,t0+at); v.gain.setValueAtTime(g,t0+at); v.gain.exponentialRampToValueAtTime(.001,t0+at+d); o.connect(v); v.connect(AC.destination); o.start(t0+at); o.stop(t0+at+d+.02); };
+  if (k==="bid") tone(620,.08,0,"triangle",.08); else if (k==="you") tone(880,.1,0,"triangle",.1); else if (k==="call") tone(330,.14,0,"sine",.09);
+  else if (k==="gavel"){ tone(150,.1,0,"square",.22); tone(110,.2,.15,"square",.28); }
+  else if (k==="win") [523,659,784,1047].forEach((f,i) => tone(f,.2,.4+i*.09,"triangle",.12)); } catch(e){} }
+
+/* ================= selling: list at your price, buyers decide ================= */
+const LIST_PCTS = [.9,1,1.1,1.25,1.5,2];
+let listPick = {}, listCustom = {};
+const thingOf = u => S.items.find(x=>x.uid===u) || S.props.find(x=>x.uid===u);
+const isProp = th => !!th.type;
+const thingVal = (th,t) => isProp(th) ? propVal(th,t) : itemVal(th,t);
+const thingName = th => isProp(th) ? th.name : (th.name || ITEMM[th.id].n);
+/* chance per minute that a buyer pays the asking price */
+function saleRate(ratio, prop){ const r=Math.max(ratio,.3); return clamp(.12*Math.pow(.9/r,8)*(r>1.2?Math.exp(-(r-1.2)*8):1), 0, .5) * (prop ? .5 : 1); }
+function sellOdds(ratio, prop){ const p = saleRate(ratio, prop); if (p <= 0) return "Won't sell"; const mins = 1/p;
+  return mins < 12 ? "Sells fast" : mins < 45 ? "Likely within the hour" : mins < 180 ? "Could take a few hours" : mins < 720 ? "Could take most of a day" : "Long shot"; }
+function listThing(u, price){ const th = thingOf(u); if (!th || price <= 0) return; if (isProp(th) && th.renoUntil > Date.now()){ toast("Wait for the renovation to finish"); return; }
+  const t = Date.now(); th.ls = {p:price, at:t, chk:Math.floor(t/MIN), off:null}; tx("list",`Listed ${thingName(th)} for ${money(price)}`,0); }
+function unlistThing(u){ const th = thingOf(u); if (th){ th.ls = null; } }
+function completeSale(th, amt, how){
+  const prop = isProp(th);
+  if (prop){ if (amt > th.paid + th.reno) S.flips++; S.props = S.props.filter(x=>x!==th); }
+  else S.items = S.items.filter(x=>x!==th);
+  S.cash += amt; tx("sell",`Sold ${thingName(th)}${how?" ("+how+")":""}`,amt);
+  toast(`Sold ${thingName(th)} for ${money(amt)}`, true); needRender = true;
+}
+function acceptOffer(u){ const th = thingOf(u); if (!th || !th.ls || !th.ls.off) return; completeSale(th, th.ls.off.a, "accepted offer"); closeSheet(); }
+function declineOffer(u){ const th = thingOf(u); if (th && th.ls) th.ls.off = null; }
+function listingsTick(t){
+  const now = Math.floor(t/MIN); let ch = false;
+  [...S.items, ...S.props].filter(th => th.ls).forEach(th => {
+    const L = th.ls, prop = isProp(th); if (L.off && L.off.exp <= t){ L.off = null; ch = true; }
+    let m = Math.max(L.chk, now - 1440);
+    while (m < now){ m++;
+      const at = m*MIN, ratio = L.p / thingVal(th, at), rate = saleRate(ratio, prop);
+      if (r01(th.uid, L.at, m, "s") < rate){ L.chk = m; completeSale(th, L.p, ""); return; }
+      if (!L.off && ratio > 1 && r01(th.uid, L.at, m, "o") < rate*1.5 + .004){
+        const v = thingVal(th, at), a = nice(Math.min(L.p*.97, v*(.95 + r01(th.uid,m,"oa")*.12)));
+        if (a > 0 && t - at < 30*MIN){ L.off = {a, exp:at + 30*MIN}; ch = true; toast(`Offer on ${thingName(th)}: ${money(a)}`); }
+      }
     }
+    L.chk = now;
   });
-  S.auc = S.auc.filter(L => {
-    if (t < L.end) return true;
-    // resolve: if you lead but the field would still outbid you, they win
-    const youWin = L.top==="you" && nextBid(L) > L.npcMax;
-    if (youWin && S.cash >= L.cur){
-      S.cash -= L.cur; tx("buy",`Won auction: ${lotName(L)}`,-L.cur); S.aucWins++;
-      let base, cm=L.cm, name;
-      if (L.mystery){ const v = L.val*(.3+Math.random()*1.9); base=v; cm=1; name=`Storage find (${["vintage guitar","antique clock","coin collection","arcade cabinet","signed jersey"][Math.floor(Math.random()*5)]})`; }
-      else base = L.val/wob(L.item,t);
-      S.items.push({uid:uid(),id:L.item,cm,base,at:t,paid:L.cur,name});
-      S.aucLog.unshift({t,n:lotName(L),won:true,a:L.cur,v:L.mystery?base:L.val});
-      toast(L.mystery ? `You won the storage unit. Contents worth ${money(base)}` : `You won ${lotName(L)} for ${money(L.cur)}`, true);
-    } else {
-      const fin = L.top==="you" ? Math.min(L.npcMax, nextBid(L)) : L.cur;
-      S.aucLog.unshift({t,n:lotName(L),won:false,a:fin,why:L.top==="you"&&S.cash<L.cur?"not enough cash":""});
-      if (L.top==="you") toast(`Outbid at the end on ${lotName(L)}`);
-    }
-    if (S.aucLog.length > 10) S.aucLog.length = 10;
-    changed = true; return false;
-  });
-  while (S.auc.length < 3){ S.auc.push(newLot(t, S.auc.length)); changed=true; }
-  return changed;
+  return ch;
+}
+function sellPanel(th){
+  const u = th.uid, t = Date.now(), v = thingVal(th,t), prop = isProp(th), basis = prop ? th.paid + th.reno : th.paid;
+  if (prop && th.renoUntil > t) return `<p class="note">You can list it once the renovation is done.</p>`;
+  if (th.ls){ const L = th.ls, r = L.p / v;
+    return `<div class="card" style="display:flex;flex-direction:column;gap:10px;border-color:var(--gold-deep)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">For sale at</div><b class="num" style="font:700 22px var(--display)">${money(L.p)}</b></div><span class="pill g">${sellOdds(r,prop)}</span></div>
+      <p class="note" style="margin:0;color:var(--muted)">Listed ${ago(L.at)} at ${Math.round(r*100)}% of today's value. ${L.p-basis>=0?"Profit if it sells":"Loss if it sells"}: <b class="${L.p-basis>=0?"up":"down"}">${signed(L.p-basis)}</b></p>
+      ${L.off?`<div class="card" style="background:var(--surface2);display:flex;flex-direction:column;gap:8px"><div><div class="lbl">A buyer offers</div><b class="num up" style="font:700 20px var(--display)">${money(L.off.a)}</b> <span class="note">expires in <b data-live="offx:${u}"></b></span></div><div class="btns"><button class="btn ghost" data-act="offNo" data-arg="${u}">Decline</button><button class="btn" data-act="offYes" data-arg="${u}">Accept ${money(L.off.a)}</button></div></div>`:""}
+      <div class="btns"><button class="btn ghost" data-act="relist" data-arg="${u}">Change price</button><button class="btn ghost" data-act="unlist" data-arg="${u}">Take it down</button></div></div>`; }
+  const cp = listCustom[u] ? parseAmt(listCustom[u]) : 0, pk = cp ? cp/v : (listPick[u] || 1.1), price = cp || nice(v*pk);
+  return `<div class="lbl">Put it up for sale</div>
+    <p class="note" style="margin-top:-8px;color:var(--muted)">Pick your asking price. The higher you go, the longer buyers take, and some prices never sell. Buyers may also send offers.</p>
+    <div class="btns three">${LIST_PCTS.map(f=>`<button class="btn stk ${!cp&&pk===f?"gold":"ghost"}" data-act="lpick" data-arg="${u}|${f}"><span>${Math.round(f*100)}%</span><small>${money(nice(v*f))}</small></button>`).join("")}</div>
+    <div class="lines"><div><span>Asking price</span><b class="num">${money(price)}</b></div><div><span>Odds</span><b>${sellOdds(pk,prop)}</b></div><div><span>${price-basis>=0?"Profit if it sells":"Loss if it sells"}</span><b class="num ${price-basis>=0?"up":"down"}">${signed(price-basis)}</b></div></div>
+    <div class="amtrow"><span class="dollar">$</span><input id="lprice" data-u="${u}" type="text" inputmode="decimal" placeholder="Or type your own price" value="${listCustom[u]||""}" autocomplete="off"><button class="btn ghost" data-act="lcustom" data-arg="${u}">Set</button></div>
+    <button class="btn gold" data-act="list" data-arg="${u}">List for ${money(price)}</button>`;
 }
 
 /* ================= events ================= */
@@ -650,7 +838,7 @@ const sheetOpen = () => !!$("sheetroot").firstChild;
 let sheetFn = null, sheetLocked = false;
 function openSheet(fn, locked){ sheetFn=fn; sheetLocked=!!locked; drawSheet(); }
 function closeSheet(){ sheetFn=null; cfm=null; $("sheetroot").innerHTML=""; }
-function drawSheet(){ if (!sheetFn) return; const html = cfm ? cfmHtml() : sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
+function drawSheet(){ if (!sheetFn) return; const html = cfm ? cfmHtml() : sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim${sc?" still":""}" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
 
 function rowHtml(o){
   return `<button class="row${o.locked?" locked":""}" ${o.act?`data-act="${o.act}"`:""} ${o.arg!==undefined?`data-arg="${esc(o.arg)}"`:""}>
@@ -686,8 +874,11 @@ const LIVE = {
   pv: u => { const p=S.props.find(x=>x.uid===u); return p?money(propVal(p)):""; },
   iv: u => { const i=S.items.find(x=>x.uid===u); return i?money(itemVal(i)):""; },
   reno: u => { const p=S.props.find(x=>x.uid===u); return p&&p.renoUntil>Date.now()?`Renovating, ${dur(p.renoUntil-Date.now())} left`:""; },
-  auc: id => { const L=S.auc.find(x=>x.id===id); return L?dur(L.end-Date.now()):"Ended"; },
-  port: () => money(stockVal())
+  lot: id => { const L=S.lots.find(x=>x.id===id); return L?dur(L.exp-Date.now()):"Gone"; },
+  head: () => dur(S.nextHead-Date.now()),
+  nlot: () => dur(S.nextLot-Date.now()),
+  port: () => money(stockVal()),
+  offx: u => { const th=thingOf(u); return th&&th.ls&&th.ls.off?dur(th.ls.off.exp-Date.now()):""; }
 };
 function liveTick(){
   document.querySelectorAll("[data-live]").forEach(el => {
@@ -718,7 +909,7 @@ function viewHome(){
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last ${Math.max(1,Math.round((Date.now()-S.hist[0][0])/H))}h</small></div>
     <div class="card chart">${sparkSvg(hv,"#1fc983")}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
-  <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>One paid shift a minute</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
+  <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?"Delivery gigs with your ride: double pay":"One paid shift a minute. A vehicle doubles the pay"}</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
   <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
     ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
@@ -737,9 +928,9 @@ function viewMarket(){
     const grp=(name,rows,emptyTxt)=>`<div class="sechead" style="margin-top:6px"><h2>${name}</h2><small>${rows.length} owned</small></div>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="empty">${emptyTxt}</div>`}`;
     body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
     ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
-    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
-    ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
-    ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
+    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
+    ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
+    ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
@@ -748,15 +939,15 @@ function viewMarket(){
     const L=propListings();
     body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
-      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
+      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
     <div class="list">${L.map(l=>{const d=PROPM[l.type],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   } else {
     const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
-    ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Classics and hypercars gain value; everyday cars lose it.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
+    ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`${i.ls?`<span class="pill g">For sale ${money(i.ls.p)}</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Owning one doubles your side hustle pay and boosts all business income.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   }
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
@@ -783,14 +974,23 @@ function viewInvest(){
   <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`;
 }
 
+const estTxt = L => `${money(L.lo,{whole:true})} to ${money(L.hi,{whole:true})}`;
+function lotCard(L){
+  return `<div class="card lot${L.head?" head":""}">${L.head?`<span class="pill g" style="align-self:flex-start">Headline lot</span>`:""}
+    <div class="shead"><div class="tile gold">${lotIcon(L)}</div><div style="flex:1;min-width:0"><h3 style="font-size:15px">${esc(lotName(L))}</h3><p>${L.mystery?"Sealed. Contents unknown":condName(L.cm)+" condition"}</p></div><div class="rside"><span>Leaves in</span><b class="timer num" data-live="lot:${L.id}"></b></div></div>
+    ${kv([[L.appr?"Appraised at":"Estimate",estTxt(L)],["Bidding opens at",money(L.open)]])}
+    <div class="rivals" style="justify-content:flex-start">${L.rivals.map(r=>`<span class="rv">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>
+    <div class="btns"><button class="btn ghost" data-act="lotAppr" data-arg="${L.id}" ${L.appr||L.mystery||L.fee>S.cash?"disabled":""}>${L.mystery?"Can't appraise":L.appr?"Appraised":"Appraise "+money(L.fee)}</button><button class="btn" data-act="lotEnter" data-arg="${L.id}" ${L.open>S.cash?"disabled":""}>${L.open>S.cash?"Need "+money(L.open):"Enter the room"}</button></div></div>`;
+}
 function viewAuctions(){
-  return `<section class="sec" style="margin-top:4px"><div class="sechead"><h2>Live auctions</h2><small>Cash on hand <b class="num em" data-live="cash"></b></small></div>
-  <div class="list">${S.auc.map(L=>{const lead=L.top==="you";return `<div class="card" style="display:flex;flex-direction:column;gap:12px">
-    <div class="shead"><div class="tile ${L.mystery?"gold":""}">${lotIcon(L)}</div><div style="flex:1;min-width:0"><h3 style="font-size:15px">${lotName(L)}</h3><p>${L.mystery?"Contents unknown":condName(L.cm)} · est. ${L.mystery?money(L.val*.3)+" to "+money(L.val*2.2):money(L.val)}</p></div><div class="rside"><span>Ends in</span><b class="timer num" data-live="auc:${L.id}"></b></div></div>
-    <div class="aucbid"><div><div class="lbl">${L.top?"Current bid":"Opening bid"}</div><b class="num">${money(L.cur)}</b></div><div style="text-align:right"><span class="pill ${lead?"":"m"}">${lead?"You're winning":L.top?"Outbid":"No bids"}</span><div class="note" style="margin-top:4px">${L.bidders} bidders watching</div></div></div>
-    <div class="btns"><button class="btn ghost" data-act="openLot" data-arg="${L.id}">Details</button><button class="btn" data-act="bid" data-arg="${L.id}" ${lead||myBid(L)>S.cash?"disabled":""}>${lead?"Top bid":"Bid "+money(myBid(L))}</button></div></div>`;}).join("")}</div>
-  <p class="note">Raise any bid by as little as $2.50. Bids in the last 15 seconds add 15 seconds to the clock. You pay only if you win.</p></section>
-  <section class="sec"><div class="sechead"><h2>Results</h2></div>${S.aucLog.length?`<div class="list">${S.aucLog.map(r=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(r.n)}</strong><span>${ago(r.t)}${r.why?" · "+r.why:""}</span></div><div class="rside"><b class="num ${r.won?"up":""}">${money(r.a)}</b><span class="pill ${r.won?"g":"m"}">${r.won?"Won":"Sold to rival"}</span></div></div>`).join("")}</div>`:`<div class="empty">Finished auctions show here.</div>`}</section>`;
+  const head = S.lots.some(L=>L.head);
+  return `<section class="sec" style="margin-top:4px"><div class="sechead"><h2>Auction house</h2><small>Cash <b class="num em" data-live="cash"></b></small></div>
+  ${S.room?`<button class="btn gold" data-act="roomBack">Back to the live auction</button>`:""}
+  ${S.lots.length?`<div class="list">${S.lots.map(lotCard).join("")}</div>`:`<div class="empty">The floor is clear.</div>`}
+  ${S.lots.filter(L=>!L.head).length<3?`<p class="note">Next lot arrives in <b class="num goldt" data-live="nlot"></b>.</p>`:""}
+  ${head?"":`<p class="note">Next headline lot in <b class="num goldt" data-live="head"></b>. Headline lots are rare, top-condition pieces.</p>`}
+  <p class="note">The auction starts when you enter the room and takes about a minute. The estimate is a guess, so the true value is only revealed after the gavel. You pay only if you win.</p></section>
+  <section class="sec"><div class="sechead"><h2>Results</h2></div>${S.aucLog.length?`<div class="list">${S.aucLog.map(r=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px">${esc(r.n)}</strong><span>${ago(r.t)}${r.v?` · worth ${money(r.v)}`:""}</span></div><div class="rside"><b class="num ${r.won?"up":""}">${money(r.a)}</b><span class="pill ${r.won?(r.verdict==="You overpaid"?"r":"g"):"m"}">${r.won?(r.verdict||"Won"):"Sold to rival"}</span></div></div>`).join("")}</div>`:`<div class="empty">Finished auctions show here, with what each lot was really worth.</div>`}</section>`;
 }
 
 function viewProfile(){
@@ -829,16 +1029,29 @@ function sheetBiz(id){ return () => {
   return `<div class="shead"><div class="tile">${b.e}</div><div><h3>${b.n}</h3><p>${o?`${n} location${n>1?"s":""} · Level ${lvl} of 5`:"Not owned yet"}</p></div></div>
   ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
   ${m!==1?`<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event.</p>`:""}
-  <button class="btn" data-act="bizBuy" data-arg="${id}" ${c>S.cash||n>=25?"disabled":""}>${o?"Open location #"+(n+1):"Open for"} ${money(c)}</button>
-  ${o?`<div class="btns"><button class="btn gold" data-act="bizUp" data-arg="${id}" ${lvl>=5||upCost(id)>S.cash?"disabled":""}>${lvl>=5?"Max level":"Upgrade "+money(upCost(id))}</button><button class="btn ghost" data-act="bizSell" data-arg="${id}">Sell one +${money(o.spent/o.n*.6)}</button></div><p class="note">Upgrades raise revenue 50% per level and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+  ${bizQtyPanel(id)}
+  ${o?`<button class="btn gold" data-act="bizUp" data-arg="${id}" ${lvl>=5||upCost(id)>S.cash?"disabled":""}>${lvl>=5?"Max level":"Upgrade to level "+(lvl+1)+" for "+money(upCost(id))}</button><p class="note">Upgrades raise revenue 50% per level and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
+let bizQ = {};
+function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.15,n+i); return c; }
+function maxBuy(id){ const n=S.biz[id]?S.biz[id].n:0; let k=0; while (n+k<25 && buyCostN(id,k+1)<=S.cash+1e-6) k++; return k; }
+const sellValN = (id,k) => { const o=S.biz[id]; return o ? o.spent*Math.min(k,o.n)/o.n*.6 : 0; };
+function bizQtyPanel(id){
+  const o=S.biz[id], n=o?o.n:0, q=Math.max(1,bizQ[id]||1), room=25-n, bq=Math.min(q,room), sq=Math.min(q,n), bc=buyCostN(id,bq);
+  return `<div class="lbl">How many locations</div>
+  <div class="btns four">${[1,5,10,"Max"].map(v=>{const val=v==="Max"?Math.max(1,maxBuy(id)):v;return `<button class="btn stk ${q===val&&(v!=="Max"||maxBuy(id)>1)?"gold":"ghost"}" data-act="bqty" data-arg="${id}|${v}"><span>${v}</span><small>${v==="Max"?maxBuy(id)+" affordable":money(buyCostN(id,Math.min(v,room)))}</small></button>`;}).join("")}</div>
+  <div class="amtrow"><span class="dollar">#</span><input id="bqin" data-id="${id}" type="text" inputmode="numeric" placeholder="Type a number" value="${bizQ[id]>1&&![5,10].includes(bizQ[id])?bizQ[id]:""}" autocomplete="off"><button class="btn ghost" data-act="bqset" data-arg="${id}">Set</button></div>
+  <div class="btns"><button class="btn" data-act="bizBuyN" data-arg="${id}|${bq}" ${bq<1||bc>S.cash?"disabled":""}><span>${bq<1?"Max 25 locations":"Open "+bq+" for "+money(bc)}</span></button>${o?`<button class="btn ghost" data-act="bizSellN" data-arg="${id}|${sq}">Sell ${sq} +${money(sellValN(id,sq))}</button>`:""}</div>
+  ${bq>=1&&bc>S.cash?`<p class="note">You need ${money(bc-S.cash)} more for ${bq}.</p>`:""}`;
+}
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
   ${kv([["Market value",`<span data-live="pv:${u}"></span>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
-  <div class="btns"><button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button><button class="btn" data-act="propSell" data-arg="${u}" ${reno?"disabled":""}>Sell ${money(v)}</button></div>
+  <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
+  ${sellPanel(p)}
   <p class="note">Property values follow the economy's cycles. Renovation takes 3 minutes and pauses rent.</p>`;
 };}
 function sheetPListing(lid){ return () => {
@@ -851,15 +1064,17 @@ function sheetPListing(lid){ return () => {
 function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
   return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]])}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">Double pay</span>`]]:[]))}
+  ${d.vb?`<p class="note">Only your best vehicle counts toward the business bonus${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
   <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
 };}
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]])}
-  <button class="btn" data-act="itemSell" data-arg="${u}">Sell for ${money(v)}</button>`;
+  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">Double pay</span>`]]:[]))}
+  ${d.vb?`<p class="note">Only your best vehicle counts toward the business bonus.</p>`:""}
+  ${sellPanel(i)}`;
 };}
 function sheetStock(s){ return () => {
   const x=STKM[s], st=S.stk[s], h=S.hold[s], val=h?h.sh*st.p:0, ref=st.hist[Math.max(0,st.hist.length-61)]||st.p;
@@ -869,16 +1084,38 @@ function sheetStock(s){ return () => {
   <div class="lbl">Buy</div>
   <p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your cash (${money(S.cash)}) to put into ${s}. You'll confirm before anything is bought.</p>
   <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}><span>${n}</span><small>${money(S.cash*f)}</small></button>`).join("")}</div>
-  ${h?`<div class="lbl">Sell</div><p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your ${s} (${money(val)}) to sell.</p><div class="btns three">${[[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn ghost stk" data-act="stkSell" data-arg="${s}|${f}"><span>${n}</span><small>${money(val*f)}</small></button>`).join("")}</div>`:""}
+  <div class="amtrow"><span class="dollar">$</span><input id="stkamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(stkAmt)}" autocomplete="off"><button class="btn" data-act="stkBuyAmt" data-arg="${s}">Buy</button></div>
+  ${h?`<div class="lbl">Sell</div><p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your ${s} (${money(val)}) to sell. You'll confirm before anything is sold.</p><div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkSell" data-arg="${s}|${f}"><span>${n}</span><small>${money(val*f)}</small></button>`).join("")}</div>
+  <div class="amtrow"><span class="dollar">$</span><input id="stksell" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(stkSellAmt)}" autocomplete="off"><button class="btn" data-act="stkSellAmt" data-arg="${s}">Sell</button></div>`:""}
   <p class="note">Simulated prices. Returns are never guaranteed.</p>`;
 };}
-function sheetLot(id){ return () => {
-  const L=S.auc.find(x=>x.id===id); if (!L) return null; const lead=L.top==="you";
-  return `<div class="shead"><div class="tile${L.mystery?" gold":""}">${lotIcon(L)}</div><div><h3>${lotName(L)}</h3><p>Ends in <span class="timer num" data-live="auc:${id}"></span></p></div></div>
-  ${kv([["Current bid",money(L.cur)],["Your cash",money(S.cash)],["Est. value",L.mystery?"Unknown":money(L.val)],["Bidders",L.bidders]])}
-  ${lead?`<button class="btn" disabled>You have the top bid</button>`:!L.top?`<button class="btn" data-act="bid" data-arg="${id}" ${L.cur>S.cash?"disabled":""}>Open the bidding at ${money(L.cur)}</button>`:`<div class="lbl">Raise the bid by</div><div class="btns three">${[2.5,25,100].map(a=>`<button class="btn stk" data-act="bid" data-arg="${id}|${a}" ${L.cur+a>S.cash?"disabled":""}><span>+${money(a).replace(".00","")}</span><small>${money(L.cur+a)}</small></button>`).join("")}</div>`}
-  <div class="lbl">Bid history</div>${L.hist.length?`<div class="lines">${L.hist.map(b=>`<div><span>${b.w==="you"?"You":"Rival bidder"} · ${ago(b.t)}</span><b class="num">${money(b.a)}</b></div>`).join("")}</div>`:`<p class="note">No bids yet.</p>`}`;
+function sheetRoom(){ return () => {
+  const R = S.room; if (!R) return null; const d = R.done;
+  const top = `<div class="shead"><div class="tile gold">${lotIcon(R)}</div><div><h3>${esc(lotName(R))}</h3><p>${R.appr?"Appraised":"Estimate"} ${estTxt(R)}</p></div></div>`;
+  if (d){
+    if (d.passed) return `${top}<div class="sold" style="font-size:26px">NO SALE</div><p class="sub">Nobody bid. The lot was withdrawn.</p><button class="btn" data-act="roomLeave">Continue</button>`;
+    const q = d.pay/d.val;
+    return `${top}<div class="sold">SOLD</div>
+    <p class="sub">${d.won?"To you":"To "+RIVALS[d.to].n} for <b class="num" style="color:var(--text)">${money(d.pay)}</b></p>
+    ${d.won?`<div style="text-align:center"><span class="pill ${d.good?"g":"r"}" style="font-size:13px;padding:6px 12px">${d.verdict}</span></div>`:""}
+    <div class="lines"><div><span>True value</span><b class="num">${money(d.val)}</b></div><div><span>${d.won?"You paid":"They paid"}</span><b class="num">${money(d.pay)}</b></div><div><span>${d.won?(d.val-d.pay>=0?"Instant profit":"Overpaid by"):"Price paid"}</span><b class="num ${d.won?(d.val-d.pay>=0?"up":"down"):""}">${d.won?money(Math.abs(d.val-d.pay)):Math.round(q*100)+"% of its value"}</b></div></div>
+    <button class="btn" data-act="roomLeave">${d.won?"Collect it":"Continue"}</button>`;
+  }
+  const lead = R.top==="you", inc = step(R.cur);
+  const call = R.stage===1 ? "Going once..." : R.stage===2 ? "Going twice..." : R.top ? "Any more bids?" : "Who'll open the bidding?";
+  const b = (k,name,add) => `<button class="btn stk${k===2?" gold":""}" data-act="rbid" data-arg="${k}" ${R.cur+add>S.cash?"disabled":""}><span>${name}</span><small>${money(R.cur+add)}</small></button>`;
+  return `${top}
+  <div class="bidbox${lead?" lead":R.top?" behind":""}"><span class="lbl">${R.top?"Current bid":"Opening bid"}</span><b class="num">${money(R.cur)}</b><span class="pill ${lead?"":R.top?"r":"m"}">${lead?"You lead":R.top?RIVALS[R.top].n+" leads":"No bids yet"}</span></div>
+  <div class="call s${R.stage}"><i></i><i></i><i></i><span>${call}</span></div>
+  <div class="rivals">${R.rivals.map(r=>`<span class="rv${r.out?" out":""}${R.top===r.k?" top":""}">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>
+  ${lead?`<button class="btn" disabled>You have the top bid</button>`:!R.top?`<button class="btn" data-act="rbid" data-arg="0" ${R.cur>S.cash?"disabled":""}>Open at ${money(R.cur)}</button>`:`<div class="btns three">${b(0,"Nudge",inc)}${b(1,"Raise",3*inc)}${b(2,"Jump",8*inc)}</div>`}
+  <p class="note" style="text-align:center">A nudge gets a fast answer. A jump costs more, but it can scare rivals out of the room. Cash: <b class="num em" data-live="cash">${money(S.cash)}</b></p>
+  <div class="rlog">${R.log.map(x=>`<div>${esc(x)}</div>`).join("")}</div>
+  <button class="btn ghost" data-act="roomLeave" ${lead?"disabled":""}>${lead?"You can't leave while you lead":"Leave the room"}</button>`;
 };}
+let roomFn = null;
+function openRoom(){ roomFn = sheetRoom(); openSheet(roomFn, true); }
+setInterval(() => { if (S && S.room && sheetFn===roomFn && !cfm){ if (roomStep(Date.now())){ progress(); save(); drawSheet(); if (S.room.done) render(); } } }, 250);
 function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
   const rows=[["Cash",S.cash],["Businesses",bizVal()],["Properties",S.props.reduce((a,p)=>a+propVal(p,t),0)],["Vehicles",v("veh")],["Collectibles",v("col")],["Investments",stockVal()],["Debt",0]];
@@ -923,17 +1160,20 @@ const GUIDE = [
     "<b>My stuff</b> shows everything you own in one place, with what it's worth.",
     "<b>Businesses</b> earn every hour. Open more locations or upgrade to earn more.",
     "<b>Real estate</b> (from $10,000 net worth): buy cheap, renovate, then rent it out or sell it.",
-    "<b>Vehicles and collectibles</b>: buy below value and sell higher. Everyday cars lose value; classics and watches gain.",
+    "<b>Vehicles</b> double your side hustle pay and boost all business income: +3% for everyday cars, +6% for sports, luxury and classics, +10% for supercars. Only your best one counts.",
+    "<b>Collectibles</b>: buy below value and sell higher. Watches and classics gain value; everyday cars lose it.",
     "New listings show up every <b>20 minutes</b>."]},
   {tab:"invest",e:"📈",t:"Invest",p:"Stocks, funds and crypto. All fictional.",l:[
     "<b>What you own</b> is at the top, with your profit or loss on each one. <b>All stocks</b> is below.",
     "Prices move <b>every minute</b>, even while you're away.",
-    "Tap one to see its chart. The <b>10%, 25%, 50% and All</b> buttons mean how much of your cash to spend, and each shows the dollar amount.",
+    "Tap one to see its chart. Spend a slice of your cash with <b>10%, 25%, 50% or All</b>, or <b>type any dollar amount</b>.",
     "Higher risk means bigger swings, up and down. <b>Bonds</b> are slow and steady; <b>MoonCoin</b> is a rollercoaster."]},
   {tab:"auctions",e:"🔨",t:"Auctions",p:"Bid against rival buyers.",l:[
-    "Three auctions run at once. <b>Tap Bid</b> to raise the price by as little as $2.50, or open Details to raise it more. Rivals will try to top you.",
-    "A bid in the last 15 seconds <b>adds 15 seconds</b> to the clock.",
-    "You only pay if you win. <b>Mystery storage units</b> could hold treasure or junk."]},
+    "Pick a lot and <b>enter the room</b>. The auction starts right then and takes a minute or two.",
+    "<b>Nudge, Raise or Jump.</b> Small bids get fast answers. A jump costs more but can scare rivals out.",
+    "After the last bid the auctioneer calls <b>going once, going twice, SOLD</b>. Any new bid resets the call.",
+    "<b>30 rival bidders</b>, each with a style. Bargain hunters quit early, specialists overpay for what they love (Sneakerhead Sam and sneakers, Grandma Rose and antiques), and big spenders like The Whale rarely lose. Each lot shows who's in the room.",
+    "The <b>estimate</b> is a guess. Pay for an appraisal to narrow it. The true value shows after the gavel."]},
   {tab:"profile",e:"👤",t:"Profile",p:"Your rank, trophies and history.",l:[
     "<b>Milestones</b> unlock new businesses, properties and items as you get richer.",
     "<b>Achievements</b> track your firsts. <b>Collections</b> add +5% to all business income when complete.",
@@ -953,26 +1193,34 @@ function guideSeen(){ try { return localStorage.getItem("mm-guide") === "1"; } c
 function markGuide(){ try { localStorage.setItem("mm-guide","1"); } catch(e){} }
 
 /* ================= input ================= */
-let resetArm = 0, pendingWelcome = null, cfm = null;
+let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
+const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
+document.addEventListener("input", e => { if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizUp"){ const b=BIZM[arg], c=upCost(arg), o=S.biz[arg]; return {e:b.e,t:`Upgrade ${b.n} to level ${o.l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
-  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(o.l)*setBonus()-b.exp*expMult(o.l)))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed((b.rev-b.exp)*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
+  if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(o.l)*setBonus()*vehBonus()-b.exp*expMult(o.l)))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
   if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["You get",money(v)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="itemBuy"){ const [c,l]=arg.split("|"), L=itemListings(c).find(x=>x.lid===l); if (!L) return null; const d=ITEMM[L.id]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="itemSell"){ const it=S.items.find(x=>x.uid===arg), v=itemVal(it); return {e:ITEMM[it.id].e,t:`Sell ${it.name||ITEMM[it.id].n}?`,l:[["You get",money(v)],["You paid",money(it.paid)],["Profit",`<span class="${v-it.paid>=0?"up":"down"}">${signed(v-it.paid)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="stkBuy"){ const [k,fr]=arg.split("|"), amt=S.cash*+fr, p=S.stk[k].p; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Buy ${money(amt)} of ${k}?`,l:[["Share of your cash",Math.round(+fr*100)+"%"],["Price per share",money(p)],["Shares you get",(amt/p).toLocaleString("en-US",{maximumFractionDigits:4})]],n:after(-amt)+". Prices can drop as well as rise.",yes:`Buy ${money(amt)}`}; }
+  if (act==="stkBuyAmt"){ const [k,a]=arg.split("|"); const amt=+a, p=S.stk[k].p; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Buy ${money(amt)} of ${k}?`,l:[["Price per share",money(p)],["Shares you get",(amt/p).toLocaleString("en-US",{maximumFractionDigits:4})]],n:after(-amt)+". Prices can drop as well as rise.",yes:`Buy ${money(amt)}`}; }
+  if (act==="stkSellAmt"){ const [k,a]=arg.split("|"), h=S.hold[k]; if (!h) return null; const val=h.sh*S.stk[k].p, fr=Math.min(1,+a/val), v=val*fr, basis=h.cost*fr; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Sell ${money(v)} of your ${k}?`,l:[["You get",money(v)],["You paid",money(basis)],["Profit",`<span class="${v-basis>=0?"up":"down"}">${signed(v-basis)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="stkSell"){ const [k,fr]=arg.split("|"), h=S.hold[k]; if (!h) return null; const v=h.sh*+fr*S.stk[k].p, basis=h.cost*+fr; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Sell ${Math.round(+fr*100)}% of your ${k}?`,l:[["You get",money(v)],["You paid",money(basis)],["Profit",`<span class="${v-basis>=0?"up":"down"}">${signed(v-basis)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="offYes"){ const th=thingOf(arg); if (!th||!th.ls||!th.ls.off) return null; const basis=isProp(th)?th.paid+th.reno:th.paid, a=th.ls.off.a; return {e:isProp(th)?PROPM[th.type].e:ITEMM[th.id].e,t:`Accept ${money(a)} for ${thingName(th)}?`,l:[["You get",money(a)],["You paid",money(basis)],["Profit",`<span class="${a-basis>=0?"up":"down"}">${signed(a-basis)}</span>`]],n:after(a),yes:`Accept ${money(a)}`,sell:1}; }
   return null;
 }
 function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>Please confirm</p></div></div>
   <div class="lines">${i.l.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div><p class="note" style="color:var(--muted)">${i.n}</p>
   <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>`; }
-const NEEDS_CFM = ["bizBuy","bizUp","bizSell","propBuy","propReno","propSell","itemBuy","itemSell","stkBuy","stkSell"];
+const NEEDS_CFM = ["bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
 document.addEventListener("click", e => {
   const tb = e.target.closest("[data-tab]");
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
@@ -980,6 +1228,11 @@ document.addEventListener("click", e => {
   let act = el.dataset.act, arg = el.dataset.arg;
   if (act==="cfmno"){ cfm=null; drawSheet(); return; }
   if (act==="cfmyes"){ if (!cfm) return; act=cfm.act; arg=cfm.arg; cfm=null; }
+  else if (act==="stkBuyAmt" || act==="stkSellAmt"){
+    const buy = act==="stkBuyAmt", a = parseAmt(buy ? stkAmt : stkSellAmt), h = S.hold[arg], max = buy ? S.cash : (h ? h.sh*S.stk[arg].p : 0);
+    if (a < .01){ toast("Type an amount first"); return; }
+    if (a > max + .005){ toast(buy ? `You only have ${money(S.cash)}` : `You only hold ${money(max)}`); return; }
+    arg = arg + "|" + Math.min(a, max); const info=cfmInfo(act,arg); cfm={act,arg,info}; drawSheet(); return; }
   else if (NEEDS_CFM.includes(act)){ const info=cfmInfo(act,arg); if (!info){ toast("That listing is gone"); return; } cfm={act,arg,info}; drawSheet(); return; }
   if (act==="scrim"){ if (e.target===el && !sheetLocked) closeSheet(); return; }
   const run = fn => { fn(); progress(); save(); render(); drawSheet(); };
@@ -993,19 +1246,33 @@ document.addEventListener("click", e => {
     case "openListing": { const [c,l]=arg.split("|"); openSheet(sheetListing(c,l)); break; }
     case "openItem": openSheet(sheetItem(arg)); break;
     case "openStock": openSheet(sheetStock(arg)); break;
-    case "openLot": openSheet(sheetLot(arg)); break;
     case "bizBuy": run(()=>A.bizBuy(arg)); break;
+    case "bizBuyN": { const [id,k]=arg.split("|"); run(()=>A.bizBuyN(id,+k)); break; }
+    case "bizSellN": { const [id,k]=arg.split("|"); run(()=>A.bizSellN(id,+k)); if (!S.biz[id]) closeSheet(); break; }
+    case "bqty": { const [id,v]=arg.split("|"); bizQ[id] = v==="Max" ? Math.max(1,maxBuy(id)) : +v; drawSheet(); break; }
+    case "bqset": { const el2=$("bqin"), k=Math.floor(parseAmt(el2?el2.value:"")); if (k<1){ toast("Type how many, like 3"); break; } bizQ[arg]=Math.min(25,k); drawSheet(); break; }
     case "bizUp": run(()=>A.bizUp(arg)); break;
     case "bizSell": run(()=>A.bizSell(arg)); if (!S.biz[arg]) closeSheet(); break;
     case "propBuy": run(()=>A.propBuy(arg)); { const p=S.props[S.props.length-1]; if (p && Date.now()-p.at<2000) openSheet(sheetProp(p.uid)); } break;
     case "propReno": run(()=>A.propReno(arg)); break;
     case "propRent": run(()=>A.propRent(arg)); break;
-    case "propSell": run(()=>A.propSell(arg)); break;
+    case "lpick": { const [u,f]=arg.split("|"); listPick[u]=+f; delete listCustom[u]; drawSheet(); break; }
+    case "lcustom": { const el2=$("lprice"), a=parseAmt(el2?el2.value:""); if (a<1){ toast("Type a price first"); break; } listCustom[arg]=String(a); drawSheet(); break; }
+    case "list": { const th=thingOf(arg); if (th){ const cp=listCustom[arg]?parseAmt(listCustom[arg]):0; run(()=>listThing(arg, cp || nice(thingVal(th,Date.now())*(listPick[arg]||1.1)))); delete listCustom[arg]; } break; }
+    case "relist": unlistThing(arg); save(); drawSheet(); break;
+    case "unlist": run(()=>unlistThing(arg)); toast("Taken off the market"); break;
+    case "offYes": run(()=>acceptOffer(arg)); break;
+    case "offNo": run(()=>declineOffer(arg)); break;
     case "itemBuy": { const [c,l]=arg.split("|"); run(()=>A.itemBuy(c,l)); const i=S.items[S.items.length-1]; if (i && Date.now()-i.at<2000) openSheet(sheetItem(i.uid)); break; }
-    case "itemSell": run(()=>A.itemSell(arg)); break;
     case "stkBuy": { const [s,f]=arg.split("|"); run(()=>A.stkBuy(s,+f)); break; }
     case "stkSell": { const [s,f]=arg.split("|"); run(()=>A.stkSell(s,+f)); break; }
-    case "bid": { const [i,a]=arg.split("|"); run(()=>A.bid(i, a?+a:0)); break; }
+    case "stkBuyAmt": { const [s,a]=arg.split("|"); run(()=>A.stkBuy(s, Math.min(1, +a/S.cash))); stkAmt=""; drawSheet(); break; }
+    case "stkSellAmt": { const [s,a]=arg.split("|"); const h=S.hold[s]; if (h) run(()=>A.stkSell(s, Math.min(1, +a/(h.sh*S.stk[s].p)))); stkSellAmt=""; drawSheet(); break; }
+    case "lotAppr": run(()=>appraise(arg)); break;
+    case "lotEnter": sfxInit(); enterRoom(arg); save(); render(); if (S.room) openRoom(); break;
+    case "roomBack": sfxInit(); if (S.room) openRoom(); break;
+    case "rbid": roomBid(+arg); progress(); save(); drawSheet(); break;
+    case "roomLeave": leaveRoom(); progress(); save(); render(); break;
     case "evc": if (evChoose) evChoose(+arg); break;
     case "help": openHelp(); break;
     case "nwinfo": openSheet(sheetNW()); break;
@@ -1016,7 +1283,7 @@ document.addEventListener("click", e => {
       const raw = ($("bkt").value||"").trim();
       let data = null; try { if (raw.startsWith("MM1:")) data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(4))))); } catch(_) {}
       if (!data || data.v !== 1){ toast("That code didn't work. Copy the whole thing and try again."); break; }
-      if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
+      if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); settleRoom(); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
       else { resetArm = Date.now(); el.textContent = "Tap again to replace this game"; setTimeout(()=>{ const b=$("bkrest"); if (b) b.textContent="Restore"; }, 4000); }
       break; }
     case "gall": openGuide(); break;
@@ -1024,7 +1291,7 @@ document.addEventListener("click", e => {
     case "gback": gStep--; drawSheet(); break;
     case "gskip": case "gdone": markGuide(); closeSheet(); render(); if (pendingWelcome){ const w=pendingWelcome; pendingWelcome=null; showWelcome(w[0],w[1]); } break;
     case "reset":
-      if (Date.now()-resetArm < 4000){ S = fresh(); auctionsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
+      if (Date.now()-resetArm < 4000){ S = fresh(); lotsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
       else { resetArm = Date.now(); el.textContent = "Tap again to erase everything"; setTimeout(()=>{ const b=$("resetbtn"); if (b) b.textContent="Reset game"; }, 4000); }
       break;
   }
@@ -1034,6 +1301,7 @@ document.addEventListener("click", e => {
 function boot(){
   const saved = load(), t = Date.now();
   S = saved || fresh();
+  settleRoom();
   const gap = t - S.last;
   const r = advance(t);
   save(); render();
