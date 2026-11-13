@@ -1056,7 +1056,7 @@ function viewProfile(){
   <section class="sec"><div class="sechead"><h2>Backup &amp; restore</h2></div>
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--muted);font-size:13px;margin:0">Copy a backup code and paste it somewhere safe, like Notes. If you delete and re-add the app, paste the code here and tap Restore to get everything back.</p>
   <textarea id="bkt" rows="3" placeholder="Paste a backup code here to restore" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;resize:vertical"></textarea>
-  <div class="btns"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
+  <div class="btns three"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkpaste">Paste</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
   <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>`;
 }
 
@@ -1324,10 +1324,12 @@ document.addEventListener("click", e => {
     case "bkcopy": { advance(Date.now()); const code = "MM1:" + btoa(unescape(encodeURIComponent(JSON.stringify(S)))); const ta=$("bkt"); ta.value = code;
       const done = () => toast("Backup copied. Paste it in Notes.", true);
       try { navigator.clipboard.writeText(code).then(done, () => { ta.select(); toast("Press and hold the code, then tap Copy"); }); } catch(_) { ta.select(); toast("Press and hold the code, then tap Copy"); } break; }
+    case "bkpaste": { try { navigator.clipboard.readText().then(t => { $("bkt").value = t||""; toast(t && t.includes("MM1:") ? `Pasted ${t.length.toLocaleString()} characters. Now tap Restore.` : "Your clipboard doesn't have a backup code"); }, () => toast("Press and hold in the box, then tap Paste")); } catch(_) { toast("Press and hold in the box, then tap Paste"); } break; }
     case "bkrest": {
-      const raw = ($("bkt").value||"").trim();
-      let data = null; try { if (raw.startsWith("MM1:")) data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(4))))); } catch(_) {}
-      if (!data || data.v !== 1){ toast("That code didn't work. Copy the whole thing and try again."); break; }
+      const raw = $("bkt").value||"", at = raw.indexOf("MM1:");
+      const b64 = at < 0 ? "" : raw.slice(at+4).replace(/[^A-Za-z0-9+/=]/g,"");
+      let data = null; try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); data = JSON.parse(new TextDecoder().decode(u)); } catch(_) {}
+      if (!data || data.v !== 1){ toast(at < 0 ? "That isn't a backup code. It should start with MM1:" : `Only part of the code came through (${b64.length.toLocaleString()} characters). Copy all of it and try again.`); break; }
       if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); settleRoom(); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
       else { resetArm = Date.now(); el.textContent = "Tap again to replace this game"; setTimeout(()=>{ const b=$("bkrest"); if (b) b.textContent="Restore"; }, 4000); }
       break; }
