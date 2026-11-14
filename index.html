@@ -263,7 +263,7 @@ function money(x, opts){
   if (!opts.full && x >= 1e12) s = (x/1e12).toFixed(2) + "T";
   else if (!opts.full && x >= 1e9) s = (x/1e9).toFixed(2) + "B";
   else if (!opts.full && x >= 1e6) s = (x/1e6).toFixed(2) + "M";
-  else if (x < 10000 && !opts.whole) s = x.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  else if (x < 1e5 && !opts.whole) s = x.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
   else s = Math.round(x).toLocaleString("en-US");
   return (neg ? "-$" : "$") + s;
 }
@@ -280,23 +280,23 @@ const MS = [
 ];
 // cost = first location; rev/exp per hour per location
 const BIZ = [
-  {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:80,rev:14,exp:6},
-  {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:450,rev:75,exp:35},
-  {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2500,rev:380,exp:200},
-  {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:12000,rev:1700,exp:900},
-  {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55000,rev:6500,exp:3500},
-  {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:240000,rev:24000,exp:14000},
-  {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:600000,rev:50000,exp:28000},
-  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1400000,rev:105000,exp:57000},
-  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2200000,rev:150000,exp:80000},
-  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:4000000,rev:260000,exp:140000},
-  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:12e6,rev:700000,exp:370000},
-  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:45e6,rev:2.3e6,exp:1.2e6},
-  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:120e6,rev:5.4e6,exp:2.8e6},
-  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:300e6,rev:12.5e6,exp:6.5e6},
-  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:650e6,rev:25e6,exp:13e6},
-  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1.8e9,rev:62e6,exp:32e6},
-  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:6e9,rev:185e6,exp:95e6}
+  {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:79.57,rev:12.24,exp:4.17},
+  {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:452.27,rev:59.84,exp:21.06},
+  {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2462.66,rev:282.95,exp:94.64},
+  {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:11657.97,rev:1170.40,exp:422.20},
+  {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55003.40,rev:4715.01,exp:1561.36},
+  {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:242155.18,rev:15265.23,exp:5365.06},
+  {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:596759.24,rev:33055.62,exp:11968.22},
+  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1412161,rev:75038.70,exp:25285.49},
+  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2245461,rev:108314.61,exp:36845.13},
+  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:3934048,rev:179577.43,exp:63776.26},
+  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:11743183,rev:495773.72,exp:179754.89},
+  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:43706501,rev:1674373,exp:609523.59},
+  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:122336142,rev:3948555,exp:1358730},
+  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:305218067,rev:9397738,exp:3241346},
+  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:660284146,rev:18463855,exp:6557432},
+  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1796341005,rev:45017017,exp:16452480},
+  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:5825197502,rev:137393253,exp:47597757}
 ];
 const BIZM = Object.fromEntries(BIZ.map(b => [b.id, b]));
 const PROP = [
@@ -406,17 +406,27 @@ function tx(type, desc, amt){ S.tx.unshift({t:Date.now(),type,desc,amt,bal:S.cas
 
 /* ================= engine: values ================= */
 const bizMult = l => 1 + .5*l, expMult = l => 1 + .3*l;
+function locs(o){ if (!Array.isArray(o.ls)) o.ls = []; while (o.ls.length < o.n) o.ls.push(o.ls.length ? 0 : 0 + (o.l||0)); if (o.ls.length > o.n) o.ls.length = o.n; return o.ls; }
+function migrateLocs(o){ if (!Array.isArray(o.ls)){ o.ls = Array(o.n).fill(o.l||0); } return locs(o); }
+const sumM = o => migrateLocs(o).reduce((a,l)=>a+bizMult(l),0), sumE = o => migrateLocs(o).reduce((a,l)=>a+expMult(l),0);
+function planMax(id){ const o=S.biz[id]; if(!o) return {n:0,cost:0}; const L=migrateLocs(o).slice(); let cash=S.cash, n=0, cost=0;
+  for(;;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>cash+1e-6) break; cash-=c; cost+=c; L[k]++; n++; }
+  return {n,cost}; }
+function planLoc(id,i){ const o=S.biz[id]; if(!o) return {n:0,cost:0}; let l=migrateLocs(o)[+i], cash=S.cash, n=0, cost=0;
+  while (l<5){ const c=upCost(id,l); if (c>cash+1e-6) break; cash-=c; cost+=c; l++; n++; } return {n,cost,to:l}; }
+const lowIdx = L => L.reduce((k,l,i)=> l < L[k] ? i : k, 0);
+function lvTxt(o){ const L=migrateLocs(o), lo=Math.min(...L), hi=Math.max(...L); return lo===hi ? `Level ${lo}` : `Levels ${lo}-${hi}`; }
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
 function vehBonus(){ return 1 + S.items.reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
 const hasRide = () => S.items.some(i => ITEMM[i.id].c==="veh");
-function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*o.n*bizMult(o.l)*setBonus()*vehBonus() : 0; }
-function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*o.n*expMult(o.l) : 0; }
+function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus() : 0; }
+function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*.6 : 0; }
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.15, o ? o.n : 0); }
-function upCost(id){ const o=S.biz[id]; return BIZM[id].cost*o.n*.75*(o.l+1); }
+function upCost(id,l){ return BIZM[id].cost*.75*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
 function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
 function propRent(p,t){ return propVal(p,t)*.006*.92; }
@@ -570,11 +580,13 @@ function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough ca
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
-  bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0}); b.n++; b.spent+=c; },
-  bizUp(id){ const o=S.biz[id]; if (!o || o.l>=5) return; const c=upCost(id); if (!spend(c,"buy",`Upgraded ${BIZM[id].n} to level ${o.l+1}`)) return; o.l++; o.spent+=c; },
+  bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
+  bizUpMax(id){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); for(;;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; } },
+  bizUpLoc(id,i){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); i=+i; if (!(i>=0 && i<L.length)) return; while (L[i]<5){ const c=upCost(id,L[i]); if (c>S.cash+1e-6 || !spend(c,"buy",`Upgraded ${BIZM[id].n} #${i+1} to level ${L[i]+1}`)) break; L[i]++; o.spent+=c; } },
+  bizUp(id,i){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); i=+i; if (!(i>=0 && i<L.length) || L[i]>=5) return; const c=upCost(id,L[i]); if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${i+1} to level ${L[i]+1}`)) return; L[i]++; o.spent+=c; },
   bizBuyN(id,k){ for (let i=0;i<k;i++){ const o=S.biz[id]; if ((o?o.n:0)>=25 || unitCost(id)>S.cash+1e-6) break; A.bizBuy(id); } },
   bizSellN(id,k){ for (let i=0;i<k && S.biz[id];i++) A.bizSell(id); },
-  bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*.6; o.spent -= o.spent/o.n; o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
+  bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*.6; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ p.rented=!p.rented; } },
@@ -634,8 +646,8 @@ function pickRivals(cat, head, sec){
   return out;
 }
 function rivalMax(k, cat, ref){ const v = RIVALS[k], R = Math.random(); return v.love && v.love.test(cat) ? ref*(v.llo+(v.lhi-v.llo)*R) : ref*(v.lo+(v.hi-v.lo)*R); }
-function step(c){ const raw=c*.04; if (raw<=2.5) return 2.5; const mag=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/mag; return (m<=1?1:m<=2.5?2.5:m<=5?5:10)*mag; }
-function nice(x){ if (x<10) return Math.max(1,Math.round(x)); const mag=Math.pow(10,Math.floor(Math.log10(x))-1); return Math.round(x/mag)*mag; }
+function step(c){ const raw=c*.04; return raw<=2.5 ? 2.5 : Math.round(raw*100)/100; }
+function nice(x){ return Math.max(1, Math.round(x*100)/100); }
 const SECS = {bin:{n:"Bargain Bin",d:"Below your rank. Cheap lots and quick flips.",q:1}, main:{n:"Main Floor",d:"Lots at your rank. Fair fights.",q:2}, priv:{n:"Private Sale",d:"Above your rank. Big money and big spenders.",q:1}};
 function secTiers(sec){ const l = S.lvl; return sec==="bin" ? [0, Math.max(0,l-2)] : sec==="priv" ? [Math.min(8,l+1), Math.min(8,l+2)] : [Math.max(0,l-1), l]; }
 function newLot(t, head, sec){
@@ -696,7 +708,7 @@ function roomStep(t){
       const r = el[Math.floor(Math.random()*el.length)]; let amt = need;
       const jp = RIVALS[r.k].jump||0, big = R.top && Math.random() < jp && R.cur+3*inc <= r.max;
       if (big) amt = R.cur+3*inc;
-      R.cur = amt; R.top = r.k; R.quiet = t; R.stage = 0; R.bids++;
+      R.cur = Math.round(amt*100)/100; R.top = r.k; R.quiet = t; R.stage = 0; R.bids++;
       rlog(R, `${RIVALS[r.k].n} ${big?"jumps to":"bids"} ${money(amt)}.`); if (Math.random() < .22) rlog(R, `${RIVALS[r.k].e} "${RIVALS[r.k].q}"`); sfx("bid"); ch = true;
       R.npcAt = t + (1800 + Math.random()*2400) * (RIVALS[r.k].spd||1);
     } else R.npcAt = FAR;
@@ -710,7 +722,7 @@ function roomBid(kind){
   const R = S.room; if (!R || R.done || R.top==="you") return; const t = Date.now(), inc = step(R.cur);
   const k = R.top ? kind : 0, add = !R.top ? 0 : k===2 ? 8*inc : k===1 ? 3*inc : inc, amt = R.cur+add;
   if (amt > S.cash){ toast("Not enough cash for that bid"); return; }
-  R.cur = amt; R.top = "you"; R.quiet = t; R.stage = 0; R.bids++; rlog(R, `You bid ${money(amt)}${k===2?". The room goes quiet":""}.`); sfx("you");
+  R.cur = Math.round(amt*100)/100; R.top = "you"; R.quiet = t; R.stage = 0; R.bids++; rlog(R, `You bid ${money(amt)}${k===2?". The room goes quiet":""}.`); sfx("you");
   dropWeak(R, amt+step(amt));
   if (k>0) R.rivals.forEach(r => { if (r.out) return;
     let p = RIVALS[r.k].fold * clamp((amt/r.max-.45)/.5,0,1) * (k===2?1:.35); if (RIVALS[r.k].love && RIVALS[r.k].love.test(R.cat)) p *= .3;
@@ -856,7 +868,7 @@ const EVENTS = [
   {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
     const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*.6, offer=each*1.7;
     return {icon:"🤝",title:"Acquisition offer",text:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
-      {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
+      {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
       {label:"Decline",run(){ return "You kept the location."; }}
     ]};
   }},
@@ -968,7 +980,7 @@ function viewHome(){
   <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?"Delivery gigs with your ride: double pay":"One paid shift a minute. A vehicle doubles the pay"}</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
   <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
-    ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
+    ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
   </section>
   <section class="sec"><div class="sechead"><h2>Recent activity</h2></div>
     ${S.tx.length?`<div class="list">${S.tx.slice(0,5).map(txRow).join("")}</div>`:`<div class="empty">Your transactions will show up here.</div>`}</section>`;
@@ -983,14 +995,14 @@ function viewMarket(){
     const tot=bizVal()+S.props.reduce((a,p)=>a+propVal(p,t),0)+S.items.reduce((a,i)=>a+itemVal(i,t),0);
     const grp=(name,rows,emptyTxt)=>`<div class="sechead" style="margin-top:6px"><h2>${name}</h2><small>${rows.length} owned</small></div>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="empty">${emptyTxt}</div>`}`;
     body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
-    ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · Level ${o.l} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
+    ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
     ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
     ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
     ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
-      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · Level ${o.l} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?"next location":"to open"}</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
+      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?"next location":"to open"}</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
     const L=propListings();
     body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
@@ -1083,13 +1095,13 @@ function render(){
 
 /* ================= sheets ================= */
 function sheetBiz(id){ return () => {
-  const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, lvl=o?o.l:0;
+  const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, L=o?migrateLocs(o):[], lvl=o?L.reduce((a,x)=>a+x,0)/Math.max(1,L.length):0;
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
-  return `<div class="shead"><div class="tile">${b.e}</div><div><h3>${b.n}</h3><p>${o?`${n} location${n>1?"s":""} · Level ${lvl} of 5`:"Not owned yet"}</p></div></div>
-  ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
+  return `<div class="shead"><div class="tile">${b.e}</div><div><h3>${b.n}</h3><p>${o?`${n} location${n>1?"s":""} · ${lvTxt(o)} of 5`:"Not owned yet"}</p></div></div>
+  ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",Math.round(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
   ${m!==1?`<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event.</p>`:""}
   ${bizQtyPanel(id)}
-  ${o?`<button class="btn gold" data-act="bizUp" data-arg="${id}" ${lvl>=5||upCost(id)>S.cash?"disabled":""}>${lvl>=5?"Max level":"Upgrade to level "+(lvl+1)+" for "+money(upCost(id))}</button><p class="note">Upgrades raise revenue 50% per level and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`,act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
 let bizQ = {};
 function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.15,n+i); return c; }
@@ -1262,10 +1274,12 @@ document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={lpric
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
-  if (act==="bizUp"){ const b=BIZM[arg], c=upCost(arg), o=S.biz[arg]; return {e:b.e,t:`Upgrade ${b.n} to level ${o.l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
+  if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
+  if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
+  if (act==="bizUp"){ const [id,i]=arg.split("|"), b=BIZM[id], o=S.biz[id], l=migrateLocs(o)[+i], c=upCost(id,l), pl=planLoc(id,i); return {alt:pl.n>=2?{label:`Max: ${pl.n} levels to ${pl.to} for ${money(pl.cost)}`,act:"bizUpLoc",arg}:null,e:b.e,t:`Upgrade ${b.n} #${+i+1} to level ${l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed((b.rev-b.exp)*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(o.l)*setBonus()*vehBonus()-b.exp*expMult(o.l)))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
   if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["You get",money(v)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
@@ -1280,14 +1294,15 @@ function cfmInfo(act, arg){
 }
 function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>Please confirm</p></div></div>
   <div class="lines">${i.l.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div><p class="note" style="color:var(--muted)">${i.n}</p>
-  <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>`; }
-const NEEDS_CFM = ["bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
+  <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>${i.alt?`<button class="btn gold" data-act="cfmalt" style="margin-top:10px">${i.alt.label}</button>`:""}`; }
+const NEEDS_CFM = ["bizUpMax","bizUpLoc","bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
 document.addEventListener("click", e => {
   const tb = e.target.closest("[data-tab]");
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
   const el = e.target.closest("[data-act]"); if (!el) return;
   let act = el.dataset.act, arg = el.dataset.arg;
   if (act==="cfmno"){ cfm=null; drawSheet(); return; }
+  if (act==="cfmalt"){ if (!cfm || !cfm.info.alt) return; const a=cfm.info.alt; cfm={act:a.act,arg:a.arg,info:cfmInfo(a.act,a.arg)}; drawSheet(); return; }
   if (act==="cfmyes"){ if (!cfm) return; act=cfm.act; arg=cfm.arg; cfm=null; }
   else if (act==="stkBuyAmt" || act==="stkSellAmt"){
     const buy = act==="stkBuyAmt", a = parseAmt(buy ? stkAmt : stkSellAmt), h = S.hold[arg], max = buy ? S.cash : (h ? h.sh*S.stk[arg].p : 0);
@@ -1312,7 +1327,9 @@ document.addEventListener("click", e => {
     case "bizSellN": { const [id,k]=arg.split("|"); run(()=>A.bizSellN(id,+k)); if (!S.biz[id]) closeSheet(); break; }
     case "bqty": { const [id,v]=arg.split("|"); bizQ[id] = v==="Max" ? Math.max(1,maxBuy(id)) : +v; drawSheet(); break; }
     case "bqset": { const el2=$("bqin"), k=Math.floor(parseAmt(el2?el2.value:"")); if (k<1){ toast("Type how many, like 3"); break; } bizQ[arg]=Math.min(25,k); drawSheet(); break; }
-    case "bizUp": run(()=>A.bizUp(arg)); break;
+    case "bizUpLoc": { const [id,i]=arg.split("|"); run(()=>A.bizUpLoc(id,i)); break; }
+    case "bizUpMax": run(()=>A.bizUpMax(arg)); break;
+    case "bizUp": { const [id,i]=arg.split("|"); run(()=>A.bizUp(id,i)); break; }
     case "bizSell": run(()=>A.bizSell(arg)); if (!S.biz[arg]) closeSheet(); break;
     case "propBuy": run(()=>A.propBuy(arg)); { const p=S.props[S.props.length-1]; if (p && Date.now()-p.at<2000) openSheet(sheetProp(p.uid)); } break;
     case "propReno": run(()=>A.propReno(arg)); break;
