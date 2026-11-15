@@ -480,7 +480,11 @@ function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); 
 const LOAN_RATE = .01;
 const grossWorth = () => S.cash + assetsVal() + bizVal();
 function netWorth(){ return grossWorth() - (S.debt||0); }
-const loanRoom = () => Math.max(0, Math.floor(grossWorth()*.5*100)/100 - (S.debt||0));
+const loanRatio = () => Math.min(2.5, .5 + .2*S.lvl);
+const loanCap = () => Math.max(Math.max(0,netWorth())*loanRatio(), 100*(S.lvl+1));
+const loanRoom = () => S.late ? 0 : Math.max(0, Math.floor(loanCap()*100)/100 - (S.debt||0));
+const loanTerm = d => Math.round(72 - 60*clamp(d/loanCap(),0,1))*H;
+const loanDue = (a,t) => { const nd = t + loanTerm((S.debt||0)+a); return (S.debt > .005 && S.dueAt) ? Math.min(S.dueAt, nd) : nd; };
 function perHour(t){
   t=t||Date.now(); let v=0;
   Object.keys(S.biz).forEach(id => v += bizNetAt(id,t));
@@ -542,8 +546,10 @@ function sample(t){ const lastS = S.hist[S.hist.length-1]; if (!lastS || t - las
 function advance(t){
   const from = Math.max(S.last, t - CAP);
   const inc = incomeBetween(from, t);
-  if (S.debt > 0) S.debt *= Math.pow(1+LOAN_RATE, (t-from)/H);
+  if (S.debt > 0) S.debt *= Math.pow(1+LOAN_RATE*(S.late?3:1), (t-from)/H);
   credit(inc.total);
+  if (S.debt > .005 && S.dueAt && t >= S.dueAt){ const pay = Math.min(S.cash, S.debt); if (pay >= .01){ S.cash -= pay; S.debt -= pay; tx("loan","Loan due: the bank collected",-pay); }
+    if (S.debt > .005){ S.late = true; S.dueAt = t + 6*H; toast("Loan overdue. Late interest is 3% an hour", true); } else { S.debt = 0; S.late = false; S.dueAt = 0; } }
   S.pending += inc.total;
   S.pendParts = S.pendParts || {};
   inc.lines.forEach(([n,a]) => { S.pendParts[n] = (S.pendParts[n]||0) + a; });
@@ -627,8 +633,8 @@ function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough ca
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
   carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
-  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; S.cash += a; S.debt = (S.debt||0) + a; tx("loan","Took out a loan",a); },
-  loanPay(a){ a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; S.cash -= a; S.debt = (S.debt||0) - a; if (S.debt < .005) S.debt = 0; tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
+  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; S.dueAt = loanDue(a, Date.now()); S.cash += a; S.debt = (S.debt||0) + a; tx("loan","Took out a loan",a); },
+  loanPay(a){ a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; S.cash -= a; S.debt = (S.debt||0) - a; if (S.debt < .005){ S.debt = 0; S.late = false; S.dueAt = 0; } tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
   bizUpMax(id){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); for(;;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; } },
@@ -982,6 +988,7 @@ const LIVE = {
   pm: () => money(perHour()/60),
   assets: () => money(assetsVal()+bizVal()),
   debt: () => money(S.debt||0),
+  debtsub: () => S.debt > .005 ? (S.late ? "OVERDUE · tap to pay" : "Due in " + dur((S.dueAt||0)-Date.now())) : "Tap for the bank",
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1019,7 +1026,7 @@ function viewHome(){
     <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b></div>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
-    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit">Tap for the bank</span></button>
+    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last ${Math.max(1,Math.round((Date.now()-S.hist[0][0])/H))}h</small></div>
     <div class="card chart">${sparkSvg(hv,"#1fc983")}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
@@ -1360,14 +1367,14 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="lbl">Where it comes from, per hour</div>
   <div class="lines"><div><span>Businesses</span><b class="num">${sg(f.biz)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   <div class="lbl">Loans</div>
-  ${kv([["Interest rate",(LOAN_RATE*100)+"% per hour"],["Interest costs",money(f.intr)+"/h · "+money(f.intr*24)+"/day"],["You can borrow",money(room)],["Side hustle",money(hustlePay())+" a shift"]])}
+  ${kv([["Credit limit",money(loanCap())],["You can borrow",money(room)],["Pay back by",d>.005?(S.late?`<i style="font-style:normal" class="down">OVERDUE</i>`:dur((S.dueAt||0)-Date.now())):"No loan"],["Interest",(LOAN_RATE*100)+"%/h"+(S.late?" · 3% late":"")],["Interest costs",money(f.intr*(S.late?3:1))+"/h"],["Side hustle",money(hustlePay())+" a shift"]])}
   <div class="lbl">Borrow</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn" data-act="loanTakeC">Borrow</button></div>
   <div class="lbl">Pay back</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanPay" data-arg="${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanpay" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanPayV)}" autocomplete="off"><button class="btn" data-act="loanPayC">Pay</button></div>
-  <p class="note">You can borrow up to half of everything you own, minus what you already owe. Interest grows your debt every hour, even while you're away, so borrow for something that earns more than ${(LOAN_RATE*100)}% an hour. Debt counts against your net worth.</p>`; }; }
+  <p class="note">Your credit limit grows with every rank (now ${Math.round(loanRatio()*100)}% of your net worth). The more you borrow, the sooner the bank wants it back: 3 days for a little, 12 hours for the max. Miss the deadline and the bank takes your cash and charges 3% an hour until you're clear. Interest grows your debt even while you're away. Debt counts against your net worth.</p>`; }; }
 let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
@@ -1378,7 +1385,7 @@ document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loana
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
-  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Debt after",money((S.debt||0)+a)],["Interest",money((((S.debt||0)+a))*LOAN_RATE)+"/h"]],n:"Interest is added to your debt every hour.",yes:`Borrow ${money(a)}`}; }
+  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Debt after",money((S.debt||0)+a)],["Interest",money((((S.debt||0)+a))*LOAN_RATE)+"/h"],["Pay back within",dur(loanDue(a,Date.now())-Date.now())]],n:"Borrow more and the bank wants it back sooner. Miss the deadline and it takes your cash, then charges 3% an hour.",yes:`Borrow ${money(a)}`}; }
   if (act==="loanPay"){ const a=Math.min(+arg,S.debt||0,S.cash); return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["You pay",money(a)],["Debt after",money(Math.max(0,(S.debt||0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
