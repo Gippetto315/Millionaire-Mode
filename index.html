@@ -129,7 +129,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .scrim{cursor:pointer;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease-out}
 .sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;padding:10px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px;animation:rise .24s cubic-bezier(.2,.9,.3,1)}
 .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:2px auto 0}
-.sheet{cursor:auto}
+.sheet{cursor:auto}.sheet>*{flex-shrink:0}
 .stop{display:flex;align-items:center;justify-content:space-between;margin-bottom:-6px}
 .stop .grab{margin:0}
 .xbtn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:16px;font-weight:800;display:grid;place-items:center}
@@ -207,6 +207,37 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 @keyframes sp-shine{from{background-position:120% 0}to{background-position:-120% 0}}
 @keyframes sp-fall{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(var(--dx),110vh) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}}
+.vm{position:relative;margin:0 auto;max-width:380px;border-radius:20px 20px 10px 10px;padding:10px 10px 0;background:linear-gradient(90deg,#08523a,#16a56c 30%,#1fc983 50%,#16a56c 70%,#08523a);border:3px solid #3b2d0c;box-shadow:inset 0 0 0 2px var(--gold),0 18px 40px rgba(0,0,0,.6)}
+.vm-top{text-align:center;border-radius:12px;padding:8px 6px 7px;background:linear-gradient(180deg,#fff2b8,#f2d27f 50%,#a87a1c);color:#1d1504;box-shadow:0 0 18px rgba(242,210,127,.45)}
+.vm-top b{display:block;font:900 22px/1 var(--display);letter-spacing:.08em}.vm-top small{display:block;margin-top:4px;font:800 9.5px/1 var(--body);letter-spacing:.16em;opacity:.75}
+.vm-mid{display:flex;gap:8px;margin-top:10px}
+.vm-glass{position:relative;flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px;border-radius:10px;background:linear-gradient(180deg,#121c18,#070b09);border:2px solid #d9b24f;overflow:hidden}
+.vm-glare{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.13) 0 22%,transparent 22% 60%,rgba(255,255,255,.05) 60% 66%,transparent 66%)}
+.vm-slot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:96px;padding:4px 2px 0;border:0;background:none;color:inherit;border-bottom:3px solid #46534d;-webkit-tap-highlight-color:transparent}
+.vm-slot:before{content:"";position:absolute;left:50%;bottom:24px;width:70%;height:10px;transform:translateX(-50%);border:2px solid #8b9a92;border-top:0;border-radius:0 0 50% 50%;opacity:.35}
+.vm-pk{position:relative;display:grid;place-items:center;margin-bottom:2px;background:var(--c);box-shadow:inset -5px 0 0 rgba(0,0,0,.18),inset 4px 0 0 rgba(255,255,255,.18)}
+.vm-pk i{font:900 7.5px/1 var(--display);font-style:normal;color:#111;transform:rotate(-90deg);white-space:nowrap;letter-spacing:.04em}
+.vm-can{width:24px;height:42px;border-radius:5px;border-top:4px solid #cfcfcf}
+.vm-bag{width:34px;height:44px;border-radius:6px 6px 4px 4px;clip-path:polygon(0 6%,12% 0,25% 6%,37% 0,50% 6%,62% 0,75% 6%,87% 0,100% 6%,100% 100%,0 100%)}
+.vm-bar{width:40px;height:24px;border-radius:3px}.vm-bar i{transform:none}
+.vm-box{width:32px;height:30px;border-radius:4px}.vm-box i{transform:none}
+.vm-so{font:900 11px/1.1 var(--display);color:var(--red);border:2px solid var(--red);border-radius:4px;padding:5px 4px;margin-bottom:8px;transform:rotate(-12deg)}
+.vm-tag{font:700 9.5px/1 var(--body);color:#c8d3cd;background:#0a100d;border-radius:4px;padding:3px 4px;white-space:nowrap}.vm-tag b{color:var(--gold)}
+.vm-drop .vm-pk,.vm-drop .vm-so{animation:vmfall .9s cubic-bezier(.5,0,.9,.5) forwards}.vm-gone .vm-pk{opacity:0}
+@keyframes vmfall{0%{transform:translate(0,0) rotate(0)}15%{transform:translate(0,4px) rotate(-4deg)}100%{transform:translate(0,190px) rotate(28deg);opacity:0}}
+.vm-side{width:74px;display:flex;flex-direction:column;gap:8px;align-items:center;padding:6px 6px 8px;border-radius:10px;background:#0a100d;border:2px solid #d9b24f}
+.vm-code{width:100%;text-align:center;padding:6px 0;border-radius:6px;background:#04140c;color:#3dff9e;font:700 18px/1 ui-monospace,Menlo,monospace;text-shadow:0 0 8px #1fc983;letter-spacing:.1em}
+.vm-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}.vm-keys span{display:grid;place-items:center;height:18px;border-radius:4px;background:linear-gradient(180deg,#fff2b8,#c99a35);color:#1d1504;font:900 9px/1 var(--display)}
+.vm-coin,.vm-bill{display:flex;flex-direction:column;align-items:center;gap:3px}.vm-coin span{width:8px;height:22px;border-radius:4px;background:#000;box-shadow:0 0 0 2px #c99a35}.vm-bill span{width:44px;height:7px;border-radius:4px;background:#000;box-shadow:0 0 0 2px #c99a35}
+.vm-coin small,.vm-bill small{font:800 7px/1 var(--body);letter-spacing:.14em;color:var(--muted)}
+.vm-ret{margin-top:auto;font:800 7.5px/1 var(--body);letter-spacing:.12em;color:#1d1504;background:var(--gold);border-radius:4px;padding:4px 6px}
+.vm-led{margin-top:10px;min-height:92px;padding:10px 12px;border-radius:10px;background:#03100a;border:2px solid #d9b24f;color:#9dffcb;font:600 13px/1.45 ui-monospace,Menlo,monospace;text-shadow:0 0 6px rgba(31,201,131,.55);background-image:radial-gradient(rgba(61,255,158,.07) 1px,transparent 1px);background-size:4px 4px}
+.vm-led b{display:block;margin-bottom:5px;color:#3dff9e;font-weight:800;letter-spacing:.08em;font-size:11.5px}
+.vm-tray{position:relative;display:flex;align-items:center;justify-content:center;height:46px;margin:10px 0 0;border-radius:8px 8px 0 0;background:#030504;border:2px solid #d9b24f;border-bottom:0;overflow:hidden}
+.vm-push{position:absolute;left:8px;top:6px;font:900 8px/1 var(--display);letter-spacing:.14em;color:#46534d}
+.vm-got{font:800 13px/1 var(--body);color:var(--gold)}.vm-got.in{animation:vmin .5s .75s both}@keyframes vmin{from{transform:translateY(-30px);opacity:0}to{transform:none;opacity:1}}
+.vm-feet{display:flex;justify-content:space-between;padding:0 18px;height:10px;margin:0 -10px}.vm-feet i{width:34px;height:10px;background:#1c160a;border-radius:0 0 6px 6px}
+.vm-shake{animation:vmshake .3s 2}@keyframes vmshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px) rotate(-.4deg)}75%{transform:translateX(3px) rotate(.4deg)}}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 </head>
@@ -420,8 +451,15 @@ const lowIdx = L => L.reduce((k,l,i)=> l < L[k] ? i : k, 0);
 function lvTxt(o){ const L=migrateLocs(o), lo=Math.min(...L), hi=Math.max(...L); return lo===hi ? `Level ${lo}` : `Levels ${lo}-${hi}`; }
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
-function vehBonus(){ return 1 + S.items.reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
-const hasRide = () => S.items.some(i => ITEMM[i.id].c==="veh");
+const RENT_RATE = .012, RENT_WEAR = .0008;
+const hustleX = d => !d || !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
+const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
+function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
+const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
+const hasRide = () => rideX() > 1;
+const rentedH = (i,t) => (i.rh||0) + (i.rent ? Math.max(0,(t-i.rentAt))/H : 0);
+const carRent = (i,t) => i.rent ? itemVal(i,t)*RENT_RATE : 0;
+const rentAll = t => S.items.reduce((a,i)=>a+carRent(i,t),0);
 function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus() : 0; }
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
@@ -434,7 +472,7 @@ function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
 function propRent(p,t){ return propVal(p,t)*.006*.92; }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
 function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
-function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H); }
+function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
 function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
@@ -445,6 +483,7 @@ function perHour(t){
   Object.keys(S.biz).forEach(id => v += bizNetAt(id,t));
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); v -= propCost(p,t); });
   S.items.forEach(i => v -= itemCarry(i,t));
+  v += rentAll(t);
   return v;
 }
 
@@ -461,6 +500,8 @@ function incomeBetween(t0,t1){
   if (S.props.length){ if (rent) lines.push(["Rental income", rent]); lines.push(["Property upkeep & taxes", -pc]); tot += rent - pc; }
   const carry = S.items.reduce((a,i)=>a+itemCarry(i,t1)*hrs,0);
   if (carry > 0){ lines.push(["Vehicle insurance & upkeep", -carry]); tot -= carry; }
+  const cr = S.items.reduce((a,i)=> i.rent ? a + carRent(i,t1)*Math.max(0,t1-Math.max(t0,i.rentAt))/H : a, 0);
+  if (cr > 0){ lines.push(["Car rentals", cr]); tot += cr; }
   return {lines,total:tot};
 }
 
@@ -581,6 +622,7 @@ function propListings(){
 function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough cash"); return false; } S.cash -= amt; tx(type, desc, -amt); return true; }
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
+  carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
   bizUpMax(id){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); for(;;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; } },
@@ -598,7 +640,7 @@ const A = {
   stkBuy(s,f){ const amt = S.cash*f; if (amt < .01) { toast("Not enough cash"); return; } const p=S.stk[s].p; if (!spend(amt,"buy",`Bought ${s}`)) return; const h=S.hold[s]||(S.hold[s]={sh:0,cost:0}); h.sh += amt/p; h.cost += amt; },
   stkSell(s,f){ const h=S.hold[s]; if (!h || h.sh<=0) return; const sh=h.sh*f, p=S.stk[s].p, v=sh*p, basis=h.cost*f; S.realized += v-basis; h.sh-=sh; h.cost-=basis; if (h.sh < 1e-9 || f>=1) delete S.hold[s]; gain(v,"sell",`Sold ${s} (${signed(v-basis)})`); }
 };
-const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*(hasRide()?2:1)*100)/100;
+const hustlePay = () => Math.round(3*Math.pow(1+S.lvl,1.6)*rideX()*100)/100;
 
 /* ================= auctions: live room ================= */
 const RIVALS = {
@@ -658,17 +700,19 @@ function newLot(t, head, sec){
   let pool = ITEMS.filter(i => !i.hidden && i.t >= a && i.t <= b);
   if (sec==="bin" && S.lvl < 2){ pool = ITEMS.filter(i => !i.hidden && i.t === 0).sort((x,y)=>x.base-y.base); pool = pool.slice(0, Math.ceil(pool.length/2)); }
   if (!pool.length) pool = ITEMS.filter(i => !i.hidden && i.t <= S.lvl+1);
+  const repo = !head && !mystery && sec!=="priv" && R() < .12;
+  if (repo){ const vp = ITEMS.filter(i => i.c==="veh" && !i.hidden && i.t <= Math.max(1, S.lvl)); if (vp.length) pool = vp; }
   const d = pool[Math.floor(R()*pool.length)];
   const cm = head ? COND[3][0] : COND[Math.floor(R()*4)][0];
   let val, ref, lo, hi;
   if (mystery){ ref = Math.max(200, S.peak*.04*(.5+R())); val = ref*(.3+R()*1.9); lo = nice(ref*.3); hi = nice(ref*2.2); }
   else { val = d.base*cm*wob(d.id,t); ref = val; lo = nice(val*(.6+.3*R())); hi = nice(val*(1.08+.5*R())); }
-  const cat = itemCat(d, mystery), ks = pickRivals(cat, head, sec), light = !head && R() < .18;
+  const cat = itemCat(d, mystery), ks = pickRivals(cat, head, sec), light = !head && (repo || R() < .18);
   return {id:uid(), sec, mystery, head:!!head, item:mystery?"storage":d.id, cm, val, lo, hi, cat, appr:false,
     fee:Math.max(5, nice((lo+hi)/2*.03)), open:Math.max(5, nice(lo*.45)),
-    light, rivals:ks.map(k => ({k, max:rivalMax(k,cat,ref)*(light?.55+.25*R():1)})), exp:t+(head?30:5+R()*6)*MIN};
+    light, repo, rivals:ks.map(k => ({k, max:rivalMax(k,cat,ref)*(repo?.4+.2*R():light?.55+.25*R():1)})), exp:t+(head?30:5+R()*6)*MIN};
 }
-function lotName(L){ return L.mystery ? "Mystery Storage Unit" : ITEMM[L.item].n; }
+function lotName(L){ return L.mystery ? "Mystery Storage Unit" : (L.repo ? "Repo: " : "") + ITEMM[L.item].n; }
 function lotIcon(L){ return L.mystery ? "📦" : ITEMM[L.item].e; }
 function lotsTick(t){
   let ch = false;
@@ -779,7 +823,7 @@ const thingName = th => isProp(th) ? th.name : (th.name || ITEMM[th.id].n);
 function saleRate(ratio, prop){ const r=Math.max(ratio,.3); return clamp(.12*Math.pow(.9/r,8)*(r>1.2?Math.exp(-(r-1.2)*8):1), 0, .5) * (prop ? .5 : 1); }
 function sellOdds(ratio, prop){ const p = saleRate(ratio, prop); if (p <= 0) return "Won't sell"; const mins = 1/p;
   return mins < 12 ? "Sells fast" : mins < 45 ? "Likely within the hour" : mins < 180 ? "Could take a few hours" : mins < 720 ? "Could take most of a day" : "Long shot"; }
-function listThing(u, price){ const th = thingOf(u); if (!th || price <= 0) return; if (isProp(th) && th.renoUntil > Date.now()){ toast("Wait for the renovation to finish"); return; }
+function listThing(u, price){ const th = thingOf(u); if (!th || price <= 0) return; if (th.rent){ toast("Bring it back from rental first"); return; } if (isProp(th) && th.renoUntil > Date.now()){ toast("Wait for the renovation to finish"); return; }
   const t = Date.now(); th.ls = {p:price, at:t, chk:Math.floor(t/MIN), off:null}; tx("list",`Listed ${thingName(th)} for ${money(price)}`,0); }
 function unlistThing(u){ const th = thingOf(u); if (th){ th.ls = null; } }
 function completeSale(th, amt, how){
@@ -860,13 +904,6 @@ const EVENTS = [
       {label:"Pass",run(){ return "Someone else snapped it up."; }}
     ]};
   }},
-  {id:"rumor", w:2, ok:()=>S.lvl>=1 && S.cash>=200, make(){
-    const x=STK[1+Math.floor(Math.random()*(STK.length-2))]; const amt=S.cash*.25;
-    return {icon:"📰",title:"Market rumor",text:`Word on the street: ${x.n} (${x.s}) may announce a big partnership. Rumors cut both ways.`,choices:[
-      {label:`Buy ${money(amt)} of ${x.s}`,cost:amt,run(){ A.stkBuy(x.s,.25); const up=Math.random()<.58, f=up?1.12+Math.random()*.1:.86-Math.random()*.08; S.stk[x.s].p*=f; S.stk[x.s].hist.push(S.stk[x.s].p); return up?`The deal was real. ${x.s} jumped ${((f-1)*100).toFixed(1)}%.`:`False alarm. ${x.s} fell ${((1-f)*100).toFixed(1)}%.`; }},
-      {label:"Stay out",run(){ return "You sat this one out."; }}
-    ]};
-  }},
   {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
     const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*.6, offer=each*1.7;
     return {icon:"🤝",title:"Acquisition offer",text:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
@@ -887,7 +924,7 @@ function maybeEvent(t){
   /* bad luck is rare: never twice in a row, and at most one mishap every 2-4 hours */
   const badOk = !S.lastBad || t - S.lastBad > (2+Math.random()*2)*H;
   const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv && (!e.bad || badOk));
-  S.nextEv = t + (15+Math.random()*15)*MIN;
+  S.nextEv = t + (45+Math.random()*45)*MIN;
   if (!pool.length) return;
   let r = Math.random()*pool.reduce((a,e)=>a+e.w,0), pk = pool[0];
   for (const e of pool){ if ((r-=e.w) < 0){ pk=e; break; } }
@@ -979,7 +1016,7 @@ function viewHome(){
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last ${Math.max(1,Math.round((Date.now()-S.hist[0][0])/H))}h</small></div>
     <div class="card chart">${sparkSvg(hv,"#1fc983")}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
-  <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?"Delivery gigs with your ride: double pay":"One paid shift a minute. A vehicle doubles the pay"}</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
+  <section class="sec"><div class="card hustle"><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A car doubles it, a supercar triples it"}</span></div><button class="btn gold" data-act="hustle" data-live="hustle"></button></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
   <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
     ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
@@ -999,8 +1036,8 @@ function viewMarket(){
     body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
     ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
     ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
-    ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
-    ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
+    ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
+    ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
@@ -1085,7 +1122,8 @@ function viewProfile(){
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--muted);font-size:13px;margin:0">Copy a backup code and paste it somewhere safe, like Notes. If you delete and re-add the app, paste the code here and tap Restore to get everything back.</p>
   <textarea id="bkt" rows="3" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Paste a backup code here to restore" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;resize:vertical"></textarea>
   <div class="btns three"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkpaste">Paste</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
-  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>`;
+  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>
+  <section class="sec"><button class="btn gold" data-act="devopen" style="width:100%">About the developer</button></section>`;
 }
 
 function render(){
@@ -1137,7 +1175,7 @@ function sheetPListing(lid){ return () => {
 function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
   return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">Double pay</span>`]]:[]))}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]]:[]))}
   ${d.vb?`<p class="note">Only your best vehicle counts toward the business bonus${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
   <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
@@ -1145,8 +1183,9 @@ function sheetListing(c,lid){ return () => {
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">Double pay</span>`]]:[]))}
-  ${d.vb?`<p class="note">Only your best vehicle counts toward the business bonus.</p>`:""}
+  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat(d.vb?(i.rent?[["Bonuses","Paused while rented"]]:[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]]):[]))}
+  ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
+  ${d.vb&&!i.rent?`<p class="note">Only your best vehicle counts toward the business bonus.</p>`:""}
   ${sellPanel(i)}`;
 };}
 function sheetStock(s){ return () => {
@@ -1266,6 +1305,37 @@ function guideSeen(){ try { return localStorage.getItem("mm-guide") === "1"; } c
 function markGuide(){ try { localStorage.setItem("mm-guide","1"); } catch(e){} }
 
 /* ================= input ================= */
+let devPick = -1, devAt = 0;
+const VEND = [
+  {c:"A1",n:"Billionaire Bar",p:"$1.00",k:"bar",col:"#e4b95b",t:"Gippetto315 is a billionaire in this game and nowhere else. He has asked us to stop bringing that up."},
+  {c:"A2",n:"Net Worth Nuts",p:"$1.25",k:"bag",col:"#ff9a3c",t:"Most of his net worth is snacks. He calls it a diversified portfolio."},
+  {c:"A3",n:"Merger Mints",p:"$0.75",k:"box",col:"#7ee0a8",t:"His first business deal was trading a sandwich for half a sandwich. He still calls it a merger."},
+  {c:"B1",n:"Cash Cola",p:"$1.50",k:"can",col:"#ff6b62",t:"He reads the business news every morning. Just the date. Then he feels informed."},
+  {c:"B2",n:"Interest Gum",p:"$0.50",k:"box",col:"#a77bff",t:"He believes compound interest is being interested in two things at once. He is interested in money and also money."},
+  {c:"B3",n:"Audit Crisps",p:"$1.25",k:"bag",col:"#4aa8ff",t:"His accountant is the calculator app. They have never once disagreed."},
+  {c:"C1",n:"Tycoon Taffy",p:"$0.95",k:"bar",col:"#f26bb0",t:"He wears a suit to check his bank balance. It is a sign of respect for both of them."},
+  {c:"C2",n:"Mystery Item",p:"$?.??",k:"can",col:"#5f6d66",t:"Contents unknown. Same as his five-year plan. Both are doing fine, thank you."},
+  {c:"C3",n:"Sold Out",p:"—",k:"out",col:"#24302b",t:"Sold out. He bought every single one himself. Business people call this vertical integration."}
+];
+function vmPack(v){ return v.k==="out" ? `<span class="vm-so">SOLD<br>OUT</span>` : `<span class="vm-pk vm-${v.k}" style="--c:${v.col}"><i>${v.n.split(" ")[0]}</i></span>`; }
+function sheetDev(){ return () => { const cur = devPick>=0 ? VEND[devPick] : null, fresh = Date.now()-devAt < 1300;
+  return `<div class="vm${fresh?" vm-shake":""}">
+  <div class="vm-top"><b>SJP VENDING</b><small>ABOUT THE DEVELOPER · EST. TODAY-ISH</small></div>
+  <div class="vm-mid">
+    <div class="vm-glass">${VEND.map((v,i)=>`<button class="vm-slot${i===devPick&&fresh?" vm-drop":""}${i===devPick&&!fresh?" vm-gone":""}" data-act="devvend" data-arg="${i}">${vmPack(v)}<span class="vm-tag"><b>${v.c}</b> ${v.p}</span></button>`).join("")}<span class="vm-glare"></span></div>
+    <div class="vm-side">
+      <div class="vm-code">${cur?cur.c:"--"}</div>
+      <div class="vm-keys">${["A","B","C","1","2","3"].map(k=>`<span>${k}</span>`).join("")}</div>
+      <div class="vm-coin"><span></span><small>COINS</small></div>
+      <div class="vm-bill"><span></span><small>BILLS</small></div>
+      <div class="vm-ret">RETURN</div>
+    </div>
+  </div>
+  <div class="vm-led">${cur?`<b>${cur.c} · ${cur.n.toUpperCase()}</b>${cur.t}`:`<b>MAKE A SELECTION</b>Tap any snack. Each one comes with a fact about the developer. No refunds.`}</div>
+  <div class="vm-tray"><span class="vm-push">PUSH</span>${cur?`<span class="vm-got${fresh?" in":""}">${cur.k==="out"?"Nothing. Still somehow charged.":"You got: "+cur.n}</span>`:""}</div>
+  <div class="vm-feet"><i></i><i></i></div>
+  </div>
+  <button class="btn gold" data-act="close" style="width:100%;margin-top:14px">BACK TO THE MONEY</button>`; }; }
 let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
@@ -1317,6 +1387,7 @@ document.addEventListener("click", e => {
   switch(act){
     case "close": closeSheet(); render(); break;
     case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
+    case "carRent": run(()=>A.carRent(arg)); break;
     case "hustle": run(A.hustle); break;
     case "openBiz": openSheet(sheetBiz(arg)); break;
     case "openProp": openSheet(sheetProp(arg)); break;
@@ -1368,6 +1439,8 @@ document.addEventListener("click", e => {
       if (Date.now() - resetArm < 4000){ S = data; S.last = Math.min(S.last, Date.now()); settleRoom(); advance(Date.now()); save(); markGuide(); resetArm = 0; tab = "home"; render(); toast(`Restored. Net worth ${money(netWorth())}`, true); }
       else { resetArm = Date.now(); el.textContent = "Tap again to replace this game"; setTimeout(()=>{ const b=$("bkrest"); if (b) b.textContent="Restore"; }, 4000); }
       break; }
+    case "devvend": devPick = +arg; devAt = Date.now(); drawSheet(); setTimeout(()=>{ if (sheetFn && devPick===+arg) drawSheet(); }, 1350); break;
+    case "devopen": devPick=-1; devAt=0; openSheet(sheetDev()); break;
     case "cheatopen": chtVal = ""; openSheet(sheetCheat()); break;
     case "cheat": { const c = ($("chtc").value||"").trim().toLowerCase();
       if (c === "bigdaddy"){ gain(10000,"income","Cheat code"); chtVal = ""; progress(); save(); closeSheet(); render(); toast("+$10,000. Spend it wisely.", true); }
