@@ -484,7 +484,8 @@ const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus() - BIZM[id].exp;
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.5*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
-function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
+const PROP_TREND = .0002;
+function propVal(p,t){ t=t||Date.now(); return propBaseVal(p)*econ(t)*Math.exp(PROP_TREND*(t-(p.uid ? (p.at || (p.at=t)) : t))/H); }
 function propRent(p,t){ return propVal(p,t)*.02*.92; }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
 function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
@@ -1067,7 +1068,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794954199";
+const BUILD = "1794954327";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
