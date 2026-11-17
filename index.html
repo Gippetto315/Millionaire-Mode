@@ -469,7 +469,8 @@ function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
-function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*.6 : 0; }
+const SELL = .8;
+function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*SELL : 0; }
 const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus() - BIZM[id].exp;
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.75*(l+1); }
@@ -672,7 +673,7 @@ const A = {
   bizUp(id,i){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); i=+i; if (!(i>=0 && i<L.length) || L[i]>=5) return; const c=upCost(id,L[i]); if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${i+1} to level ${L[i]+1}`)) return; L[i]++; o.spent+=c; },
   bizBuyN(id,k){ for (let i=0;i<k;i++){ const o=S.biz[id]; if ((o?o.n:0)>=25 || unitCost(id)>S.cash+1e-6) break; A.bizBuy(id); } },
   bizSellN(id,k){ for (let i=0;i<k && S.biz[id];i++) A.bizSell(id); },
-  bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*.6; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
+  bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*SELL; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ p.rented=!p.rented; } },
@@ -949,7 +950,7 @@ const EVENTS = [
     ]};
   }},
   {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
-    const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*.6, offer=each*1.7;
+    const id=ownedBiz().filter(i=>bizEquity(i)>=100)[0], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*SELL, offer=o.spent/o.n*1.02;
     return {icon:"🤝",title:"Acquisition offer",text:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
       {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
       {label:"Decline",run(){ return "You kept the location."; }}
@@ -1043,7 +1044,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794892752";
+const BUILD = "1794893249";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1233,7 +1234,7 @@ function sheetBiz(id){ return () => {
 let bizQ = {};
 function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.10,n+i); return c; }
 function maxBuy(id){ const n=S.biz[id]?S.biz[id].n:0; let k=0; while (n+k<25 && buyCostN(id,k+1)<=S.cash+1e-6) k++; return k; }
-const sellValN = (id,k) => { const o=S.biz[id]; return o ? o.spent*Math.min(k,o.n)/o.n*.6 : 0; };
+const sellValN = (id,k) => { const o=S.biz[id]; return o ? o.spent*Math.min(k,o.n)/o.n*SELL : 0; };
 function bizQtyPanel(id){
   const o=S.biz[id], n=o?o.n:0, q=Math.max(1,bizQ[id]||1), room=25-n, bq=Math.min(q,room), sq=Math.min(q,n), bc=buyCostN(id,bq);
   return `<div class="lbl">How many locations</div>
@@ -1325,7 +1326,7 @@ function sheetNW(){ return () => {
   <ul class="ilist">
     <li><span><b>Why it keeps climbing:</b> your businesses and rentals pay you every second, so cash ticks up all the time.</span></li>
     <li><span><b>Why it can dip:</b> stocks, cars, collectibles and property change value with the market. Vehicles also cost upkeep.</span></li>
-    <li><span><b>Businesses</b> count at 60% of what you put in, which is what you'd get if you sold.</span></li>
+    <li><span><b>Businesses</b> count at ${Math.round(SELL*100)}% of what you put in, which is what you'd get if you sold.</span></li>
   </ul>
   <button class="btn ghost" data-act="close">Got it</button>`; }; }
 function showEvent(ev){
@@ -1476,7 +1477,7 @@ function cfmInfo(act, arg){
   if (act==="bizUp"){ const [id,i]=arg.split("|"), b=BIZM[id], o=S.biz[id], l=migrateLocs(o)[+i], c=upCost(id,l), pl=planLoc(id,i); return {alt:pl.n>=2?{label:`Max: ${pl.n} levels to ${pl.to} for ${money(pl.cost)}`,act:"bizUpLoc",arg}:null,e:b.e,t:`Upgrade ${b.n} #${+i+1} to level ${l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
   if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["You get",money(v)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
