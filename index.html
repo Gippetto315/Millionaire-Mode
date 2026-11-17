@@ -484,8 +484,8 @@ function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
 function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); }
-const LOAN_RATE = .09/12, LOAN_PART = .08, LOAN_EVERY = 12*3600000, LATE_X = 2;
-const LOAN_PAYS = Math.ceil(1/LOAN_PART - 1e-9), LOAN_SUM = (() => { let r = 1, t = 0; while (r > 1e-9){ t += r; r -= LOAN_PART; } return t; })(), LOAN_COST = LOAN_RATE*12*LOAN_SUM, LOAN_PCT = Math.round(LOAN_PART*100), LOAN_IPCT = Math.round(LOAN_RATE*1200);
+const LOAN_FEE = .11, LATE_RATE = .11/12, LOAN_PART = .08, LOAN_EVERY = 12*3600000;
+const LOAN_PAYS = Math.ceil(1/LOAN_PART - 1e-9), LOAN_COST = LOAN_FEE, LOAN_PCT = Math.round(LOAN_PART*100), LOAN_IPCT = Math.round(LOAN_FEE*100);
 const savRate = d => { d = Math.max(1, Math.min(30, d)); const r = .005 + .0041*(d-1)/29; return Math.round((Math.pow(1+r, d) - 1)*1000)/1000; };
 const savVal = (t) => { t=t||Date.now(); return (S.sav||[]).reduce((a,v)=>a+v.p*(1+v.r*Math.min(1,Math.max(0,(t-v.at)/(v.end-v.at)))),0); };
 const savLocked = () => (S.sav||[]).reduce((a,v)=>a+v.p,0);
@@ -496,14 +496,15 @@ const loanRatioAt = l => Math.min(2.5, .5 + .2*l);
 const loanRatio = () => loanRatioAt(S.lvl);
 const loanCap = () => Math.max(Math.max(0,netWorth())*loanRatio(), 100*(S.lvl+1));
 const overdrawn = () => S.cash < -.005;
-const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor(loanCap()*100)/100 - (S.debt||0));
+const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor((Math.floor(loanCap()*100)/100 - (S.debt||0))/(1+LOAN_FEE)*100)/100);
 const loanIntr = () => Math.max(0, (S.debt||0) - (S.prin||0));
 const loanInstLeft = () => Math.min(Math.max(0, (S.inst||0) - (S.pp||0)), S.prin||0);
-const loanDueNow = () => loanInstLeft() + loanIntr();
-const loanRate = () => LOAN_RATE * (overdrawn() ? LATE_X : 1);
+const loanMul = () => (S.prin||0) > .005 ? Math.max(1, (S.debt||0)/S.prin) : 1;
+const loanDueNow = () => loanInstLeft()*loanMul();
+const loanRate = () => overdrawn() ? LATE_RATE : 0;
 function loanClear(){ S.pp = 0; S.orig = 0; S.debt = 0; S.prin = 0; S.inst = 0; S.late = false; S.dueAt = 0; }
 function loanMigrate(){ if (S.debt > .005 && S.prin == null){ S.prin = S.debt; S.inst = LOAN_PART*S.debt; if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; S.late = false; } if (S.orig == null) S.orig = S.prin || 0; if (S.prin == null) S.prin = 0; if (S.inst == null) S.inst = 0; }
-function loanPayment(ev){ const intr = loanIntr(), inst = loanInstLeft(), due = inst + intr, was = overdrawn();
+function loanPayment(ev){ const inst = loanInstLeft(), due = inst*loanMul(), was = overdrawn();
   S.cash -= due; S.debt -= due; S.prin = Math.max(0, S.prin - inst); S.pp = 0; if (due > .005) tx("loan", S.cash < -.005 ? "Loan payment (account overdrawn)" : "Loan payment", -due);
   if (S.debt < .01 || S.prin <= .005){ loanClear(); } else { S.late = false; S.dueAt = ev + LOAN_EVERY; }
   if (overdrawn() && !was) toast("The bank took the payment and your account went negative. Interest doubles until you're back above zero", true); }
@@ -659,10 +660,10 @@ function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough ca
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
   carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
-  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); if (!(S.debt > .005) || !S.dueAt) S.dueAt = Date.now() + LOAN_EVERY; S.cash += a; S.debt = (S.debt||0) + a; S.prin += a; S.orig = (S.orig||0) + a; S.inst += LOAN_PART*a; tx("loan","Took out a loan",a); },
+  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); if (!(S.debt > .005) || !S.dueAt) S.dueAt = Date.now() + LOAN_EVERY; S.cash += a; S.debt = (S.debt||0) + a*(1+LOAN_FEE); S.prin += a; S.orig = (S.orig||0) + a; S.inst += LOAN_PART*a; tx("loan","Took out a loan",a); },
   savPut(arg){ const [a0,d0]=String(arg).split("|"), d=Math.max(1,Math.min(30,Math.round(+d0))), a=Math.min(+a0,S.cash,savCap()); if (!(a>=.01)) return; const t=Date.now(); S.sav=S.sav||[]; S.sav.push({p:a,r:savRate(d),at:t,end:t+d*24*H,d}); S.cash-=a; tx("spend","Savings deposit",-a); },
   savBreak(i){ S.sav=S.sav||[]; const v=S.sav[+i]; if (!v) return; S.sav.splice(+i,1); const g=v.p*.95; S.cash+=g; tx("spend","Savings broken early (5% fee)",g); },
-  loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; const dueBefore = loanDueNow(), intr = loanIntr(), toP = Math.max(0, a - Math.min(a, intr));
+  loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; const toP = Math.min(S.prin, a*(S.prin/Math.max(.01,S.debt)));
     S.cash -= a; S.debt -= a; S.prin = Math.max(0, S.prin - toP); S.pp = (S.pp||0) + toP;
     if (S.debt < .005 || S.prin <= .005 && S.debt - S.prin < .005){ const paidOff = S.debt < .005 || S.prin <= .005; if (paidOff){ loanClear(); } }
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
@@ -1044,7 +1045,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794894379";
+const BUILD = "1794894635";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1430,7 +1431,7 @@ function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0;
   Object.keys(S.biz).forEach(id => biz += bizNetAt(id,t));
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) prop += propRent(p,t); up += propCost(p,t); });
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t);
-  const net = biz + prop + car - up, intr = (S.prin||0)*loanRate();
+  const net = biz + prop + car - up, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*12) + (S.prin||0)*loanRate()) : 0;
   return {biz,prop,car,up,net,intr,after:net-intr}; }
 function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Math.min(d,S.cash), f=cashFlow(), sg=x=>Math.abs(x)<.005?money(0):`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}</i>`;
   const assets=assetsVal()+bizVal();
@@ -1442,7 +1443,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="lbl">Where it comes from, per hour</div>
   <div class="lines"><div><span>Businesses</span><b class="num">${sg(f.biz)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   <div class="lbl">Loans</div>
-  ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment",LOAN_PCT+"% of loan + interest"],["Interest",LOAN_IPCT+"% every 12 hours on what's left"+(overdrawn()?" · doubled (overdrawn)":"")],["Interest costs",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"],["Paid off",d>.005&&S.orig>.005?`<span class="up">${Math.max(0,Math.min(100,(1-(S.prin||0)/S.orig)*100)).toFixed(1)}%</span> of ${money(S.orig)}`:"No loan"]])}
+  ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment",(LOAN_PART*(1+LOAN_FEE)*100).toFixed(2).replace(/0$/,"")+"% of the loan"],["Interest",LOAN_IPCT+"% flat, charged once"+(overdrawn()?" · extra while negative":"")],["Interest per hour",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"],["Paid off",d>.005&&S.orig>.005?`<span class="up">${Math.max(0,Math.min(100,(1-(S.prin||0)/S.orig)*100)).toFixed(1)}%</span> of ${money(S.orig)}`:"No loan"]])}
   <div class="lbl">Borrow</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn" data-act="loanTakeC">Borrow</button></div>
@@ -1457,7 +1458,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="amtrow"><span class="dollar">$</span><input id="savamt" type="text" inputmode="decimal" placeholder="Amount to lock away" value="${esc(savAmt)}" autocomplete="off"><button class="btn" data-act="savPutC">Save</button></div>
   <div class="amtrow"><span class="dollar" style="font-size:12px">days</span><input id="savdays" type="text" inputmode="numeric" placeholder="1 to 30" value="${savDays}" autocomplete="off"></div>
   <p class="note">Lock cash away and it earns a fixed payout when the time is up, even while you're away. Longer pays more, and every extra day pays a better daily rate, so locking longer always beats re-depositing short: 1 day 0.5%, 3 days 1.6%, 7 days 4.2%, 14 days 10%, 21 days 17.8%, 30 days 31.2%. Locked money still counts toward your net worth, but you can't spend it. Total in savings is capped at 25% of your net worth. Break a deposit early and you lose the interest plus a 5% fee.</p>
-  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. Every 12 hours you pay back ${LOAN_PCT}% of what you borrowed plus the interest so far (${LOAN_IPCT}% every 12 hours on what's left), so a loan clears in about ${LOAN_PAYS*12} hours and costs about ${Math.round(LOAN_COST*100)}% of the amount in interest. Anything you pay early comes off your next payment. It all happens even while you're away. The bank always takes the full payment. If you don't have the cash, your account goes negative, interest doubles, and you can't borrow or buy until you're back above zero. Debt counts against your net worth.</p>`; }; }
+  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. The bank charges ${LOAN_IPCT}% interest, once, on what you borrow: borrow $100 and you pay back $${(100*(1+LOAN_FEE)).toFixed(0)} in total. You pay it in ${LOAN_PAYS} equal-ish payments, one every 12 hours, so a loan clears in about ${LOAN_PAYS*12} hours. Anything you pay early comes off your next payment. It all happens even while you're away. The bank always takes the full payment. If you don't have the cash, your account goes negative, the bank adds ${LOAN_IPCT}% extra every 12 hours until you're back above zero, and you can't borrow or buy until then. Debt counts against your net worth.</p>`; }; }
 let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
@@ -1470,7 +1471,7 @@ function cfmInfo(act, arg){
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="savPut"){ const [a0,d0]=arg.split("|"), d=+d0, a=+a0, r=savRate(d); return {e:"🐷",t:`Lock away ${money(a)}?`,l:[["Locked for",d+" day"+(d>1?"s":"")],["Interest",(r*100).toFixed(1).replace(/\.0$/,"")+"%"],["You get back",money(a*(1+r))],["Unlocks",new Date(Date.now()+d*24*H).toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit"})]],n:after(-a)+" You can't spend it until then. Breaking early loses the interest plus a 5% fee.",yes:`Lock ${money(a)}`}; }
   if (act==="savBreak"){ const v=(S.sav||[])[+arg]; if (!v) return null; return {e:"🐷",t:"Break this deposit?",l:[["You get",money(v.p*.95)],["Interest lost",money(v.p*v.r)],["Fee","5% · "+money(v.p*.05)]],n:`It still had ${dur(v.end-Date.now())} to go.`,yes:`Take ${money(v.p*.95)}`,sell:1}; }
-  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Debt after",money((S.debt||0)+a)],["Interest",LOAN_IPCT+"% every 12 hours on what's left"],["Every 12 hours",LOAN_PCT+"% of the loan + interest"],["First payment",money(LOAN_PART*a + a*LOAN_RATE*12)],["Total interest","about "+money(a*LOAN_COST)+" ("+Math.round(LOAN_COST*100)+"%)"],["You repay in total","about "+money(a*(1+LOAN_COST))]],n:`${LOAN_PAYS} payments over ${LOAN_PAYS*12} hours. If your cash can't cover one, the bank takes it anyway, your account goes negative, and interest doubles until you're back above zero.`,yes:`Borrow ${money(a)}`}; }
+  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()), pay1=a*LOAN_PART*(1+LOAN_FEE); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Interest",LOAN_IPCT+"% flat, charged once"],["You repay in total",money(a*(1+LOAN_FEE))],["Debt after",money((S.debt||0)+a*(1+LOAN_FEE))],["Every 12 hours",money(pay1)],["Payments",LOAN_PAYS+" over "+LOAN_PAYS*12+" hours"]],n:`If your cash can't cover a payment, the bank takes it anyway, your account goes negative, and extra interest builds until you're back above zero.`,yes:`Borrow ${money(a)}`}; }
   if (act==="loanPay"){ const a=Math.min(+arg,S.debt||0,S.cash); return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["You pay",money(a)],["Debt after",money(Math.max(0,(S.debt||0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
