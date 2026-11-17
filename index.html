@@ -90,7 +90,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .rmain .parts b{font-weight:800}
 .up{color:var(--em)!important}.down{color:var(--red)!important}.goldt{color:var(--gold)!important}
 .pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:rgba(31,201,131,.14);color:var(--em)}
-.pill.g{background:rgba(228,185,91,.15);color:var(--gold)}
+.pill:empty{display:none}.pill.g{background:rgba(228,185,91,.15);color:var(--gold)}
 .pill.r{background:rgba(255,107,98,.14);color:var(--red)}
 .pill.m{background:var(--surface2);color:var(--muted)}
 .locked{opacity:.5}
@@ -468,6 +468,9 @@ const rentAll = t => S.items.reduce((a,i)=>a+carRent(i,t),0);
 function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus() : 0; }
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
+function evInfo(id,t){ t=t||Date.now(); const a=S.mods.filter(x=>(x.b==="*"||x.b===id)&&t>=x.from&&t<x.until); if (!a.length) return null; return {m:a.reduce((p,x)=>p*x.m,1), end:Math.min(...a.map(x=>x.until)), all:a.some(x=>x.b==="*")}; }
+function evText(id,up){ const e=evInfo(id); if (!e || (up ? e.m<=1 : e.m>=1)) return ""; return (up ? "▲ "+(Math.abs(e.m-Math.round(e.m))<.01 ? Math.round(e.m)+"x" : "+"+Math.round((e.m-1)*100)+"%") : "▼ "+Math.round(e.m*100)+"%")+" revenue · "+dur(e.end-Date.now()); }
+const evTags = id => `<span class="pill" data-live="evu:${id}">${evText(id,true)}</span><span class="pill r" data-live="evd:${id}">${evText(id,false)}</span>`;
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 const SELL = .8;
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*SELL : 0; }
@@ -1045,7 +1048,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794894635";
+const BUILD = "1794895049";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1054,6 +1057,8 @@ setTimeout(checkUpdate, 1500);
 
 /* live text bound to the clock */
 const LIVE = {
+  evu: id => evText(id,true),
+  evd: id => evText(id,false),
   cash: () => money(S.cash),
   nw: () => money(netWorth()),
   ph: () => signed(perHour()*24),
@@ -1108,7 +1113,7 @@ function viewHome(){
   <section class="sec"><div class="card hustle"><button class="btn gold" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
   <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
-    ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
+    ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)}${m!==1?` · ${evTags(id)}`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
   </section>
   <section class="sec"><div class="sechead"><h2>Recent activity</h2></div>
     ${S.tx.length?`<div class="list">${S.tx.slice(0,5).map(txRow).join("")}</div>`:`<div class="empty">Your transactions will show up here.</div>`}</section>`;
@@ -1130,7 +1135,7 @@ function viewMarket(){
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
-      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?(o.n>=25?"all 25 open":"#"+(o.n+1)):"first"} · +${money(newLocNet(b.id))}/h</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
+      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h${modAt(b.id,Date.now())!==1?" "+evTags(b.id):""}`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?(o.n>=25?"all 25 open":"#"+(o.n+1)):"first"} · +${money(newLocNet(b.id))}/h</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
     const L=propListings();
     body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
@@ -1228,9 +1233,9 @@ function sheetBiz(id){ return () => {
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
   return `<div class="shead"><div class="tile">${b.e}</div><div><h3>${b.n}</h3><p>${o?`${n} location${n>1?"s":""} · ${lvTxt(o)} of 5`:"Not owned yet"}</p></div></div>
   ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",Math.round(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
-  ${m!==1?`<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event.</p>`:""}
+  ${m!==1?(()=>{const e=evInfo(id);return `<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event: ${evText(id,m>1).replace(/^[▲▼] /,"")} left, ${e&&e.all?"market-wide, hitting all your businesses":"hitting all "+n+" of your locations here"}.</p>`;})():""}
   ${bizQtyPanel(id)}
-  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`,act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns 60% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:(l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`)+(m!==1?" "+evTags(id):""),act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns ${Math.round(SELL*100)}% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
 let bizQ = {};
 function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.10,n+i); return c; }
