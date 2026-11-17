@@ -1044,7 +1044,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794893635";
+const BUILD = "1794893985";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1272,7 +1272,7 @@ function sheetListing(c,lid){ return () => {
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
   ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
   ${(d.vb||d.hx)&&!i.rent?`<p class="note">Only your best vehicle counts toward the bonuses.</p>`:""}
   ${sellPanel(i)}`;
