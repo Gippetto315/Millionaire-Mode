@@ -145,6 +145,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .sheet .big{font:800 30px/1.1 var(--display);text-align:center}
 .sheet .sub{color:var(--muted);text-align:center;margin-top:-6px}
 .lines{display:flex;flex-direction:column;gap:6px}
+.lrow{display:block;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;color:inherit;font:inherit}
 .lines div{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted)}
 .lines div b{color:var(--text);font-weight:800}
 .welcome{font:800 13px/1 var(--display);letter-spacing:.2em;color:var(--gold);text-align:center;margin-top:6px}
@@ -1066,7 +1067,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794953203";
+const BUILD = "1794953340";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1474,6 +1475,15 @@ function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t);
   const net = biz + prop + car - up, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
   return {biz,bx,prop,car,up,net,intr,after:net-intr}; }
+let curLoan = "", loanOneV = "";
+function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) === curLoan); if (!l) return sheetBank()();
+  const n = loanNextStep(l), pay = Math.min(l.d, S.cash);
+  return `<div class="shead"><div class="tile gold">🏦</div><div><h3>${money(l.o)} loan</h3><p>Taken ${dur(Date.now()-l.at)} ago</p></div></div>
+  ${kv([["You owe",money(l.d)],["Borrowed",money(l.o)],["What's left costs",loanPct(loanRate(l))],["Next rise",n?loanPct(n.rate)+" in "+dur(n.in):"Top rate"],["Each payment",money(loanInstOf(l)*(l.d/Math.max(.01,l.p)))],["Your cash",money(S.cash)]])}
+  <div class="lbl">Pay toward this loan</div>
+  <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanPayOne" data-arg="${l.at}|${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
+  <div class="amtrow"><span class="dollar">$</span><input id="loanone" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanOneV)}" autocomplete="off"><button class="btn" data-act="loanPayOneC">Pay</button></div>
+  <button class="btn ghost" data-act="bank" style="width:100%;margin-top:12px">‹ Back to the bank</button>`; }; }
 function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Math.min(d,S.cash), f=cashFlow(), sg=x=>Math.abs(x)<.005?money(0):`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}</i>`;
   const assets=assetsVal()+bizVal();
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>The Bank</h3><p>All your money in one place</p></div></div>
@@ -1485,7 +1495,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="lines"><div><span>Business revenue</span><b class="num">${sg(f.biz+f.bx)}</b></div><div><span>Business running costs</span><b class="num">${sg(-f.bx)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   <div class="lbl">Loans</div>
   ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment",(d>.005?money(Math.min(loanFullPay(),d))+" · ":"")+(LOAN_PART*(1+LOAN_FEE)*100).toFixed(2).replace(/0$/,"")+"% of the loan"],["Interest",loanLadder()+(overdrawn()?" · extra while negative":"")],["Interest per hour",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"],["Paid off",d>.005&&S.orig>.005?`<span class="up">${Math.max(0,Math.min(100,(1-(S.prin||0)/S.orig)*100)).toFixed(1)}%</span> of ${money(S.orig)}`:"No loan"]])}
-    ${loansOf().length?`<div class="lbl">Your loans</div>${loansOf().slice().sort((x,y)=>x.at-y.at).map(l=>{const full=Math.floor(Math.min(l.d,S.cash)*100)/100, half=Math.floor(Math.min(l.d/2,S.cash)*100)/100; return `<div class="lines" style="margin-bottom:6px"><div><span>${money(l.o)} · taken ${dur(Date.now()-l.at)} ago<br><small>What's left costs ${loanPct(loanRate(l))}${(()=>{const n=loanNextStep(l);return n?" · "+loanPct(n.rate)+" in "+dur(n.in):"";})()}</small></span><b>${money(l.d)}</b></div></div><div class="btns" style="margin-bottom:12px"><button class="btn ghost" data-act="loanPayOne" data-arg="${l.at}|${half}" ${half<.01?"disabled":""}>Pay half · ${money(half)}</button><button class="btn gold" data-act="loanPayOne" data-arg="${l.at}|${full}" ${full<.01?"disabled":""}>${full>=l.d-.005?"Pay it off":"Pay what I can"} · ${money(full)}</button></div>`;}).join("")}`:""}
+      ${loansOf().length?`<div class="lbl">Your loans · tap one to pay it</div>${loansOf().slice().sort((x,y)=>x.at-y.at).map(l=>`<button class="lrow" data-act="openLoan" data-arg="${l.at}"><div class="lines"><div><span>${money(l.o)} · taken ${dur(Date.now()-l.at)} ago<br><small>What's left costs ${loanPct(loanRate(l))}${(()=>{const n=loanNextStep(l);return n?" · "+loanPct(n.rate)+" in "+dur(n.in):"";})()}</small></span><b>${money(l.d)} ›</b></div></div></button>`).join("")}`:""}
   <div class="lbl">Borrow</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn" data-act="loanTakeC">Borrow</button></div>
@@ -1505,8 +1515,8 @@ let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
-document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
-document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
@@ -1546,6 +1556,11 @@ document.addEventListener("click", e => {
   if (act==="cfmno"){ cfm=null; drawSheet(); return; }
   if (act==="cfmalt"){ if (!cfm || !cfm.info.alt) return; const a=cfm.info.alt; cfm={act:a.act,arg:a.arg,info:cfmInfo(a.act,a.arg)}; drawSheet(); return; }
   if (act==="cfmyes"){ if (!cfm) return; act=cfm.act; arg=cfm.arg; cfm=null; }
+  else if (act==="loanPayOneC"){ const l=loansOf().find(x=>String(x.at)===curLoan); if(!l) return; const a=parseAmt(loanOneV);
+    if (a < .01){ toast("Type an amount first"); return; }
+    if (a > l.d+.005){ toast(`You only owe ${money(l.d)} on this loan`); return; }
+    if (a > S.cash+.005){ toast(`You only have ${money(S.cash)}`); return; }
+    arg = curLoan+"|"+a; act = "loanPayOne"; const info=cfmInfo(act,arg); cfm={act,arg,info}; drawSheet(); return; }
   else if (act==="loanTakeC" || act==="loanPayC"){
     const take = act==="loanTakeC", a = parseAmt(take ? loanAmt : loanPayV);
     if (a < .01){ toast("Type an amount first"); return; }
@@ -1628,7 +1643,8 @@ document.addEventListener("click", e => {
     case "bank": loanAmt=""; loanPayV=""; openSheet(sheetBank()); break;
     case "loanTake": loanAmt=""; run(()=>A.loanTake(arg)); break;
     case "loanPay": loanPayV=""; run(()=>A.loanPay(arg)); break;
-    case "loanPayOne": run(()=>A.loanPayOne(arg)); break;
+    case "openLoan": curLoan=arg; loanOneV=""; openSheet(sheetLoan()); break;
+    case "loanPayOne": loanOneV=""; run(()=>A.loanPayOne(arg)); break;
     case "savDays": savDays=+arg; drawSheet(); break;
     case "savPut": savAmt=""; run(()=>A.savPut(arg)); break;
     case "savBreak": run(()=>A.savBreak(arg)); break;
