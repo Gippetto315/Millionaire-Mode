@@ -1103,7 +1103,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794959417";
+const BUILD = "1794959604";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1532,6 +1532,7 @@ function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) 
   const n = loanNextStep(l), pay = Math.min(l.d, S.cash);
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>${money(l.o)} loan</h3><p>Taken ${dur(Date.now()-l.at)} ago</p></div></div>
   ${kv([["You owe",money(l.d)],["Borrowed",money(l.o)],["What's left costs",loanPct(loanRate(l))],["Next rise",n?loanPct(n.rate)+" in "+dur(n.in):"Top rate"],["Each payment",money(loanInstOf(l)*(l.d/Math.max(.01,l.p)))],["Your cash",money(S.cash)]])}
+  ${(()=>{const due=Math.floor(Math.min(loanInstOf(l)*(l.d/Math.max(.01,l.p)),l.d,S.cash)*100)/100; return due>=.01?`<button class="btn gold" data-act="loanPayOne" data-arg="${l.at}|${due}" style="width:100%;margin-bottom:8px">Pay next payment · ${money(due)}</button>`:`<p class="note" style="margin:0 0 8px">The next payment on this loan is already covered.</p>`;})()}
   <div class="lbl">Pay toward this loan</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanPayOne" data-arg="${l.at}|${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanone" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanOneV)}" autocomplete="off"><button class="btn" data-act="loanPayOneC">Pay</button></div>
