@@ -946,8 +946,8 @@ const EVENTS = [
     const id=pickBiz(), b=BIZM[id], net=Math.max(5,bizNetAt(id,Date.now())), fix=net*1.5;
     return {icon:"⚠️",title:"Business emergency",text:`Equipment broke down at your ${b.n}. Customers are being turned away until it's fixed.`,choices:[
       {label:`Repair it now (${money(fix)})`,cost:fix,run(){ spend(fix,"event",`Repair at ${b.n}`); return `Fixed. ${b.n} is running at full speed again.`; }},
-      {label:`Patch it cheap (${money(fix*.3)})`,cost:fix*.3,run(){ spend(fix*.3,"event",`Patch job at ${b.n}`); if (Math.random()<.5) return "The patch held. Nice save."; S.mods.push({b:id,m:.5,from:Date.now(),until:Date.now()+2*H,why:`Equipment broke at your ${b.n} and the cheap patch failed.`}); return `The patch failed. ${b.n} runs at half revenue for 2 hours.`; }},
-      {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+3*H,why:`Equipment broke at your ${b.n} and you left it broken.`}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
+      {label:`Patch it cheap (${money(fix*.3)})`,cost:fix*.3,run(){ spend(fix*.3,"event",`Patch job at ${b.n}`); if (Math.random()<.5) return "The patch held. Nice save."; S.mods.push({b:id,m:.5,from:Date.now(),until:Date.now()+1*H,why:`Equipment broke at your ${b.n} and the cheap patch failed.`}); return `The patch failed. ${b.n} runs at half revenue for 2 hours.`; }},
+      {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+2*H,why:`Equipment broke at your ${b.n} and you left it broken.`}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
     ]};
   }},
   {id:"surge", w:3, ok:()=>ownedBiz().length>0, make(){
@@ -989,8 +989,8 @@ const EVENTS = [
 let evOpen=false;
 function maybeEvent(t){
   if (t < S.nextEv || sheetOpen()) return;
-  /* bad luck is rare: never twice in a row, and at most one mishap every 2-4 hours */
-  const badOk = !S.lastBad || t - S.lastBad > (2+Math.random()*2)*H;
+  /* bad luck is rare: never twice in a row, and at most one mishap every 8-16 hours */
+  const badOk = !S.lastBad || t - S.lastBad > (8+Math.random()*8)*H;
   const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv && (!e.bad || badOk));
   S.nextEv = t + (45+Math.random()*45)*MIN;
   if (!pool.length) return;
@@ -1067,7 +1067,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794953340";
+const BUILD = "1794953912";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
