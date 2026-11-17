@@ -465,7 +465,7 @@ function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*.6 : 0; }
-function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.15, o ? o.n : 0); }
+function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.75*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
 function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
@@ -1175,7 +1175,7 @@ function sheetBiz(id){ return () => {
   ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",Math.round(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
   ${m!==1?`<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event.</p>`:""}
   ${bizQtyPanel(id)}
-  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`,act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 15% more than the last. Selling returns 60% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`,act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns 60% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
 let bizQ = {};
 function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.15,n+i); return c; }
