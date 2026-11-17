@@ -466,6 +466,7 @@ function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*.6 : 0; }
+const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus() - BIZM[id].exp;
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.75*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
@@ -1038,7 +1039,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794889953";
+const BUILD = "1794890760";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1123,7 +1124,7 @@ function viewMarket(){
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     body = `<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp);
-      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?"next location":"to open"}</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
+      return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?(o.n>=25?"all 25 open":"#"+(o.n+1)):"first"} · +${money(newLocNet(b.id))}/h</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
     const L=propListings();
     body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
@@ -1226,7 +1227,7 @@ function sheetBiz(id){ return () => {
   ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`,act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns 60% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
 let bizQ = {};
-function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.15,n+i); return c; }
+function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.10,n+i); return c; }
 function maxBuy(id){ const n=S.biz[id]?S.biz[id].n:0; let k=0; while (n+k<25 && buyCostN(id,k+1)<=S.cash+1e-6) k++; return k; }
 const sellValN = (id,k) => { const o=S.biz[id]; return o ? o.spent*Math.min(k,o.n)/o.n*.6 : 0; };
 function bizQtyPanel(id){
@@ -1235,6 +1236,7 @@ function bizQtyPanel(id){
   <div class="btns four">${[1,5,10,"Max"].map(v=>{const val=v==="Max"?Math.max(1,maxBuy(id)):v;return `<button class="btn stk ${q===val&&(v!=="Max"||maxBuy(id)>1)?"gold":"ghost"}" data-act="bqty" data-arg="${id}|${v}"><span>${v}</span><small>${v==="Max"?maxBuy(id)+" affordable":money(buyCostN(id,Math.min(v,room)))}</small></button>`;}).join("")}</div>
   <div class="amtrow"><span class="dollar">#</span><input id="bqin" data-id="${id}" type="text" inputmode="numeric" placeholder="Type a number" value="${bizQ[id]>1&&![5,10].includes(bizQ[id])?bizQ[id]:""}" autocomplete="off"><button class="btn ghost" data-act="bqset" data-arg="${id}">Set</button></div>
   <div class="btns"><button class="btn" data-act="bizBuyN" data-arg="${id}|${bq}" ${bq<1||bc>S.cash?"disabled":""}><span>${bq<1?"Max 25 locations":"Open "+bq+" for "+money(bc)}</span></button>${o?`<button class="btn ghost" data-act="bizSellN" data-arg="${id}|${sq}">Sell ${sq} +${money(sellValN(id,sq))}</button>`:""}</div>
+  ${n<25?`<p class="note">Next location (#${n+1}) costs ${money(unitCost(id))} and adds about ${money(newLocNet(id))}/h. Every location you own makes the next one 10% pricier, and new ones start at level 0.</p>`:""}
   ${bq>=1&&bc>S.cash?`<p class="note">You need ${money(bc-S.cash)} more for ${bq}.</p>`:""}`;
 }
 function sheetProp(u){ return () => {
@@ -1468,7 +1470,7 @@ function cfmInfo(act, arg){
   if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUp"){ const [id,i]=arg.split("|"), b=BIZM[id], o=S.biz[id], l=migrateLocs(o)[+i], c=upCost(id,l), pl=planLoc(id,i); return {alt:pl.n>=2?{label:`Max: ${pl.n} levels to ${pl.to} for ${money(pl.cost)}`,act:"bizUpLoc",arg}:null,e:b.e,t:`Upgrade ${b.n} #${+i+1} to level ${l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
-  if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed((b.rev-b.exp)*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
+  if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*.6; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
