@@ -470,6 +470,9 @@ function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function evInfo(id,t){ t=t||Date.now(); const a=S.mods.filter(x=>(x.b==="*"||x.b===id)&&t>=x.from&&t<x.until); if (!a.length) return null; return {m:a.reduce((p,x)=>p*x.m,1), end:Math.min(...a.map(x=>x.until)), all:a.some(x=>x.b==="*")}; }
 function evText(id,up){ const e=evInfo(id); if (!e || (up ? e.m<=1 : e.m>=1)) return ""; return (up ? "▲ "+(Math.abs(e.m-Math.round(e.m))<.01 ? Math.round(e.m)+"x" : "+"+Math.round((e.m-1)*100)+"%") : "▼ "+Math.round(e.m*100)+"%")+" revenue · "+dur(e.end-Date.now()); }
+function evSummary(){ const t=Date.now(); let up=0, dn=0, ue=Infinity, de=Infinity;
+  Object.keys(S.biz).forEach(id=>{ const e=evInfo(id,t); if (!e) return; const d=bizRev(id)*(e.m-1); if (e.m>1){ up+=d; ue=Math.min(ue,e.end); } else if (e.m<1){ dn+=d; de=Math.min(de,e.end); } });
+  return {up,dn,ue,de}; }
 const evTags = id => `<span class="pill" data-live="evu:${id}">${evText(id,true)}</span><span class="pill r" data-live="evd:${id}">${evText(id,false)}</span>`;
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 const SELL = .8;
@@ -1048,7 +1051,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794895109";
+const BUILD = "1794899715";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1057,6 +1060,8 @@ setTimeout(checkUpdate, 1500);
 
 /* live text bound to the clock */
 const LIVE = {
+  evgu: () => { const e=evSummary(); return e.up>.005 ? "▲ +"+money(e.up)+"/h · "+dur(e.ue-Date.now()) : ""; },
+  evgd: () => { const e=evSummary(); return e.dn<-.005 ? "▼ −"+money(-e.dn)+"/h · "+dur(e.de-Date.now()) : ""; },
   evu: id => evText(id,true),
   evd: id => evText(id,false),
   cash: () => money(S.cash),
@@ -1103,7 +1108,7 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span></div>
+    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></div>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
