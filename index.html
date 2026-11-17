@@ -492,12 +492,13 @@ const loanCap = () => Math.max(Math.max(0,netWorth())*loanRatio(), 100*(S.lvl+1)
 const overdrawn = () => S.cash < -.005;
 const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor(loanCap()*100)/100 - (S.debt||0));
 const loanIntr = () => Math.max(0, (S.debt||0) - (S.prin||0));
-const loanDueNow = () => Math.min(S.inst||0, S.prin||0) + loanIntr();
+const loanInstLeft = () => Math.min(Math.max(0, (S.inst||0) - (S.pp||0)), S.prin||0);
+const loanDueNow = () => loanInstLeft() + loanIntr();
 const loanRate = () => LOAN_RATE * (overdrawn() ? LATE_X : 1);
-function loanClear(){ S.orig = 0; S.debt = 0; S.prin = 0; S.inst = 0; S.late = false; S.dueAt = 0; }
+function loanClear(){ S.pp = 0; S.orig = 0; S.debt = 0; S.prin = 0; S.inst = 0; S.late = false; S.dueAt = 0; }
 function loanMigrate(){ if (S.debt > .005 && S.prin == null){ S.prin = S.debt; S.inst = LOAN_PART*S.debt; if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; S.late = false; } if (S.orig == null) S.orig = S.prin || 0; if (S.prin == null) S.prin = 0; if (S.inst == null) S.inst = 0; }
-function loanPayment(ev){ const intr = loanIntr(), inst = Math.min(S.inst, S.prin), due = inst + intr, was = overdrawn();
-  S.cash -= due; S.debt -= due; S.prin = Math.max(0, S.prin - inst); tx("loan", S.cash < -.005 ? "Loan payment (account overdrawn)" : "Loan payment", -due);
+function loanPayment(ev){ const intr = loanIntr(), inst = loanInstLeft(), due = inst + intr, was = overdrawn();
+  S.cash -= due; S.debt -= due; S.prin = Math.max(0, S.prin - inst); S.pp = 0; if (due > .005) tx("loan", S.cash < -.005 ? "Loan payment (account overdrawn)" : "Loan payment", -due);
   if (S.debt < .01 || S.prin <= .005){ loanClear(); } else { S.late = false; S.dueAt = ev + LOAN_EVERY; }
   if (overdrawn() && !was) toast("The bank took the payment and your account went negative. Interest doubles until you're back above zero", true); }
 function loanRun(from, t){ let cur = from, guard = 0;
@@ -656,7 +657,7 @@ const A = {
   savPut(arg){ const [a0,d0]=String(arg).split("|"), d=Math.max(1,Math.min(30,Math.round(+d0))), a=Math.min(+a0,S.cash,savCap()); if (!(a>=.01)) return; const t=Date.now(); S.sav=S.sav||[]; S.sav.push({p:a,r:savRate(d),at:t,end:t+d*24*H,d}); S.cash-=a; tx("spend","Savings deposit",-a); },
   savBreak(i){ S.sav=S.sav||[]; const v=S.sav[+i]; if (!v) return; S.sav.splice(+i,1); const g=v.p*.95; S.cash+=g; tx("spend","Savings broken early (5% fee)",g); },
   loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; const dueBefore = loanDueNow(), intr = loanIntr(), toP = Math.max(0, a - Math.min(a, intr));
-    S.cash -= a; S.debt -= a; S.prin = Math.max(0, S.prin - toP);
+    S.cash -= a; S.debt -= a; S.prin = Math.max(0, S.prin - toP); S.pp = (S.pp||0) + toP;
     if (S.debt < .005 || S.prin <= .005 && S.debt - S.prin < .005){ const paidOff = S.debt < .005 || S.prin <= .005; if (paidOff){ loanClear(); } }
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
@@ -1037,7 +1038,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794889062";
+const BUILD = "1794889198";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1449,7 +1450,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="amtrow"><span class="dollar">$</span><input id="savamt" type="text" inputmode="decimal" placeholder="Amount to lock away" value="${esc(savAmt)}" autocomplete="off"><button class="btn" data-act="savPutC">Save</button></div>
   <div class="amtrow"><span class="dollar" style="font-size:12px">days</span><input id="savdays" type="text" inputmode="numeric" placeholder="1 to 30" value="${savDays}" autocomplete="off"></div>
   <p class="note">Lock cash away and it earns a fixed payout when the time is up, even while you're away. Longer pays more, and every extra day pays a better daily rate, so locking longer always beats re-depositing short: 1 day 0.5%, 3 days 1.6%, 7 days 4.2%, 14 days 10%, 21 days 17.8%, 30 days 31.2%. Locked money still counts toward your net worth, but you can't spend it. Total in savings is capped at 25% of your net worth. Break a deposit early and you lose the interest plus a 5% fee.</p>
-  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. Every 12 hours you pay back ${LOAN_PCT}% of what you borrowed plus the interest so far (${LOAN_IPCT}% every 12 hours on what's left), so a loan clears in about ${LOAN_PAYS*12} hours and costs about ${Math.round(LOAN_COST*100)}% of the amount in interest. It all happens even while you're away. The bank always takes the full payment. If you don't have the cash, your account goes negative, interest doubles, and you can't borrow or buy until you're back above zero. Debt counts against your net worth.</p>`; }; }
+  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. Every 12 hours you pay back ${LOAN_PCT}% of what you borrowed plus the interest so far (${LOAN_IPCT}% every 12 hours on what's left), so a loan clears in about ${LOAN_PAYS*12} hours and costs about ${Math.round(LOAN_COST*100)}% of the amount in interest. Anything you pay early comes off your next payment. It all happens even while you're away. The bank always takes the full payment. If you don't have the cash, your account goes negative, interest doubles, and you can't borrow or buy until you're back above zero. Debt counts against your net worth.</p>`; }; }
 let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
