@@ -989,8 +989,8 @@ const EVENTS = [
 let evOpen=false;
 function maybeEvent(t){
   if (t < S.nextEv || sheetOpen()) return;
-  /* bad luck is rare: never twice in a row, and at most one mishap every 8-16 hours */
-  const badOk = !S.lastBad || t - S.lastBad > (8+Math.random()*8)*H;
+  /* bad luck is rare: never twice in a row, and at most one mishap every 30-48 hours */
+  const badOk = !S.lastBad || t - S.lastBad > (30+Math.random()*18)*H;
   const pool = EVENTS.filter(e => e.ok() && e.id !== S.lastEv && (!e.bad || badOk));
   S.nextEv = t + (45+Math.random()*45)*MIN;
   if (!pool.length) return;
@@ -1067,7 +1067,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794953912";
+const BUILD = "1794954031";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
