@@ -346,6 +346,10 @@ const PROP = [
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
+  {id:"bike",c:"veh",hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-.0015,carry:.00012},
+  {id:"scooter",c:"veh",hx:1.5,n:"Used Scooter",e:"🛵",t:1,base:1500,a:-.0012,carry:.00012},
+  {id:"carbon",c:"veh",hx:1.25,n:"Carbon Race Bike",e:"🚴",t:1,base:1100,a:.0004,carry:.00005},
+  {id:"vespa",c:"veh",hx:1.5,n:"Vintage Italian Scooter",e:"🛵",t:2,base:4500,a:.0005,carry:.00008},
   {id:"hatch",c:"veh",vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-.0012,carry:.00012},
   {id:"sedan",c:"veh",vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-.0008,carry:.00012},
   {id:"coupe",c:"veh",vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-.0004,carry:.00015},
@@ -453,7 +457,7 @@ function lvTxt(o){ const L=migrateLocs(o), lo=Math.min(...L), hi=Math.max(...L);
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
 const RENT_RATE = .012, RENT_WEAR = .0008;
-const hustleX = d => !d || !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
+const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
 const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
@@ -1039,7 +1043,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794890760";
+const BUILD = "1794892274";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1099,7 +1103,7 @@ function viewHome(){
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
-  <section class="sec"><div class="card hustle"><button class="btn gold" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div></div></section>
+  <section class="sec"><div class="card hustle"><button class="btn gold" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
   <section class="sec"><div class="sechead"><h2>Active businesses</h2><small>${owned.length} owned</small></div>
     ${owned.length?`<div class="list">${owned.map(id=>{const b=BIZM[id],o=S.biz[id],net=bizNetAt(id,Date.now()),m=modAt(id,Date.now());return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)}${m!==1?` · <span class="${m>1?"up":"down"}">${m>1?"boosted":"slowed"}</span>`:""}`,right:`<b class="up num">${signed(net)}</b><span>per hour</span>`,act:"openBiz",arg:id});}).join("")}</div>`:`<div class="empty">You don't own a business yet. A vending machine costs ${money(80)} in the Market.</div>`}
@@ -1137,7 +1141,7 @@ function viewMarket(){
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
     ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`${i.ls?`<span class="pill g">For sale ${money(i.ls.p)}</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Owning one doubles your side hustle pay and boosts all business income.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   }
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
@@ -1259,17 +1263,17 @@ function sheetPListing(lid){ return () => {
 function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
   return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]]:[]))}
-  ${d.vb?`<p class="note">Only your best vehicle counts toward the business bonus${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat((d.vb||d.hx)?(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`]]:[]).concat([["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]]):[]))}
+  ${d.vb||d.hx?`<p class="note">Only your best vehicle counts toward the bonuses${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
   <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
 };}
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat(d.vb?(i.rent?[["Bonuses","Paused while rented"]]:[["Business income",`<span class="up">+${d.vb}%</span>`],["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]]):[]))}
+  ${kv([["Value now",`<span data-live="iv:${u}"></span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat((d.vb||d.hx)?(i.rent?[["Bonuses","Paused while rented"]]:(d.vb?[["Business income",`<span class="up">+${d.vb}%</span>`]]:[]).concat([["Side hustle",`<span class="up">${hustleX(d)}x pay</span>`]])):[]))}
   ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
-  ${d.vb&&!i.rent?`<p class="note">Only your best vehicle counts toward the business bonus.</p>`:""}
+  ${(d.vb||d.hx)&&!i.rent?`<p class="note">Only your best vehicle counts toward the bonuses.</p>`:""}
   ${sellPanel(i)}`;
 };}
 function sheetStock(s){ return () => {
