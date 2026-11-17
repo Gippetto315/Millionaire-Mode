@@ -515,7 +515,7 @@ const loanRamping = () => loansOf().some(l => loanIsRamp(l));
 const loanAccrualH = () => loansOf().reduce((a,l) => a + l.p*(loanIsRamp(l) ? LOAN_RAMP : 0), 0) + (S.prin||0)*(overdrawn() ? LATE_RATE : 0);
 function loanSync(){ const L = loansOf(); S.debt = L.reduce((a,l)=>a+l.d,0); S.prin = L.reduce((a,l)=>a+l.p,0); S.inst = L.reduce((a,l)=>a+l.i,0); S.pp = L.reduce((a,l)=>a+(l.pp||0),0); S.orig = L.reduce((a,l)=>a+l.o,0); }
 function loanClear(){ S.loans = []; S.debt = 0; S.prin = 0; S.inst = 0; S.pp = 0; S.orig = 0; S.late = false; S.dueAt = 0; }
-function loanMigrate(){ if (!S.loans){ S.loans = []; if (S.debt > .005){ const p = S.prin == null ? S.debt : S.prin; S.loans.push({p, d:S.debt, i:S.inst != null ? S.inst : LOAN_PART*p, pp:S.pp||0, at:S.loanAt || Date.now(), o:S.orig != null ? S.orig : p}); if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; } } loanSync(); }
+function loanMigrate(){ if (!S.loans){ S.loans = []; if (S.debt > .005){ const p = S.prin == null ? S.debt : S.prin; S.loans.push({p, d:S.debt, i:S.inst != null ? S.inst : LOAN_PART*p, pp:S.pp||0, at:S.loanAt || Date.now(), o:S.orig != null ? S.orig : p}); if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; } } if (S.loanV !== 2){ S.loanV = 2; (S.loans||[]).forEach(l => { l.i = LOAN_PART*l.o; }); if (S.dueAt && S.dueAt > Date.now() + LOAN_EVERY) S.dueAt = Date.now() + LOAN_EVERY; } loanSync(); }
 function loanPayment(ev){ const was = overdrawn(); let due = 0;
   loansOf().forEach(l => { const inst = loanInstOf(l), d = inst*loanMulOf(l); due += d; l.d -= d; l.p = Math.max(0, l.p - inst); l.pp = 0; });
   S.cash -= due; S.loans = S.loans.filter(l => l.p > .005 && l.d > .01); loanSync();
@@ -1059,7 +1059,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794900898";
+const BUILD = "1794901104";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
