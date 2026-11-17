@@ -483,18 +483,17 @@ function netWorth(){ return grossWorth() - (S.debt||0); }
 const loanRatioAt = l => Math.min(2.5, .5 + .2*l);
 const loanRatio = () => loanRatioAt(S.lvl);
 const loanCap = () => Math.max(Math.max(0,netWorth())*loanRatio(), 100*(S.lvl+1));
-const loanRoom = () => S.late ? 0 : Math.max(0, Math.floor(loanCap()*100)/100 - (S.debt||0));
+const overdrawn = () => S.cash < -.005;
+const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor(loanCap()*100)/100 - (S.debt||0));
 const loanIntr = () => Math.max(0, (S.debt||0) - (S.prin||0));
 const loanDueNow = () => Math.min(S.inst||0, S.prin||0) + loanIntr();
-const loanRate = () => LOAN_RATE * (S.late ? LATE_X : 1);
+const loanRate = () => LOAN_RATE * (overdrawn() ? LATE_X : 1);
 function loanClear(){ S.debt = 0; S.prin = 0; S.inst = 0; S.late = false; S.dueAt = 0; }
 function loanMigrate(){ if (S.debt > .005 && S.prin == null){ S.prin = S.debt; S.inst = LOAN_PART*S.debt; if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; S.late = false; } if (S.prin == null) S.prin = 0; if (S.inst == null) S.inst = 0; }
-function loanPayment(ev){ const intr = loanIntr(), inst = Math.min(S.inst, S.prin), due = inst + intr, pay = Math.min(S.cash, due);
-  if (pay >= .01){ S.cash -= pay; S.debt -= pay; const toP = Math.max(0, Math.min(inst, pay - Math.min(pay, intr))); S.prin = Math.max(0, S.prin - toP); tx("loan", pay >= due - .005 ? "Loan payment" : "Partial loan payment (short on cash)", -pay); }
-  const ok = pay >= due - .005;
-  if (S.debt < .01 || (S.prin <= .005 && ok)){ loanClear(); return; }
-  const was = S.late; S.late = !ok; S.dueAt = ev + (S.late ? 6 : 12)*H;
-  if (S.late && !was) toast("Missed a loan payment. Interest is doubled until you catch up", true); }
+function loanPayment(ev){ const intr = loanIntr(), inst = Math.min(S.inst, S.prin), due = inst + intr, was = overdrawn();
+  S.cash -= due; S.debt -= due; S.prin = Math.max(0, S.prin - inst); tx("loan", S.cash < -.005 ? "Loan payment (account overdrawn)" : "Loan payment", -due);
+  if (S.debt < .01 || S.prin <= .005){ loanClear(); } else { S.late = false; S.dueAt = ev + LOAN_EVERY; }
+  if (overdrawn() && !was) toast("The bank took the payment and your account went negative. Interest doubles until you're back above zero", true); }
 function loanRun(from, t){ let cur = from, guard = 0;
   while (S.debt > .005 && guard++ < 90){ const hit = S.dueAt && S.dueAt <= t, ev = hit ? Math.max(S.dueAt, cur) : t;
     S.debt += S.prin * loanRate() * Math.max(0, ev - cur) / H; cur = ev;
@@ -650,7 +649,6 @@ const A = {
   loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; const dueBefore = loanDueNow(), intr = loanIntr(), toP = Math.max(0, a - Math.min(a, intr));
     S.cash -= a; S.debt -= a; S.prin = Math.max(0, S.prin - toP);
     if (S.debt < .005 || S.prin <= .005 && S.debt - S.prin < .005){ const paidOff = S.debt < .005 || S.prin <= .005; if (paidOff){ loanClear(); } }
-    else if (S.late && a >= dueBefore - .005){ S.late = false; S.dueAt = Date.now() + LOAN_EVERY; }
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
@@ -1007,7 +1005,7 @@ const LIVE = {
   pm: () => money(perHour()/60),
   assets: () => money(assetsVal()+bizVal()),
   debt: () => money(S.debt||0),
-  debtsub: () => S.debt > .005 ? (S.late ? "MISSED PAYMENT · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
+  debtsub: () => S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1023,6 +1021,7 @@ const LIVE = {
 function liveTick(){
   document.querySelectorAll("[data-live]").forEach(el => {
     const [k, a] = el.dataset.live.split(":"); const f = LIVE[k]; if (!f) return; const v = f(a); if (el.textContent !== v) el.textContent = v;
+    if (k === "cash") el.style.color = S.cash < -.005 ? "var(--red)" : "";
   });
   const hb = document.querySelector('[data-act="hustle"]'); if (hb) hb.disabled = Date.now()-S.shiftAt < 60000;
 }
@@ -1386,7 +1385,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="lbl">Where it comes from, per hour</div>
   <div class="lines"><div><span>Businesses</span><b class="num">${sg(f.biz)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   <div class="lbl">Loans</div>
-  ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · ${S.late?`<i style="font-style:normal" class="down">MISSED</i>`:"in "+dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment","20% of loan + interest"],["Interest",(LOAN_RATE*100)+"%/h on what's left"+(S.late?" · doubled":"")],["Interest costs",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"]])}
+  ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment","20% of loan + interest"],["Interest",(LOAN_RATE*100)+"%/h on what's left"+(overdrawn()?" · doubled (overdrawn)":"")],["Interest costs",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"]])}
   <div class="lbl">Borrow</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn" data-act="loanTakeC">Borrow</button></div>
@@ -1394,7 +1393,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   ${d>.005?`<button class="btn gold" data-act="loanPay" data-arg="${Math.min(loanDueNow(),S.cash).toFixed(2)}" ${S.cash<.01?"disabled":""} style="width:100%;margin-bottom:8px">Pay next payment · ${money(loanDueNow())}</button>`:""}
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanPay" data-arg="${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanpay" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanPayV)}" autocomplete="off"><button class="btn" data-act="loanPayC">Pay</button></div>
-  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. Every 12 hours you pay back 20% of what you borrowed plus the interest so far (1.5% an hour on what's left), so a loan clears in 60 hours and costs about 54% of the amount. It all happens even while you're away. Miss a payment and the bank takes all your cash, interest doubles, and you can't borrow until you catch up. Debt counts against your net worth.</p>`; }; }
+  <p class="note">The bank lends you a share of your net worth, like a real one lends against what you own. That share grows with every rank, from 50% up to 250%. Every 12 hours you pay back 20% of what you borrowed plus the interest so far (1.5% an hour on what's left), so a loan clears in 60 hours and costs about 54% of the amount. It all happens even while you're away. The bank always takes the full payment. If you don't have the cash, your account goes negative, interest doubles, and you can't borrow or buy until you're back above zero. Debt counts against your net worth.</p>`; }; }
 let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
@@ -1405,7 +1404,7 @@ document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loana
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
-  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Debt after",money((S.debt||0)+a)],["Every 12 hours","20% of the loan + interest"],["First payment",money(LOAN_PART*a + a*LOAN_RATE*12)],["You repay in total","about "+money(a*(1+LOAN_RATE*12*3))]],n:"Five payments over 60 hours. Miss one and the bank takes all your cash and doubles the interest.",yes:`Borrow ${money(a)}`}; }
+  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Debt after",money((S.debt||0)+a)],["Every 12 hours","20% of the loan + interest"],["First payment",money(LOAN_PART*a + a*LOAN_RATE*12)],["You repay in total","about "+money(a*(1+LOAN_RATE*12*3))]],n:"Five payments over 60 hours. If your cash can't cover one, the bank takes it anyway, your account goes negative, and interest doubles until you're back above zero.",yes:`Borrow ${money(a)}`}; }
   if (act==="loanPay"){ const a=Math.min(+arg,S.debt||0,S.cash); return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["You pay",money(a)],["Debt after",money(Math.max(0,(S.debt||0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
