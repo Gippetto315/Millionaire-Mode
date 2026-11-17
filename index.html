@@ -429,6 +429,7 @@ const propCond = c => c >= 95 ? "Renovated" : c >= 70 ? "Good" : c >= 45 ? "Worn
 
 /* ================= economy curves ================= */
 function econ(t){const h=t/H;return 1+.06*Math.sin(2*Math.PI*h/30+1)+.03*Math.sin(2*Math.PI*h/7.3+2)}
+const mktTag = x => `<span class="${x>=0?"up":"down"}">Market ${x>=0?"high":"low"} ${Math.abs(x*100).toFixed(1)}%</span>`;
 function wob(id,t){const h=t/H,p1=8+r01(id,"p1")*20,p2=2+r01(id,"p2")*5;return 1+.06*Math.sin(2*Math.PI*h/p1+r01(id,"f1")*6.28)+.03*Math.sin(2*Math.PI*h/p2+r01(id,"f2")*6.28)}
 
 /* ================= state ================= */
@@ -1063,7 +1064,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794938673";
+const BUILD = "1794946268";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1270,7 +1271,7 @@ function bizQtyPanel(id){
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
@@ -1295,7 +1296,7 @@ function sheetListing(c,lid){ return () => {
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",(i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented")+`<br><small>${payH(i.paid,itemVal(i)*RENT_RATE-itemCarry(i))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span><br><small>${mktTag(wob(i.id,Date.now())-1)}</small>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",(i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented")+`<br><small>${payH(i.paid,itemVal(i)*RENT_RATE-itemCarry(i))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
   ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
   ${(d.vb||d.hx)&&!i.rent?`<p class="note">Only your best vehicle counts toward the bonuses.</p>`:""}
   ${sellPanel(i)}`;
@@ -1347,10 +1348,10 @@ function sheetCash(){ return () => {
   return `<div class="shead"><div class="tile gold">💵</div><div><h3>Your cash</h3><p>${money(S.cash)} now</p></div></div>
   ${a.length?`<div class="lbl">Events changing your income</div><div class="lines">${rows}</div>`:`<p class="note">No events right now. Your businesses are earning their normal rate.</p>`}`; }; }
 function sheetAssets(){ return () => {
-  const t=Date.now(), row=(e,n,v,g)=>`<div><span>${e} ${esc(n)}${g==null?"":`<br><small class="${g>=0?"up":"down"}">${g>=0?"▲":"▼"} ${Math.abs(g*100).toFixed(1)}% since you got it</small>`}</span><b class="num">${money(v)}</b></div>`;
-  const grp=(title,list)=>list.length?`<div class="lbl">${title} · ${money(list.reduce((a,x)=>a+x.v,0))}</div><div class="lines" style="margin-bottom:6px">${list.sort((a,b)=>b.v-a.v).map(x=>row(x.e,x.n,x.v,x.g)).join("")}</div>`:"";
-  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t)}));
-  const its=c=>S.items.filter(i=>ITEMM[i.id].c===c).map(i=>({e:ITEMM[i.id].e,n:i.name||ITEMM[i.id].n,v:itemVal(i,t),g:i.paid>0?itemVal(i,t)/i.paid-1:null}));
+  const t=Date.now(), row=(e,n,v,g,m)=>`<div><span>${e} ${esc(n)}${g==null?"":`<br><small class="${g>=0?"up":"down"}">${g>=0?"▲":"▼"} ${Math.abs(g*100).toFixed(1)}% since you got it</small>`}${m==null?"":`<br><small>${mktTag(m)}</small>`}</span><b class="num">${money(v)}</b></div>`;
+  const grp=(title,list)=>list.length?`<div class="lbl">${title} · ${money(list.reduce((a,x)=>a+x.v,0))}</div><div class="lines" style="margin-bottom:6px">${list.sort((a,b)=>b.v-a.v).map(x=>row(x.e,x.n,x.v,x.g,x.m)).join("")}</div>`:"";
+  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t),m:econ(t)-1}));
+  const its=c=>S.items.filter(i=>ITEMM[i.id].c===c).map(i=>({e:ITEMM[i.id].e,n:i.name||ITEMM[i.id].n,v:itemVal(i,t),g:i.paid>0?itemVal(i,t)/i.paid-1:null,m:wob(i.id,t)-1}));
   const stk=Object.entries(S.hold).filter(([k,h])=>h.sh>0).map(([k,h])=>({e:"📈",n:k+" · "+(+h.sh.toFixed(4))+" sh",v:h.sh*S.stk[k].p}));
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
   return `<div class="shead"><div class="tile gold">🏷️</div><div><h3>Your assets</h3><p>Everything you own except cash</p></div></div>
