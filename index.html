@@ -562,7 +562,7 @@ function sample(t){ const lastS = S.hist[S.hist.length-1]; if (!lastS || t - las
 
 /* advance the whole world to now; returns income summary for the gap */
 function advance(t){
-  const from = Math.max(S.last, t - CAP);
+  const from = S.nocap ? S.last : Math.max(S.last, t - CAP);
   const inc = incomeBetween(from, t);
   loanMigrate();
   credit(inc.total);
@@ -1036,7 +1036,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794888265";
+const BUILD = "1794888388";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1332,7 +1332,7 @@ function showWelcome(inc, gap){
   if (Math.abs(inc.total) < .01) return;
   openSheet(() => `<div class="welcome">WELCOME BACK</div>
     <div class="big num ${inc.total>=0?"up":"down"}">${signed(inc.total)}</div>
-    <p class="sub">You ${inc.total>=0?"earned":"spent"} this while you were away for ${dur(gap)}${gap>CAP?" (capped at "+Math.round(CAP/H)+" hours)":""}.</p>
+    <p class="sub">You ${inc.total>=0?"earned":"spent"} this while you were away for ${dur(gap)}${gap>CAP&&!S.nocap?" (capped at "+Math.round(CAP/H)+" hours)":""}.</p>
     <div class="lines">${inc.lines.map(([n,a])=>`<div><span>${esc(n)}</span><b class="num ${a>=0?"up":"down"}">${signed(a)}</b></div>`).join("")}</div>
     <button class="btn" data-act="close">Collect</button>`, true);
 }
@@ -1580,6 +1580,7 @@ document.addEventListener("click", e => {
     case "cheatopen": chtVal = ""; openSheet(sheetCheat()); break;
     case "cheat": { const c = ($("chtc").value||"").trim().toLowerCase();
       if (c === "bigdaddy"){ gain(10000,"income","Cheat code"); chtVal = ""; progress(); save(); closeSheet(); render(); toast("+$10,000. Spend it wisely.", true); }
+      else if (c === "nonstop"){ S.nocap = !S.nocap; chtVal = ""; save(); closeSheet(); toast(S.nocap ? "Always earning: no offline limit" : "Offline limit back on", true); }
       else toast(c ? "That code doesn't work" : "Type a code first"); break; }
     case "gall": openGuide(); break;
     case "gnext": gStep++; drawSheet(); break;
