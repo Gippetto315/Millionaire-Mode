@@ -938,22 +938,22 @@ const EVENTS = [
     const id=pickBiz(), b=BIZM[id], net=Math.max(5,bizNetAt(id,Date.now())), fix=net*1.5;
     return {icon:"⚠️",title:"Business emergency",text:`Equipment broke down at your ${b.n}. Customers are being turned away until it's fixed.`,choices:[
       {label:`Repair it now (${money(fix)})`,cost:fix,run(){ spend(fix,"event",`Repair at ${b.n}`); return `Fixed. ${b.n} is running at full speed again.`; }},
-      {label:`Patch it cheap (${money(fix*.3)})`,cost:fix*.3,run(){ spend(fix*.3,"event",`Patch job at ${b.n}`); if (Math.random()<.5) return "The patch held. Nice save."; S.mods.push({b:id,m:.5,from:Date.now(),until:Date.now()+2*H}); return `The patch failed. ${b.n} runs at half revenue for 2 hours.`; }},
-      {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+3*H}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
+      {label:`Patch it cheap (${money(fix*.3)})`,cost:fix*.3,run(){ spend(fix*.3,"event",`Patch job at ${b.n}`); if (Math.random()<.5) return "The patch held. Nice save."; S.mods.push({b:id,m:.5,from:Date.now(),until:Date.now()+2*H,why:`Equipment broke at your ${b.n} and the cheap patch failed.`}); return `The patch failed. ${b.n} runs at half revenue for 2 hours.`; }},
+      {label:"Ignore it",run(){ S.mods.push({b:id,m:.4,from:Date.now(),until:Date.now()+3*H,why:`Equipment broke at your ${b.n} and you left it broken.`}); return `${b.n} runs at 40% revenue for 3 hours.`; }}
     ]};
   }},
   {id:"surge", w:3, ok:()=>ownedBiz().length>0, make(){
     const id=pickBiz(), b=BIZM[id], rev=bizRev(id);
     return {icon:"🔥",title:"Customer surge",text:`A local influencer posted about your ${b.n}. The line is out the door.`,choices:[
-      {label:`Hire temp staff (${money(rev*.4)})`,cost:rev*.4,run(){ spend(rev*.4,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H}); return `${b.n} earns double revenue for the next hour.`; }},
+      {label:`Hire temp staff (${money(rev*.4)})`,cost:rev*.4,run(){ spend(rev*.4,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H,why:`An influencer sent a crowd to your ${b.n} and you hired temp staff.`}); return `${b.n} earns double revenue for the next hour.`; }},
       {label:"Ride the wave",run(){ const g=rev*.5; gain(g,"event",`Surge sales at ${b.n}`); S.earned+=g; return `Your current staff squeezed out ${money(g)} in extra sales.`; }}
     ]};
   }},
   {id:"down", w:1, bad:1, ok:()=>ownedBiz().length>=2, make(){
     const ph=perHour(), promo=Math.max(10,ph*.5);
     return {icon:"📉",title:"Economic downturn",text:"Consumer spending is cooling off. Every business you own will feel it for the next hour.",choices:[
-      {label:`Run a promotion (${money(promo)})`,cost:promo,run(){ spend(promo,"event","Downturn promotion"); S.mods.push({b:"*",m:.9,from:Date.now(),until:Date.now()+H}); return "The promo softened the blow. Revenue dips 10% for an hour."; }},
-      {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H}); return "Revenue drops 30% across your businesses for an hour."; }}
+      {label:`Run a promotion (${money(promo)})`,cost:promo,run(){ spend(promo,"event","Downturn promotion"); S.mods.push({b:"*",m:.9,from:Date.now(),until:Date.now()+H,why:"Economic downturn. Your promotion softened the hit."}); return "The promo softened the blow. Revenue dips 10% for an hour."; }},
+      {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H,why:"Economic downturn. Spending is down everywhere."}); return "Revenue drops 30% across your businesses for an hour."; }}
     ]};
   }},
   {id:"deal", w:3, ok:()=>S.lvl>=2, make(){
@@ -1059,7 +1059,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794901621";
+const BUILD = "1794901906";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1116,7 +1116,7 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></div>
+    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
@@ -1336,6 +1336,12 @@ function sheetRoom(){ return () => {
 let roomFn = null;
 function openRoom(){ roomFn = sheetRoom(); openSheet(roomFn, true); }
 setInterval(() => { if (S && S.room && sheetFn===roomFn && !cfm){ if (roomStep(Date.now())){ progress(); save(); drawSheet(); if (S.room.done) render(); } } }, 250);
+function sheetCash(){ return () => {
+  const t=Date.now(), a=S.mods.filter(x=>t>=x.from&&t<x.until).sort((x,y)=>x.until-y.until);
+  const rows=a.map(x=>{ const up=x.m>1, eff=up?(Math.abs(x.m-Math.round(x.m))<.01?Math.round(x.m)+"x":"+"+Math.round((x.m-1)*100)+"%"):Math.round(x.m*100)+"%", who=x.b==="*"?"All your businesses":(BIZM[x.b]?BIZM[x.b].n:"A business"), d=x.b==="*"?Object.keys(S.biz).reduce((p,id)=>p+bizRev(id)*(x.m-1),0):(S.biz[x.b]?bizRev(x.b)*(x.m-1):0);
+    return `<div><span>${esc(x.why||"A recent event changed your income.")}<br><small class="${up?"up":"down"}">${up?"▲":"▼"} ${eff} · ${esc(who)} · ${signed(d)}/h</small></span><b>${dur(x.until-t)}</b></div>`; }).join("");
+  return `<div class="shead"><div class="tile gold">💵</div><div><h3>Your cash</h3><p>${money(S.cash)} now</p></div></div>
+  ${a.length?`<div class="lbl">Events changing your income</div><div class="lines">${rows}</div>`:`<p class="note">No events right now. Your businesses are earning their normal rate.</p>`}`; }; }
 function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
   const rows=[["Cash",S.cash],["Businesses",bizVal()],["Properties",S.props.reduce((a,p)=>a+propVal(p,t),0)],["Vehicles",v("veh")],["Collectibles",v("col")],["Investments",stockVal()],["Debt",-(S.debt||0)]];
@@ -1585,6 +1591,7 @@ document.addEventListener("click", e => {
     case "roomLeave": leaveRoom(); progress(); save(); render(); break;
     case "evc": if (evChoose) evChoose(+arg); break;
     case "help": openHelp(); break;
+    case "cashinfo": openSheet(sheetCash()); break;
     case "nwinfo": openSheet(sheetNW()); break;
     case "bkcopy": { advance(Date.now()); const code = "MM1:" + btoa(unescape(encodeURIComponent(JSON.stringify(S)))); const ta=$("bkt"); ta.value = code;
       const done = () => toast("Backup copied. Paste it in Notes.", true);
