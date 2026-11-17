@@ -463,6 +463,7 @@ function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id]
 const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
 const hasRide = () => rideX() > 1;
 const rentedH = (i,t) => (i.rh||0) + (i.rent ? Math.max(0,(t-i.rentAt))/H : 0);
+const payH = (cost, net) => net > .0001 ? Math.round(cost/net).toLocaleString() + "h to earn it back" : "never earns it back";
 const carRent = (i,t) => i.rent ? itemVal(i,t)*RENT_RATE : 0;
 const rentAll = t => S.items.reduce((a,i)=>a+carRent(i,t),0);
 function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus() : 0; }
@@ -1062,7 +1063,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794935979";
+const BUILD = "1794936198";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1269,7 +1270,7 @@ function bizQtyPanel(id){
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${kv([["Market value",`<span data-live="pv:${u}"></span>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
@@ -1279,14 +1280,14 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRent(p))+"/h"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRent(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
 };}
 function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
   return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.c==="veh"?[["Rental income",`<span class="up">+${money(l.val*RENT_RATE)}/h</span>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.c==="veh"?[["Rental income",`<span class="up">+${money(l.val*RENT_RATE)}/h</span><br><small>${payH(l.ask,l.val*RENT_RATE-l.val*(d.carry||0))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
   ${d.vb||d.hx?`<p class="note">Only your best vehicle counts toward the bonuses${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
   <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
@@ -1294,7 +1295,7 @@ function sheetListing(c,lid){ return () => {
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented"]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",(i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented")+`<br><small>${payH(i.paid,itemVal(i)*RENT_RATE-itemCarry(i))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
   ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
   ${(d.vb||d.hx)&&!i.rent?`<p class="note">Only your best vehicle counts toward the bonuses.</p>`:""}
   ${sellPanel(i)}`;
