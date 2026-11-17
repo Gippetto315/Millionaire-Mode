@@ -458,7 +458,7 @@ const lowIdx = L => L.reduce((k,l,i)=> l < L[k] ? i : k, 0);
 function lvTxt(o){ const L=migrateLocs(o), lo=Math.min(...L), hi=Math.max(...L); return lo===hi ? `Level ${lo}` : `Levels ${lo}-${hi}`; }
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
-const RENT_RATE = .012, RENT_WEAR = .0001;
+const RENT_RATE = .017, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
@@ -485,7 +485,7 @@ function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o 
 function upCost(id,l){ return BIZM[id].cost*.5*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
 function propVal(p,t){ return propBaseVal(p)*econ(t||Date.now()); }
-function propRent(p,t){ return propVal(p,t)*.006*.92; }
+function propRent(p,t){ return propVal(p,t)*.02*.92; }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
 function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
 function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
@@ -1067,7 +1067,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794954050";
+const BUILD = "1794954199";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
