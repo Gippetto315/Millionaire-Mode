@@ -630,7 +630,7 @@ function itemListings(c){
     const cm = COND[Math.floor(r01(c,w,k,"c")*4)][0];
     const base = d.base*cm*(.92+r01(c,w,k,"b")*.16);
     const val = base*wob(d.id,t);
-    const steal = d.t <= S.lvl && r01(c,w,k,"steal") < .014, ask = steal ? val*(.50+r01(c,w,k,"sa")*.10) : val*(.84+r01(c,w,k,"a")*.32);
+    const steal = d.t <= S.lvl && r01(c,w,k,"steal") < .06, ask = steal ? val*(.50+r01(c,w,k,"sa")*.10) : val*(.84+r01(c,w,k,"a")*.32);
     const lid = `${c}-${w}-${k}`;
     if (!S.sold.includes(lid)) out.push({lid,id:d.id,cm,base,val,ask,steal});
   }
@@ -1043,7 +1043,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794892618";
+const BUILD = "1794892661";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
