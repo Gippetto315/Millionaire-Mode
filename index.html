@@ -490,7 +490,7 @@ function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
 function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); }
-const LOAN_FEE = .05, LOAN_RAMP = .02/12, LOAN_GRACE = 24*3600000, LATE_RATE = .11/12, LOAN_PART = .08, LOAN_EVERY = 12*3600000;
+const LOAN_FEE = .05, LOAN_RAMP = .02/12, LOAN_GRACE = 24*3600000, LATE_RATE = .11/12, LOAN_PART = .12, LOAN_EVERY = 12*3600000;
 const LOAN_PAYS = Math.ceil(1/LOAN_PART - 1e-9), LOAN_PCT = Math.round(LOAN_PART*100), LOAN_FEE_PCT = Math.round(LOAN_FEE*100), LOAN_RAMP_PCT = Math.round(LOAN_RAMP*1200), LOAN_GRACE_H = Math.round(LOAN_GRACE/3600000);
 const LOAN_SCHED = (() => { let t = LOAN_FEE; for (let k = 0; k < LOAN_PAYS; k++){ if (k*12 >= LOAN_GRACE_H) t += (1 - LOAN_PART*k)*LOAN_RAMP*12; } return t; })();
 const savRate = d => { d = Math.max(1, Math.min(30, d)); const r = .005 + .0041*(d-1)/29; return Math.round((Math.pow(1+r, d) - 1)*1000)/1000; };
@@ -1059,7 +1059,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794900480";
+const BUILD = "1794900603";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
