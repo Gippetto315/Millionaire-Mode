@@ -572,11 +572,13 @@ function perHour(t){
 /* income over [t0,t1] with event modifiers integrated exactly */
 function incomeBetween(t0,t1){
   const lines=[]; let tot=0; const hrs=(t1-t0)/H; if (hrs <= 0) return {lines,total:0};
+  let bx=0;
   Object.keys(S.biz).forEach(id => {
     const rev=bizRev(id); let r=rev*hrs;
     S.mods.forEach(m => { if (m.b==="*"||m.b===id){ const o=Math.max(0,Math.min(t1,m.until)-Math.max(t0,m.from)); r += rev*(m.m-1)*o/H; } });
-    const amt = r - bizExp(id)*hrs; tot += amt; lines.push([BIZM[id].n, amt]);
+    bx += bizExp(id)*hrs; tot += r; lines.push([BIZM[id].n, r]);
   });
+  if (bx > 0){ lines.push(["Business running costs", -bx]); tot -= bx; }
   let rent=0, pc=0;
   S.props.forEach(p => { if (p.rented){ const rh=Math.max(0,t1-Math.max(t0,p.renoUntil))/H; rent += propRent(p,t1)*rh; } pc += propCost(p,t1)*hrs; });
   if (S.props.length){ if (rent) lines.push(["Rental income", rent]); lines.push(["Property upkeep & taxes", -pc]); tot += rent - pc; }
@@ -1101,7 +1103,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794957302";
+const BUILD = "1794959417";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
