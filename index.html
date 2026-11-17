@@ -346,14 +346,14 @@ const PROP = [
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
-  {id:"bike",c:"veh",hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-.0015,carry:.00012},
-  {id:"scooter",c:"veh",hx:1.5,n:"Used Scooter",e:"🛵",t:1,base:1500,a:-.0012,carry:.00012},
+  {id:"bike",c:"veh",hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-0.00038,carry:.00012},
+  {id:"scooter",c:"veh",hx:1.5,n:"Used Scooter",e:"🛵",t:1,base:1500,a:-0.0003,carry:.00012},
   {id:"carbon",c:"veh",hx:1.25,n:"Carbon Race Bike",e:"🚴",t:1,base:1100,a:.0004,carry:.00005},
   {id:"vespa",c:"veh",hx:1.5,n:"Vintage Italian Scooter",e:"🛵",t:2,base:4500,a:.0005,carry:.00008},
-  {id:"hatch",c:"veh",vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-.0012,carry:.00012},
-  {id:"sedan",c:"veh",vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-.0008,carry:.00012},
-  {id:"coupe",c:"veh",vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-.0004,carry:.00015},
-  {id:"lux",c:"veh",vb:6,n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-.0006,carry:.00015},
+  {id:"hatch",c:"veh",vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-0.0003,carry:.00012},
+  {id:"sedan",c:"veh",vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-0.0002,carry:.00012},
+  {id:"coupe",c:"veh",vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-0.0001,carry:.00015},
+  {id:"lux",c:"veh",vb:6,n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-0.00015,carry:.00015},
   {id:"classic",c:"veh",vb:6,n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
   {id:"super",c:"veh",vb:10,n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
   {id:"hyper",c:"veh",vb:10,n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
@@ -456,7 +456,7 @@ const lowIdx = L => L.reduce((k,l,i)=> l < L[k] ? i : k, 0);
 function lvTxt(o){ const L=migrateLocs(o), lo=Math.min(...L), hi=Math.max(...L); return lo===hi ? `Level ${lo}` : `Levels ${lo}-${hi}`; }
 function setBonus(){ return 1 + .05*Object.keys(SETS).filter(k => setDone(k)).length; }
 function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === id)); }
-const RENT_RATE = .012, RENT_WEAR = .0003;
+const RENT_RATE = .012, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
@@ -1063,7 +1063,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794936198";
+const BUILD = "1794936564";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
