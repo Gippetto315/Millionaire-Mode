@@ -1021,7 +1021,7 @@ function wealthChart(hv){ const ts = S.hist.map(h=>h[0]).concat([Date.now()]), t
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794886942";
+const BUILD = "1794887045";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1428,7 +1428,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="amtrow"><span class="dollar">$</span><input id="loanpay" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanPayV)}" autocomplete="off"><button class="btn" data-act="loanPayC">Pay</button></div>
   <div class="lbl">Savings</div>
   ${(S.sav||[]).length?`<div class="lines">${S.sav.map((v,i)=>`<div><span>${money(v.p)} · ${v.d} day${v.d>1?"s":""} at ${(v.r*100).toFixed(1).replace(/\.0$/,"")}%<br><small style="color:var(--muted)">Pays ${money(v.p*(1+v.r))} in ${dur(v.end-Date.now())}</small></span><button class="btn ghost" data-act="savBreak" data-arg="${i}" style="padding:6px 14px;flex:none;width:auto;height:auto;min-height:0;align-self:center">Break</button></div>`).join("")}</div>`:`<p class="note" style="margin-top:0">Nothing saved yet.</p>`}
-  ${kv([["Locked in savings",money(savLocked())],["You can deposit",money(Math.max(0,Math.min(S.cash,savCap())))],["Rate for "+savDays+" day"+(savDays>1?"s":""),(savRate(savDays)*100).toFixed(1).replace(/\.0$/,"")+"%"]])}
+  ${kv([["Locked in savings",money(savLocked())],["Interest waiting",`<span class="up">${money((S.sav||[]).reduce((x,v)=>x+v.p*v.r,0))}</span>`],["You can deposit",money(Math.max(0,Math.min(S.cash,savCap())))],["Rate for "+savDays+" day"+(savDays>1?"s":""),(savRate(savDays)*100).toFixed(1).replace(/\.0$/,"")+"%"]])}
   <div class="btns three" style="margin-top:8px">${[1,3,7,14,21,30].map(x=>`<button class="btn stk ${x===savDays?"":"ghost"}" data-act="savDays" data-arg="${x}"><span>${x}d</span><small>${(savRate(x)*100).toFixed(1).replace(/\.0$/,"")}%</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="savamt" type="text" inputmode="decimal" placeholder="Amount to lock away" value="${esc(savAmt)}" autocomplete="off"><button class="btn" data-act="savPutC">Save</button></div>
   <div class="amtrow"><span class="dollar" style="font-size:12px">days</span><input id="savdays" type="text" inputmode="numeric" placeholder="1 to 30" value="${savDays}" autocomplete="off"></div>
