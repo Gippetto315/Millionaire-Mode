@@ -145,6 +145,10 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .sheet .big{font:800 30px/1.1 var(--display);text-align:center}
 .sheet .sub{color:var(--muted);text-align:center;margin-top:-6px}
 .lines{display:flex;flex-direction:column;gap:6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:4px;margin:4px 0 14px}
+.seg button{min-height:42px;border-radius:11px;background:none;border:0;color:var(--muted);font:700 15px var(--display);display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button.on{background:var(--gold,#f3c969);color:#1a1405}
+.seg .n{font-size:12px;opacity:.8}
 .lrow{display:block;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;color:inherit;font:inherit}
 .lines div{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted)}
 .lines div b{color:var(--text);font-weight:800}
@@ -1097,7 +1101,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794956360";
+const BUILD = "1794957302";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1128,7 +1132,7 @@ const LIVE = {
   lot: id => { const L=S.lots.find(x=>x.id===id); return L?dur(L.exp-Date.now()):"Gone"; },
   head: () => dur(S.nextHead-Date.now()),
   nlot: sec => dur((S.secNext||{})[sec]-Date.now()),
-  port: () => money(stockVal()),
+  port: () => money(stockVal()+projLocked()),
   offx: u => { const th=thingOf(u); return th&&th.ls&&th.ls.off?dur(th.ls.off.exp-Date.now()):""; }
 };
 function liveTick(){
@@ -1212,14 +1216,16 @@ function miniSpark(vals){
   return `<svg class="mini" viewBox="0 0 56 24" aria-hidden="true"><path d="${d}" fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
 }
 const tkr = s => `<span style="font:800 11px var(--display);color:var(--gold)">${s}</span>`;
+let invTab = "stocks";
 function viewInvest(){
   const hv=stockVal(), basis=Object.values(S.hold).reduce((a,h)=>a+h.cost,0), mine=STK.filter(x=>S.hold[x.s]), pl=hv-basis;
-  return `<section class="hero"><div class="lbl">Your stocks are worth</div><div class="nw num" data-live="port">${money(hv)}</div>
-    <div class="lvrow">${hv?`<span class="pill ${pl>=0?"":"r"}">${pl>=0?"Up":"Down"} ${money(Math.abs(pl))} (${pct(basis?hv/basis-1:0)})</span>`:`<span class="pill m">You don't own any stocks yet</span>`}${S.realized?`<span class="note">Locked-in profit from sales: ${signed(S.realized)}</span>`:""}</div></section>
-  <section class="sec"><div class="sechead"><h2>Projects</h2><small>New pitches every few hours</small></div>
+  return `<section class="hero"><div class="lbl">Your investments are worth</div><div class="nw num" data-live="port">${money(hv+projLocked())}</div>
+    <div class="lvrow">${hv?`<span class="pill ${pl>=0?"":"r"}">${pl>=0?"Up":"Down"} ${money(Math.abs(pl))} (${pct(basis?hv/basis-1:0)})</span>`:`<span class="pill m">${projLocked()?money(projLocked())+" locked in projects":"You haven't invested yet"}</span>`}${S.realized?`<span class="note">Locked-in profit from sales: ${signed(S.realized)}</span>`:""}</div></section>
+  <div class="seg"><button class="${invTab==="stocks"?"on":""}" data-act="invTab" data-arg="stocks">Stocks${mine.length?` <span class="n">${mine.length}</span>`:""}</button><button class="${invTab==="projects"?"on":""}" data-act="invTab" data-arg="projects">Projects${(S.proj||[]).length?` <span class="n">${S.proj.length} running</span>`:""}</button></div>
+  ${invTab==="projects"?`<section class="sec"><div class="sechead"><h2>Projects</h2><small>New pitches every few hours</small></div>
     <div class="list">${projListings().map(L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>from</span><b class="num">${money(projTiers()[0])}</b>`,act:"openProj",arg:L.id});}).join("")||`<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`}</div>
     ${(S.proj||[]).length?`<div class="list" style="margin-top:8px">${S.proj.map(p=>rowHtml({e:PROJ[p.kind].e,title:p.name,sub:`<span class="pill g">Locked</span> <span data-live="proj:${p.id}"></span>`,right:`<b class="num">${money(p.amt)}</b><span>in</span>`})).join("")}</div>`:""}
-    ${(S.plog||[]).length?`<div class="list" style="margin-top:8px">${S.plog.slice(0,4).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${n.e} ${esc(n.text)}</strong><span>${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Win":"Loss"}</span></div></div>`).join("")}</div>`:""}</section>
+    ${(S.plog||[]).length?`<div class="list" style="margin-top:8px">${S.plog.slice(0,4).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${n.e} ${esc(n.text)}</strong><span>${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Win":"Loss"}</span></div></div>`).join("")}</div>`:""}</section>`:`
   <section class="sec"><div class="sechead"><h2>What you own</h2><small>${mine.length} of ${STK.length}</small></div>
     ${mine.length?`<div class="list">${mine.map(x=>{const st=S.stk[x.s],h=S.hold[x.s],v=h.sh*st.p,g=v-h.cost;
       return rowHtml({e:tkr(x.s),title:x.n,sub:`You paid ${money(h.cost)}`,right:`<b class="num">${money(v)}</b><span class="${g>=0?"up":"down"}">${signed(g)} (${pct(h.cost?v/h.cost-1:0)})</span>`,act:"openStock",arg:x.s});}).join("")}</div>`
@@ -1228,7 +1234,7 @@ function viewInvest(){
     return rowHtml({e:tkr(x.s),title:x.n,sub:own?`<span class="pill g">You own this</span>`:`${x.risk} risk`,right:`<div class="sprow">${miniSpark(hh)}<div><b class="num">${money(st.p)}</b><span class="${ch>=0?"up":"down"}" style="display:block">${pct(ch)} 1h</span></div></div>`,act:"openStock",arg:x.s});}).join("")}</div>
     <p class="note">Price is the cost of one share. The percentage and little chart show how it moved in the last hour (1h). Tap a stock for its full chart and risk level.</p></section>
   <section class="sec"><div class="sechead"><h2>Market news</h2></div>${S.news.length?`<div class="list">${S.news.slice(0,6).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${esc(n.text)}</strong><span>${n.s} · ${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Up":"Down"}</span></div></div>`).join("")}</div>`:`<div class="empty">Big price moves will make the news here.</div>`}
-  <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`;
+  <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`}`;
 }
 
 let curProj = "";
@@ -1688,6 +1694,7 @@ document.addEventListener("click", e => {
     case "bank": loanAmt=""; loanPayV=""; openSheet(sheetBank()); break;
     case "loanTake": loanAmt=""; run(()=>A.loanTake(arg)); break;
     case "loanPay": loanPayV=""; run(()=>A.loanPay(arg)); break;
+    case "invTab": invTab=arg; render(); break;
     case "openProj": curProj=arg; openSheet(sheetProj()); break;
     case "projPut": run(()=>A.projPut(arg)); closeSheet(); break;
     case "openLoan": curLoan=arg; loanOneV=""; openSheet(sheetLoan()); break;
