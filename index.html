@@ -630,9 +630,9 @@ function itemListings(c){
     const cm = COND[Math.floor(r01(c,w,k,"c")*4)][0];
     const base = d.base*cm*(.92+r01(c,w,k,"b")*.16);
     const val = base*wob(d.id,t);
-    const ask = val*(.84+r01(c,w,k,"a")*.32);
+    const steal = d.t <= S.lvl && r01(c,w,k,"steal") < .014, ask = steal ? val*(.50+r01(c,w,k,"sa")*.10) : val*(.84+r01(c,w,k,"a")*.32);
     const lid = `${c}-${w}-${k}`;
-    if (!S.sold.includes(lid)) out.push({lid,id:d.id,cm,base,val,ask});
+    if (!S.sold.includes(lid)) out.push({lid,id:d.id,cm,base,val,ask,steal});
   }
   return out;
 }
@@ -1043,7 +1043,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794892274";
+const BUILD = "1794892618";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); } }).catch(()=>{}); }
@@ -1141,7 +1141,7 @@ function viewMarket(){
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
     ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`${i.ls?`<span class="pill g">For sale ${money(i.ls.p)}</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Owning one doubles your side hustle pay and boosts all business income.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   }
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
