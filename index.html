@@ -1059,7 +1059,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794901906";
+const BUILD = "1794932980";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1451,12 +1451,12 @@ function sheetDev(){ return () => { const cur = devPick>=0 ? VEND[devPick] : nul
   </div>
   <button class="btn gold" data-act="close" style="width:100%;margin-top:14px">BACK TO THE MONEY</button>`; }; }
 let loanAmt = "", loanPayV = "", savAmt = "", savDays = 7;
-function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0;
-  Object.keys(S.biz).forEach(id => biz += bizNetAt(id,t));
+function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
+  Object.keys(S.biz).forEach(id => { biz += bizNetAt(id,t); bx += bizExp(id); });
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) prop += propRent(p,t); up += propCost(p,t); });
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t);
   const net = biz + prop + car - up, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
-  return {biz,prop,car,up,net,intr,after:net-intr}; }
+  return {biz,bx,prop,car,up,net,intr,after:net-intr}; }
 function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Math.min(d,S.cash), f=cashFlow(), sg=x=>Math.abs(x)<.005?money(0):`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}</i>`;
   const assets=assetsVal()+bizVal();
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>The Bank</h3><p>All your money in one place</p></div></div>
@@ -1465,7 +1465,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="lbl">Income</div>
   ${kv([["Per minute",sg(f.net/60)],["Per hour",sg(f.net)],["Per day",sg(f.net*24)],["Per week",sg(f.net*168)]])}
   <div class="lbl">Where it comes from, per hour</div>
-  <div class="lines"><div><span>Businesses</span><b class="num">${sg(f.biz)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
+  <div class="lines"><div><span>Business revenue</span><b class="num">${sg(f.biz+f.bx)}</b></div><div><span>Business running costs</span><b class="num">${sg(-f.bx)}</b></div><div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Car rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Upkeep, taxes &amp; insurance</span><b class="num">${sg(-f.up)}</b></div><div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   <div class="lbl">Loans</div>
   ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment",(d>.005?money(Math.min(loanFullPay(),d))+" · ":"")+(LOAN_PART*(1+LOAN_FEE)*100).toFixed(2).replace(/0$/,"")+"% of the loan"],["Interest",(d>.005?(loansOf().every(l=>loanIsRamp(l))?LOAN_FEE_PCT+"% + "+LOAN_RAMP_PCT+"% every 6h now":loanRamping()?"Rising on your older loans":LOAN_FEE_PCT+"% · +"+LOAN_RAMP_PCT+"% every 6h starts in "+dur(Math.min(...loansOf().map(l=>l.at+LOAN_GRACE))-Date.now())):LOAN_FEE_PCT+"% if repaid in "+LOAN_GRACE_H+"h")+(overdrawn()?" · extra while negative":"")],["Interest per hour",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"],["Paid off",d>.005&&S.orig>.005?`<span class="up">${Math.max(0,Math.min(100,(1-(S.prin||0)/S.orig)*100)).toFixed(1)}%</span> of ${money(S.orig)}`:"No loan"]])}
   ${loansOf().length?`<div class="lbl">Your loans</div><div class="lines" style="margin-bottom:6px">${loansOf().slice().sort((x,y)=>x.at-y.at).map((l,i)=>`<div><span>${money(l.o)} · taken ${dur(Date.now()-l.at)} ago<br><small>${loanIsRamp(l)?"Interest rising now":"Interest rises in "+dur(l.at+LOAN_GRACE-Date.now())}</small></span><b>${money(l.d)}</b></div>`).join("")}</div>`:""}
