@@ -1062,7 +1062,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794935625";
+const BUILD = "1794935979";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1685,6 +1685,15 @@ addEventListener("pagehide", () => { advance(Date.now()); save(); });
 })();
 boot();
 setInterval(tick, 1000);
+/* iOS ignores orientation locks, so when the phone turns sideways we turn the whole page back */
+function holdPortrait(){ const b = document.body, W = innerWidth, Hh = innerHeight;
+  if (W <= Hh || Math.min(W,Hh) > 600){ ["position","top","left","width","height","transformOrigin","transform","overflow"].forEach(k => b.style[k] = ""); return; }
+  let ang = (screen.orientation && typeof screen.orientation.angle === "number") ? screen.orientation.angle : (typeof window.orientation === "number" ? window.orientation : 90);
+  ang = ((ang % 360) + 360) % 360;
+  const cw = ang === 270; /* device turned the other way */
+  b.style.position = "fixed"; b.style.top = "0"; b.style.left = "0"; b.style.width = Hh + "px"; b.style.height = W + "px"; b.style.overflow = "auto"; b.style.transformOrigin = "0 0";
+  b.style.transform = cw ? "translateX(" + W + "px) rotate(90deg)" : "translateY(" + Hh + "px) rotate(-90deg)"; }
+addEventListener("resize", holdPortrait); addEventListener("orientationchange", () => setTimeout(holdPortrait, 60)); holdPortrait();
 </script>
 
 </body>
