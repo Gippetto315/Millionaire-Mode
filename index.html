@@ -1003,6 +1003,7 @@ const LIVE = {
   nw: () => money(netWorth()),
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
+  cph: () => signed(perHour()),
   assets: () => money(assetsVal()+bizVal()),
   debt: () => money(S.debt||0),
   debtsub: () => S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
@@ -1021,6 +1022,7 @@ const LIVE = {
 function liveTick(){
   document.querySelectorAll("[data-live]").forEach(el => {
     const [k, a] = el.dataset.live.split(":"); const f = LIVE[k]; if (!f) return; const v = f(a); if (el.textContent !== v) el.textContent = v;
+    if (k === "cph") el.style.color = perHour() < 0 ? "var(--red)" : "var(--em)";
     if (k === "cash") el.style.color = S.cash < -.005 ? "var(--red)" : "";
   });
   const hb = document.querySelector('[data-act="hustle"]'); if (hb) hb.disabled = Date.now()-S.shiftAt < 60000;
@@ -1041,7 +1043,7 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b></div>
+    <div class="stat"><span class="lbl">Cash</span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span></div>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <div class="stat"><span class="lbl">Assets</span><b class="num" data-live="assets"></b></div>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
