@@ -1049,7 +1049,8 @@ function toast(msg, em){
 const sheetOpen = () => !!$("sheetroot").firstChild;
 let sheetFn = null, sheetLocked = false;
 function openSheet(fn, locked){ sheetFn=fn; sheetLocked=!!locked; drawSheet(); }
-function closeSheet(){ sheetFn=null; cfm=null; $("sheetroot").innerHTML=""; }
+let evResume = null, evReopen = null;
+function closeSheet(){ sheetFn=null; cfm=null; $("sheetroot").innerHTML=""; if (evResume){ const f=evResume; evResume=null; f(); } }
 function drawSheet(){ if (!sheetFn) return; const html = cfm ? cfmHtml() : sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim${sc?" still":""}" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
 
 function rowHtml(o){
@@ -1104,7 +1105,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794964791";
+const BUILD = "1794965325";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1425,12 +1426,12 @@ function sheetNW(){ return () => {
     <li><span><b>Businesses</b> count at ${Math.round(SELL*100)}% of what you put in, which is what you'd get if you sold.</span></li>
   </ul>
   <button class="btn ghost" data-act="close">Got it</button>`; }; }
-function showEvent(ev){
-  S.evs++; let result=null;
+function showEvent(ev, again){
+  if (!again) S.evs++; let result=null; evReopen = () => showEvent(ev, true);
   openSheet(() => result ? `<div class="welcome">${esc(ev.title.toUpperCase())}</div><p class="evtext" style="text-align:center">${esc(result)}</p><button class="btn" data-act="close">Continue</button>`
     : `<div class="shead"><div class="tile gold">${ev.icon}</div><div><h3>${esc(ev.title)}</h3><p>Decision needed</p></div></div><p class="evtext">${esc(ev.text)}</p>
-       <div class="list">${ev.choices.map((c,i)=>`<button class="btn ${i===0?"":"ghost"}" data-act="evc" data-arg="${i}" ${c.cost&&c.cost>S.cash?"disabled":""}>${esc(c.label)}</button>`).join("")}</div>`, true);
-  evChoose = i => { result = ev.choices[i].run(); save(); needRender = true; drawSheet(); };
+       <div class="list">${ev.choices.map((c,i)=>`<button class="btn ${i===0?"":"ghost"}" data-act="evc" data-arg="${i}" ${c.cost&&c.cost>S.cash?"disabled":""}>${esc(c.label)}</button>`).join("")}${ev.choices.some(c=>c.cost)?`<button class="btn ghost" data-act="evBank" style="margin-top:8px">🏦 Visit the bank first</button>`:""}</div>`, true);
+  evChoose = i => { evResume = null; result = ev.choices[i].run(); save(); needRender = true; drawSheet(); };
 }
 let evChoose = null;
 function showWelcome(inc, gap){
@@ -1678,6 +1679,7 @@ document.addEventListener("click", e => {
     case "rbid": roomBid(+arg); progress(); save(); drawSheet(); break;
     case "roomLeave": leaveRoom(); progress(); save(); render(); break;
     case "evc": if (evChoose) evChoose(+arg); break;
+    case "evBank": evResume = evReopen; loanAmt=""; loanPayV=""; openSheet(sheetBank()); break;
     case "help": openHelp(); break;
     case "cashinfo": openSheet(sheetCash()); break;
     case "assetinfo": openSheet(sheetAssets()); break;
