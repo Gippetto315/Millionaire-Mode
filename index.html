@@ -376,18 +376,39 @@ const PROP = [
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
-  {id:"bike",c:"veh",hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-0.00038,carry:.00012},
-  {id:"scooter",c:"veh",hx:1.5,n:"Used Scooter",e:"🛵",t:1,base:1500,a:-0.0003,carry:.00012},
-  {id:"carbon",c:"veh",hx:1.25,n:"Carbon Race Bike",e:"🚴",t:1,base:1100,a:.0004,carry:.00005},
-  {id:"vespa",c:"veh",hx:1.5,n:"Vintage Italian Scooter",e:"🛵",t:2,base:4500,a:.0005,carry:.00008},
-  {id:"hatch",c:"veh",vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-0.0003,carry:.00012},
-  {id:"sedan",c:"veh",vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-0.0002,carry:.00012},
-  {id:"coupe",c:"veh",vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-0.0001,carry:.00015},
-  {id:"lux",c:"veh",vb:6,n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-0.00015,carry:.00015},
-  {id:"classic",c:"veh",vb:6,n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
-  {id:"super",c:"veh",vb:10,n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
-  {id:"hyper",c:"veh",vb:10,n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
-  {id:"proto",c:"veh",vb:10,n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
+  {id:"bike",c:"veh",g:0,hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-0.00038,carry:.00012},
+  {id:"scooter",c:"veh",g:1,hx:1.5,n:"Used Scooter",e:"🛵",t:1,base:1500,a:-0.0003,carry:.00012},
+  {id:"carbon",c:"veh",g:1,hx:1.25,n:"Carbon Race Bike",e:"🚴",t:1,base:1100,a:.0004,carry:.00005},
+  {id:"vespa",c:"veh",g:2,hx:1.5,n:"Vintage Italian Scooter",e:"🛵",t:2,base:4500,a:.0005,carry:.00008},
+  {id:"hatch",c:"veh",g:2,vb:3,n:"Used Hatchback",e:"🚗",t:1,base:6000,a:-0.0003,carry:.00012},
+  {id:"sedan",c:"veh",g:3,vb:3,n:"Family Sedan",e:"🚙",t:2,base:24000,a:-0.0002,carry:.00012},
+  {id:"coupe",c:"veh",g:4,vb:6,n:"Sports Coupe",e:"🏎️",t:3,base:70000,a:-0.0001,carry:.00015},
+  {id:"lux",c:"veh",g:5,vb:6,n:"Luxury Sedan",e:"🚘",t:4,base:110000,a:-0.00015,carry:.00015},
+  {id:"classic",c:"veh",g:5,vb:6,n:"'63 Classic Roadster",e:"🚕",t:4,base:180000,a:.0006,carry:.00012},
+  {id:"super",c:"veh",g:6,vb:10,n:"V12 Supercar",e:"🏁",t:5,base:350000,a:.0001,carry:.0002,set:"cars"},
+  {id:"hyper",c:"veh",g:8,vb:10,n:"Hybrid Hypercar",e:"⚡",t:7,base:2.5e6,a:.0003,carry:.0002,set:"cars"},
+  {id:"mtb",c:"veh",g:0,hx:1.25,n:"Mountain Bike",e:"🚵",t:0,base:600,a:-0.0003,carry:.00012},
+  {id:"ebike",c:"veh",g:1,hx:1.5,n:"Electric Bike",e:"🚲",t:1,base:1800,a:-0.0003,carry:.00012},
+  {id:"dirt",c:"veh",g:1,hx:1.5,n:"Dirt Bike",e:"🏍️",t:1,base:2800,a:-0.0003,carry:.00012},
+  {id:"golf",c:"veh",g:2,hx:1.5,n:"Golf Cart",e:"🛺",t:2,base:4200,a:-0.0002,carry:.0001},
+  {id:"moto",c:"veh",g:2,hx:1.75,n:"Used Motorcycle",e:"🏍️",t:2,base:7500,a:-0.0003,carry:.00013},
+  {id:"beater",c:"veh",g:2,vb:3,n:"Beater Pickup",e:"🛻",t:2,base:8500,a:-0.0003,carry:.00012},
+  {id:"minivan",c:"veh",g:3,vb:3,n:"Minivan",e:"🚐",t:2,base:21000,a:-0.0002,carry:.00012},
+  {id:"suv",c:"veh",g:3,vb:3,n:"Compact SUV",e:"🚙",t:3,base:26000,a:-0.0002,carry:.00012},
+  {id:"pickup",c:"veh",g:3,vb:3,n:"Work Pickup Truck",e:"🛻",t:3,base:34000,a:-0.0002,carry:.00013},
+  {id:"cruiser",c:"veh",g:3,hx:1.75,n:"Cruiser Motorcycle",e:"🏍️",t:3,base:18000,a:-0.0001,carry:.00013},
+  {id:"fishboat",c:"veh",g:4,vb:3,n:"Fishing Boat",e:"🎣",t:3,base:42000,a:-0.0002,carry:.0002},
+  {id:"luxsuv",c:"veh",g:4,vb:6,n:"Luxury SUV",e:"🚙",t:4,base:62000,a:-0.00015,carry:.00015},
+  {id:"muscle",c:"veh",g:5,vb:6,n:"Muscle Car",e:"🏎️",t:4,base:95000,a:.0003,carry:.00013},
+  {id:"rv",c:"veh",g:5,vb:3,n:"Motorhome RV",e:"🚌",t:4,base:160000,a:-0.0002,carry:.0002},
+  {id:"speedboat",c:"veh",g:5,vb:6,n:"Speedboat",e:"🚤",t:4,base:130000,a:-0.00015,carry:.0002},
+  {id:"exotic",c:"veh",g:6,vb:10,n:"Italian Exotic",e:"🏎️",t:5,base:460000,a:.0002,carry:.0002},
+  {id:"cruiserboat",c:"veh",g:6,vb:6,n:"Cabin Cruiser",e:"🛥️",t:5,base:600000,a:-0.0001,carry:.00022},
+  {id:"yacht",c:"veh",g:7,vb:10,n:"60-Foot Yacht",e:"🛥️",t:6,base:1.6e6,a:-0.0001,carry:.00025},
+  {id:"heli",c:"veh",g:7,vb:10,n:"Helicopter",e:"🚁",t:6,base:1.9e6,a:-0.0001,carry:.00025},
+  {id:"jet",c:"veh",g:9,vb:10,n:"Private Jet",e:"✈️",t:7,base:9e6,a:-0.00005,carry:.00025},
+  {id:"superyacht",c:"veh",g:9,vb:10,n:"Superyacht",e:"🚢",t:7,base:16e6,a:-0.00005,carry:.00025},
+  {id:"proto",c:"veh",g:10,vb:10,n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
   {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0,hidden:true},
   {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0,hidden:true},
   {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0,hidden:true},
@@ -723,9 +744,15 @@ function itemListings(c){
   const pool = ITEMS.filter(i => i.c===c && !i.hidden && i.t <= S.lvl+1);
   const out = [];
   const used = new Set();
-  for (let k=0; k<(c==="col"?6:5) && pool.length; k++){
+  let vlad = null, vA = 0, vM = 0; const voffs = [-1,0,0,1,2,3];
+  if (c==="veh"){ vlad = []; ITEMS.filter(i=>i.c==="veh"&&!i.hidden).forEach(i => { (vlad[i.g]||(vlad[i.g]=[])).push(i); }); vlad = vlad.filter(Boolean);
+    const tb = g => Math.min(...g.map(i=>i.base));
+    if (!S.vAnc || S.vAnc.w !== w){ let a = 0; vlad.forEach((g,i) => { if (tb(g)*.95 <= Math.max(0,S.cash)+1500) a = i; }); let m = a; vlad.forEach((g,i) => { if (tb(g) <= 6*Math.max(2000,Math.max(0,S.cash)+500)) m = Math.max(m,i); }); S.vAnc = {w,a,m}; }
+    vA = S.vAnc.a; vM = S.vAnc.m; }
+  for (let k=0; k<(c==="col"?6:c==="veh"?6:5) && (c==="veh" || pool.length); k++){
     let d, tries=0;
-    do { d = pool[Math.floor(r01(c,w,k,"i",tries)*pool.length)]; tries++; } while (used.has(d.id) && tries < 8);
+    if (c==="veh"){ const grp = vlad[Math.max(0,Math.min(vM,vA+voffs[k]))]; do { d = grp[Math.floor(r01(c,w,k,"i",tries)*grp.length)]; tries++; } while (used.has(d.id) && tries < 8); }
+    else do { d = pool[Math.floor(r01(c,w,k,"i",tries)*pool.length)]; tries++; } while (used.has(d.id) && tries < 8);
     used.add(d.id);
     const cm = COND[Math.floor(r01(c,w,k,"c")*4)][0];
     const base = d.base*cm*(.92+r01(c,w,k,"b")*.16);
@@ -1157,7 +1184,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794985300";
+const BUILD = "1794986000";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1261,7 +1288,7 @@ function viewMarket(){
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
     ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`${i.ls?`<span class="pill g">For sale ${money(i.ls.p)}</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Owning one doubles your side hustle pay and boosts all business income.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=c!=="veh"&&d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   }
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
