@@ -1184,7 +1184,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794986000";
+const BUILD = "1794987000";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1203,8 +1203,8 @@ const LIVE = {
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
   assets: () => money(assetsVal()+bizVal()),
-  debt: () => money(S.debt||0),
-  debtsub: () => S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
+  debt: () => money((S.debt||0)+mortDebt()),
+  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h · tap` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1245,7 +1245,7 @@ function viewHome(){
     <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
-    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${S.debt>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
+    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)+mortDebt()>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
@@ -1278,7 +1278,8 @@ function viewMarket(){
   } else if (mcat==="prop"){
     const L=propListings();
     const hp = homeProp();
-    body = (hp ? `<div class="sechead"><h2>Our Home</h2><small>+${HOME_PCT[PROPM[hp.type].g||0]}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${HOME_PCT[PROPM[hp.type].g||0]}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living in a nicer home gives all your businesses a bonus.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
+    const mt = mortDebt();
+    body = (mt > .005 ? `<button class="lrow" data-act="bank"><div class="lines"><div><span>Mortgages owed · tap for details</span><b class="num down">${money(mt)}</b></div></div></button>` : "") + (hp ? `<div class="sechead"><h2>Our Home</h2><small>+${HOME_PCT[PROPM[hp.type].g||0]}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${HOME_PCT[PROPM[hp.type].g||0]}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living in a nicer home gives all your businesses a bonus.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
       return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Our Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
@@ -1628,11 +1629,12 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   const assets=assetsVal()+bizVal();
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>The Bank</h3><p>All your money in one place</p></div></div>
   <div class="lbl">Your money</div>
-  ${kv([["Net worth",money(netWorth())],["Cash",money(S.cash)],["Assets",money(assets)],["Debt",`<i style="font-style:normal" class="${d>0?"down":""}">${money(d)}</i>`],["Lifetime earnings",money(S.earned)],["Peak net worth",money(S.peak)]])}
+  ${kv([["Net worth",money(netWorth())],["Cash",money(S.cash)],["Assets",money(assets)],["Loans owed",`<i style="font-style:normal" class="${d>0?"down":""}">${money(d)}</i>`],...(mortDebt()>.005?[["Mortgages owed",`<i style="font-style:normal" class="down">${money(mortDebt())}</i>`],["Total debt",`<i style="font-style:normal" class="down">${money(d+mortDebt())}</i>`]]:[]),["Lifetime earnings",money(S.earned)],["Peak net worth",money(S.peak)]])}
   <div class="lbl">Income</div>
   ${kv([["Per minute",sg(f.net/60)],["Per hour",sg(f.net)],["Per day",sg(f.net*24)],["Per week",sg(f.net*168)]])}
   <div class="lbl">Where it comes from, per hour</div>
   <div class="lines"><div><span>Business revenue</span><b class="num">${sg(f.biz+f.bx)}</b></div>${EXP_SPLIT.map(([n,x])=>`<div><span>${n}</span><b class="num">${sg(-f.bx*x)}</b></div>`).join("")}<div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Vehicle & bicycle rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Vehicle &amp; property upkeep</span><b class="num">${sg(-f.up)}</b></div>${f.mort>.005?`<div><span>Mortgage payments</span><b class="num">${sg(-f.mort)}</b></div>`:""}<div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
+  ${(S.mort||[]).length?`<div class="lbl">Your mortgages · tap one</div>${S.mort.map(m=>({m,p:S.props.find(x=>x.uid===m.uid)})).filter(x=>x.p).map(({m,p})=>`<button class="lrow" data-act="openProp" data-arg="${p.uid}"><div class="lines"><div><span>${esc(p.name)} · ${money(mortBal(m))} left</span><b class="num down">${money(mortRate(m))}/h</b></div></div></button>`).join("")}${kv([["Mortgages owed",money(mortDebt())],["Mortgage payments per hour",money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))],["Per day",money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0)*24)]])}`:""}
   <div class="lbl">Loans</div>
   ${kv([["Credit limit",money(loanCap())],["Of your net worth",Math.round(loanRatio()*100)+"%"],["Next rank",S.lvl>=MS.length-1?"Top rank":Math.round(loanRatioAt(S.lvl+1)*100)+"% · "+MS[S.lvl+1][1]],["You can borrow",money(room)],["Next payment",d>.005?`${money(loanDueNow())} · in ${dur((S.dueAt||0)-Date.now())}`:"No loan"],["Each payment",(d>.005?money(Math.min(loanFullPay(),d))+" · ":"")+(LOAN_PART*(1+LOAN_FEE)*100).toFixed(2).replace(/0$/,"")+"% of the loan"],["Interest",loanLadder()+(overdrawn()?" · extra while negative":"")],["Interest per hour",money(f.intr)+"/h"],["Side hustle",money(hustlePay())+" a shift"],["Paid off",d>.005&&S.orig>.005?`<span class="up">${Math.max(0,Math.min(100,(1-(S.prin||0)/S.orig)*100)).toFixed(1)}%</span> of ${money(S.orig)}`:"No loan"]])}
       ${loansOf().length?`<div class="lbl">Your loans · tap one to pay it</div>${loansOf().slice().sort((x,y)=>x.at-y.at).map(l=>`<button class="lrow" data-act="openLoan" data-arg="${l.at}"><div class="lines"><div><span>${money(l.o)} · taken ${dur(Date.now()-l.at)} ago<br><small>What's left costs ${loanPct(loanRate(l))}${(()=>{const n=loanNextStep(l);return n?" · "+loanPct(n.rate)+" in "+dur(n.in):"";})()}</small></span><b>${money(l.d)} ›</b></div></div></button>`).join("")}`:""}
