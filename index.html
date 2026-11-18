@@ -306,6 +306,7 @@ function money(x, opts){
   else s = Math.round(x).toLocaleString("en-US");
   return (neg ? "-$" : "$") + s;
 }
+const wholeMoney = x => money(x,{full:true,whole:true});
 const signed = x => (x >= 0 ? "+" : "") + money(x);
 const pct = x => (x >= 0 ? "+" : "") + (x*100).toFixed(1) + "%";
 function dur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}h ${m}m`:m?`${m}:${String(ss).padStart(2,"0")}`:`0:${String(ss).padStart(2,"0")}`}
@@ -777,7 +778,7 @@ function propListings(){
     const base = d.base*(.88+r01("p",w,k,"b")*.24);
     const p = {type:d.id,base,cond};
     const val = propVal(p,t);
-    const ask = val*(.84+r01("p",w,k,"a")*.24);
+    const ask = Math.round(val*(.84+r01("p",w,k,"a")*.24)/500)*500;
     const lid = `p-${w}-${k}`;
     if (!S.sold.includes(lid)) out.push({lid,...p,val,ask});
   }
@@ -812,7 +813,7 @@ const A = {
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (S.home===u){ toast("You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
-  propMort(arg){ const [lid,pc]=String(arg).split("|"), pct=+pc, L=propListings().find(x=>x.lid===lid); if (!L||!MORT_DOWNS.includes(pct)) return; const d=PROPM[L.type], down=Math.round(L.ask*pct*100)/100, loan=L.ask-down;
+  propMort(arg){ const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L||!(+am>=1)) return; const d=PROPM[L.type], loan=Math.round(Math.min(+am,L.ask)*100)/100, down=Math.round((L.ask-loan)*100)/100;
     if (down > S.cash+1e-6){ toast("Not enough cash for the down payment"); return; } if (mortDebt()+loan > mortCap()){ toast("The bank won't lend that much against your net worth. Put more down."); return; }
     S.cash -= down; const u=uid(); S.sold.push(lid); S.props.push({uid:u,type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()});
     (S.mort=S.mort||[]).push({uid:u,p0:loan,at:Date.now(),pay:loan*MORT_PAYF}); tx("buy",`Bought ${d.n} (mortgage)`,-down); },
@@ -1186,7 +1187,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794988500";
+const BUILD = "1794992000";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1285,7 +1286,7 @@ function viewMarket(){
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
       return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Our Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${money(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${wholeMoney(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   } else {
     const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
@@ -1407,7 +1408,7 @@ function bizQtyPanel(id){
   <div class="amtrow"><span class="dollar">#</span><input id="bqin" data-id="${id}" type="text" inputmode="numeric" placeholder="Type a number" value="${bizQ[id]>1&&![5,10].includes(bizQ[id])?bizQ[id]:""}" autocomplete="off"><button class="btn ghost" data-act="bqset" data-arg="${id}">Set</button></div>
   <div class="btns"><button class="btn" data-act="bizBuyN" data-arg="${id}|${bq}" ${bq<1||bc>S.cash?"disabled":""}><span>${bq<1?"Max 25 locations":"Open "+bq+" for "+money(bc)}</span></button>${o?`<button class="btn ghost" data-act="bizSellN" data-arg="${id}|${sq}">Sell ${sq} +${money(sellValN(id,sq))}</button>`:""}</div>
   ${n<25?`<p class="note">Next location (#${n+1}) costs ${money(unitCost(id))} and adds about ${money(newLocNet(id))}/h. Every location you own makes the next one 10% pricier, and new ones start at level 0.</p>`:""}
-  ${bq>=1&&bc>S.cash?`<p class="note">You need ${money(bc-S.cash)} more for ${bq}.</p>`:""}`;
+  ${bq>=1&&bc>S.cash?(()=>{const need=Math.ceil((bc-S.cash)*100)/100, rm=loanRoom(); return `<p class="note">You need ${money(bc-S.cash)} more for ${bq}.</p><button class="btn gold" data-act="loanTake" data-arg="${need}" ${need>rm?"disabled":""} style="width:100%">Take out a loan for ${money(need)}</button>${need>rm?`<p class="note">The bank would only lend you ${money(rm)} right now.</p>`:`<p class="note">Borrows exactly what you're short. Then open the location.</p>`}`;})():""}`;
 }
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
@@ -1425,10 +1426,12 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
-  <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Pay cash · ${money(l.ask)}</button>
-  <div class="lbl" style="margin-top:12px">Or get a mortgage. Put down:</div>
-  <div class="btns three">${MORT_DOWNS.map(f=>`<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${f}" ${l.ask*f>S.cash?"disabled":""}><span>${Math.round(f*100)}%</span><small>${money(l.ask*f)}</small><small>${money(l.ask*(1-f)*MORT_PAYF)}/h</small></button>`).join("")}</div>
+  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Pay cash · ${wholeMoney(l.ask)}</button>
+  <div class="lbl" style="margin-top:12px">Or get a mortgage for:</div>
+  <div class="btns three" style="grid-template-columns:repeat(4,1fr)">${[.25,.5,.75,1].map(f=>{const am=Math.round(l.ask*f*100)/100, dn=l.ask-am; return `<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${am}" ${dn>S.cash+1e-6?"disabled":""}><span>${Math.round(f*100)}%</span><small>${money(am)}</small><small>${money(am*MORT_PAYF)}/h</small></button>`;}).join("")}</div>
+  <div class="amtrow" style="margin-top:10px"><span class="dollar">$</span><input id="mortamt" type="text" inputmode="decimal" placeholder="Or type your mortgage amount" value="${esc(mortAmtV)}" autocomplete="off"><button class="btn" data-act="propMortC" data-arg="${lid}">Mortgage</button></div>
+  <p class="note">The rest of the price comes out of your cash as the down payment. A 100% mortgage means nothing down, if the bank allows it.</p>
   <p class="note"><b>How it works:</b> a mortgage is a loan for the home. Each hour's payment comes out of your income on its own, and it's paid off in ${Math.round(MORT_N/24)} days. The rate is 6.5%, like a real 30-year mortgage, just sped up. That means you repay about ${(MORT_PAYF*MORT_N).toFixed(2)}x what you borrow, same as real life: borrow $300K, repay about $681K. Rent is there to cover the payments. If you can't afford it, put more down.</p>`;
 };}
 function sheetListing(c,lid){ return () => {
@@ -1528,6 +1531,7 @@ function showWelcome(inc, gap){
   openSheet(() => `<div class="welcome">WELCOME BACK</div>
     <div class="big num ${inc.total>=0?"up":"down"}">${signed(inc.total)}</div>
     <p class="sub">You ${inc.total>=0?"earned":"spent"} this while you were away for ${dur(gap)}${gap>CAP&&!S.nocap?" (capped at "+Math.round(CAP/H)+" hours)":""}.</p>
+    <div class="lines" style="margin-bottom:10px"><div><span><b>Added</b></span><b class="num up">${signed(inc.lines.reduce((x,[,a])=>x+(a>0?a:0),0))}</b></div><div><span><b>Lost</b></span><b class="num down">${signed(inc.lines.reduce((x,[,a])=>x+(a<0?a:0),0))}</b></div></div>
     <div class="lines">${inc.lines.map(([n,a])=>`<div><span>${esc(n)}</span><b class="num ${a>=0?"up":"down"}">${signed(a)}</b></div>`).join("")}</div>
     <button class="btn" data-act="close">Collect</button>`, true);
 }
@@ -1618,7 +1622,7 @@ function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t); const mort = (S.mort||[]).reduce((a,m)=>a+mortRate(m,t),0);
   const net = biz + prop + car - up - mort, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
   return {biz,bx,prop,car,up,mort,net,intr,after:net-intr}; }
-let curLoan = "", loanOneV = "", projAmtV = "";
+let curLoan = "", loanOneV = "", projAmtV = "", mortAmtV = "", curPL = "";
 function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) === curLoan); if (!l) return sheetBank()();
   const n = loanNextStep(l), pay = Math.min(l.d, S.cash);
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>${money(l.o)} loan</h3><p>Taken ${dur(Date.now()-l.at)} ago</p></div></div>
@@ -1660,8 +1664,8 @@ let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
-document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
-document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
@@ -1678,7 +1682,7 @@ function cfmInfo(act, arg){
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()*homeBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="propMort"){ const [lid,pc]=String(arg).split("|"), pct=+pc, L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], down=L.ask*pct, loan=L.ask-down, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",money(L.ask)],["You put down",money(down)],["Mortgage",money(loan)],["Rate","6.5%"],["Payment",money(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Interest you pay",money(pay*MORT_N-loan)],["Total you repay",money(pay*MORT_N)]],n:after(-down),yes:`Put down ${money(down)}`}; }
+  if (act==="propMort"){ const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], loan=Math.min(+am,L.ask), down=L.ask-loan, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",wholeMoney(L.ask)],["Mortgage",money(loan)],["You put down",money(down)],["Rate","6.5%"],["Payment",money(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Interest you pay",money(pay*MORT_N-loan)],["Total you repay",money(pay*MORT_N)]],n:after(-down),yes:down>.005?`Put down ${money(down)}`:"Borrow it all"}; }
   if (act==="propMortPay"){ const m=mortOf(arg); if (!m) return null; const b=mortBal(m); return {e:"🏦",t:"Pay off the mortgage?",l:[["You pay",money(b)],["Saves",money(mortRate(m))+"/h"]],n:after(-b),yes:`Pay ${money(b)}`}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
@@ -1737,7 +1741,7 @@ document.addEventListener("click", e => {
     case "hustle": run(A.hustle); break;
     case "openBiz": openSheet(sheetBiz(arg)); break;
     case "openProp": openSheet(sheetProp(arg)); break;
-    case "openPListing": openSheet(sheetPListing(arg)); break;
+    case "openPListing": curPL=arg; mortAmtV=""; openSheet(sheetPListing(arg)); break;
     case "openListing": { const [c,l]=arg.split("|"); openSheet(sheetListing(c,l)); break; }
     case "openItem": openSheet(sheetItem(arg)); break;
     case "openStock": openSheet(sheetStock(arg)); break;
@@ -1755,6 +1759,7 @@ document.addEventListener("click", e => {
     case "propRent": run(()=>A.propRent(arg)); break;
     case "propLive": run(()=>A.propLive(arg)); break;
     case "propMort": run(()=>A.propMort(arg)); { const p=S.props[S.props.length-1]; if (p && Date.now()-p.at<2000) openSheet(sheetProp(p.uid)); } break;
+    case "propMortC": { const L=propListings().find(x=>x.lid===(arg||curPL)); const a=parseAmt(mortAmtV); if (!L){ break; } if (!(a>=1)){ toast("Type an amount first"); break; } if (L.ask-Math.min(a,L.ask) > S.cash+1e-6){ toast("Not enough cash for the down payment"); break; } const ar=(arg||curPL)+"|"+Math.min(a,L.ask), info=cfmInfo("propMort",ar); if (!info){ toast("That listing is gone"); break; } cfm={act:"propMort",arg:ar,info}; drawSheet(); break; }
     case "propMortPay": run(()=>A.propMortPay(arg)); break;
     case "lpick": { const [u,f]=arg.split("|"); listPick[u]=+f; delete listCustom[u]; drawSheet(); break; }
     case "lcustom": { const el2=$("lprice"), a=parseAmt(el2?el2.value:""); if (a<1){ toast("Type a price first"); break; } listCustom[arg]=String(a); drawSheet(); break; }
