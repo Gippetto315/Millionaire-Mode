@@ -498,7 +498,7 @@ function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
 function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); }
-const LOAN_TIERS = [[0,.055],[24,.09],[36,.11]], LOAN_FEE = LOAN_TIERS[0][1], LOAN_GRACE = LOAN_TIERS[1][0]*3600000, LATE_RATE = .11/12, LOAN_PART = .10, LOAN_EVERY_H = 6, LOAN_EVERY = LOAN_EVERY_H*3600000;
+const LOAN_TIERS = [[0,.055],[24,.09],[36,.11]], LOAN_FEE = LOAN_TIERS[0][1], LOAN_GRACE = LOAN_TIERS[1][0]*3600000, LATE_RATE = .11/12, LOAN_PART = .125, LOAN_EVERY_H = 6, LOAN_EVERY = LOAN_EVERY_H*3600000;
 const LOAN_PAYS = Math.ceil(1/LOAN_PART - 1e-9), LOAN_PCT = Math.round(LOAN_PART*100), LOAN_FEE_PCT = +(LOAN_FEE*100).toFixed(2), LOAN_GRACE_H = Math.round(LOAN_GRACE/3600000);
 const loanPct = x => +(x*100).toFixed(2) + "%";
 const loanLadder = () => LOAN_TIERS.map((tr,k) => loanPct(tr[1]) + (k===0 ? " first "+LOAN_TIERS[1][0]+"h" : k<LOAN_TIERS.length-1 ? " next "+(LOAN_TIERS[k+1][0]-tr[0])+"h" : " after that")).join(" · ");
@@ -549,7 +549,7 @@ const loanNextStep = (l,t) => { t = t||Date.now(); const age = (t - l.at)/H, n =
 const loanAccrualH = () => (S.prin||0)*(overdrawn() ? LATE_RATE : 0);
 function loanSync(){ const L = loansOf(); S.debt = L.reduce((a,l)=>a+l.d,0); S.prin = L.reduce((a,l)=>a+l.p,0); S.inst = L.reduce((a,l)=>a+l.i,0); S.pp = L.reduce((a,l)=>a+(l.pp||0),0); S.orig = L.reduce((a,l)=>a+l.o,0); }
 function loanClear(){ S.loans = []; S.debt = 0; S.prin = 0; S.inst = 0; S.pp = 0; S.orig = 0; S.late = false; S.dueAt = 0; }
-function loanMigrate(){ if (!S.evFix1){ S.evFix1 = 1; S.mods = (S.mods||[]).filter(x => x.m >= 1); S.lastBad = Date.now(); } if (!S.loans){ S.loans = []; if (S.debt > .005){ const p = S.prin == null ? S.debt : S.prin; S.loans.push({p, d:S.debt, i:S.inst != null ? S.inst : LOAN_PART*p, pp:S.pp||0, at:S.loanAt || Date.now(), o:S.orig != null ? S.orig : p}); if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; } } if ((S.loanV||0) < 2){ (S.loans||[]).forEach(l => { l.i = LOAN_PART*l.o; }); } if ((S.loanV||0) < 5){ (S.loans||[]).forEach(l => { l.i = LOAN_PART*l.o; }); } if ((S.loanV||0) < 3){ (S.loans||[]).forEach(l => { l.d = l.p*(1+loanRate(l)); }); } S.loanV = 5; if ((S.loans||[]).length && S.dueAt && S.dueAt > Date.now() + LOAN_EVERY) S.dueAt = Date.now() + LOAN_EVERY; loanSync(); }
+function loanMigrate(){ if (!S.evFix1){ S.evFix1 = 1; S.mods = (S.mods||[]).filter(x => x.m >= 1); S.lastBad = Date.now(); } if (!S.loans){ S.loans = []; if (S.debt > .005){ const p = S.prin == null ? S.debt : S.prin; S.loans.push({p, d:S.debt, i:S.inst != null ? S.inst : LOAN_PART*p, pp:S.pp||0, at:S.loanAt || Date.now(), o:S.orig != null ? S.orig : p}); if (!S.dueAt || S.dueAt < Date.now()) S.dueAt = Date.now() + LOAN_EVERY; } } if ((S.loanV||0) < 2){ (S.loans||[]).forEach(l => { l.i = LOAN_PART*l.o; }); } if ((S.loanV||0) < 6){ (S.loans||[]).forEach(l => { l.i = LOAN_PART*l.o; }); } if ((S.loanV||0) < 3){ (S.loans||[]).forEach(l => { l.d = l.p*(1+loanRate(l)); }); } S.loanV = 6; if ((S.loans||[]).length && S.dueAt && S.dueAt > Date.now() + LOAN_EVERY) S.dueAt = Date.now() + LOAN_EVERY; loanSync(); }
 function loanPayment(ev){ const was = overdrawn(); let due = 0;
   loansOf().forEach(l => { const inst = loanInstOf(l), d = inst*loanMulOf(l); due += d; l.d -= d; l.p = Math.max(0, l.p - inst); l.pp = 0; });
   S.cash -= due; S.loans = S.loans.filter(l => l.p > .005 && l.d > .01); loanSync();
@@ -1105,7 +1105,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794966954";
+const BUILD = "1794967500";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
