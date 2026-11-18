@@ -509,13 +509,13 @@ const savVal = (t) => { t=t||Date.now(); return (S.sav||[]).reduce((a,v)=>a+v.p*
 const savLocked = () => (S.sav||[]).reduce((a,v)=>a+v.p,0);
 const savCap = () => Math.max(0, Math.max(.25*netWorth(), 50) - savLocked());
 const PROJ = {
-  startup:{e:"🚀",n:"Startup",lock:48,odds:"About 1 in 3 takes off",range:"Lose it all, or 2x to 5.5x",roll:()=>Math.random()<.35?2+Math.random()*3.5:0,
+  startup:{e:"🚀",n:"Startup",lock:48,odds:"About 1 in 3 takes off",range:"Flop returns 0.1x to 0.5x, a hit pays 2x to 5.5x",roll:()=>Math.random()<.35?2+Math.random()*3.5:.1+Math.random()*.4,
     names:["Uber for Umbrellas","Dating App for Houseplants","The AI Toaster","Blockchain Lemonade","Sock Subscription Box","Pizza Delivery Drones","The Smart Fork","Meal Kits for Cats"],
     line:["Two founders, one whiteboard, zero revenue.","Pre-revenue, pre-product, pre-everything.","They said the same thing about the wheel."]},
   movie:{e:"🎬",n:"Movie",lock:24,odds:"Most turn a small profit",range:"Flop pays 0.3x, hit pays up to 4x",roll:()=>{const r=Math.random();return r<.35?.3:r<.8?1.1+Math.random()*.3:2.5+Math.random()*1.5;},
     names:["Space Cowboys 4","The Last Accountant","Haunted Timeshare","Sharknado: Tax Season","Quiet Zombies","Heist at the DMV"],
     line:["The trailer tested well with the director's mother.","Big stars, bigger budget, no script yet.","Critics are already calling it a movie."]},
-  oil:{e:"🛢️",n:"Oil well",lock:6,odds:"4 in 10 strike oil",range:"Dry hole, or 2.2x to 3.3x",roll:()=>Math.random()<.4?2.2+Math.random()*1.1:0,
+  oil:{e:"🛢️",n:"Oil well",lock:6,odds:"4 in 10 strike oil",range:"Dry hole returns 0.2x to 0.6x, oil pays 2.2x to 3.3x",roll:()=>Math.random()<.4?2.2+Math.random()*1.1:.2+Math.random()*.4,
     names:["Dusty Flats Well #3","Rattlesnake Ridge","Old Pete's Backyard","Lucky Mesa Rig","Prairie Dog Field","Gusher Gulch"],
     line:["The geologist is 60 percent sure. Of something.","Drilled by a man named Tex. Naturally.","Quick to find out, quick to regret."]},
   partner:{e:"🤝",n:"Silent partner",lock:48,odds:"Steady, no surprises",range:"Pays 1.2x",roll:()=>1.2,
@@ -627,7 +627,7 @@ function advance(t){
   loanMigrate();
   credit(inc.total);
   loanRun(from, t);
-  if (S.proj && S.proj.length){ const keep=[]; S.plog=S.plog||[]; S.proj.forEach(p=>{ if (p.end<=t){ const g=p.amt*p.mult; S.cash+=g; const d=PROJ[p.kind], good=g>=p.amt;
+  if (S.proj && S.proj.length){ S.proj.forEach(p => { if (p.mult < .1) p.mult = .1 + Math.random()*.4; }); const keep=[]; S.plog=S.plog||[]; S.proj.forEach(p=>{ if (p.end<=t){ const g=p.amt*p.mult; S.cash+=g; const d=PROJ[p.kind], good=g>=p.amt;
       const txt = g<=0 ? `${p.name} flopped. You lost ${money(p.amt)}.` : good ? `${p.name} paid ${money(g)} on ${money(p.amt)} (${+(p.mult).toFixed(2)}x).` : `${p.name} underperformed. You got back ${money(g)} of ${money(p.amt)}.`;
       S.plog.unshift({t:p.end,text:txt,up:good,e:d.e}); if (S.plog.length>8) S.plog.length=8; tx(g>0?"income":"spend",`Project: ${p.name}`,g-p.amt); toast(txt, true); } else keep.push(p); }); S.proj=keep; }
   if (S.sav && S.sav.length){ const keep=[]; S.sav.forEach(v=>{ if (v.end<=t){ const g=v.p*(1+v.r); S.cash+=g; tx("income","Savings matured",g); toast(`Savings paid out ${money(g)}`, true); } else keep.push(v); }); S.sav=keep; }
@@ -1105,7 +1105,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794966058";
+const BUILD = "1794966954";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
