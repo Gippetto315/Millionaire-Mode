@@ -1157,7 +1157,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794984900";
+const BUILD = "1794985300";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1398,7 +1398,7 @@ function sheetPListing(lid){ return () => {
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Pay cash · ${money(l.ask)}</button>
   <div class="lbl" style="margin-top:12px">Or get a mortgage. Put down:</div>
   <div class="btns three">${MORT_DOWNS.map(f=>`<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${f}" ${l.ask*f>S.cash?"disabled":""}><span>${Math.round(f*100)}%</span><small>${money(l.ask*f)}</small><small>${money(l.ask*(1-f)*MORT_PAYF)}/h</small></button>`).join("")}</div>
-  <p class="note">Mortgages are paid off over ${Math.round(MORT_N/24)} days. The amount per hour comes out of your income automatically.</p>`;
+  <p class="note"><b>How it works:</b> a mortgage is a loan for the home. Each hour's payment comes out of your income on its own, and it's paid off in ${Math.round(MORT_N/24)} days. The rate is 6.5%, like a real 30-year mortgage, just sped up. That means you repay about ${(MORT_PAYF*MORT_N).toFixed(2)}x what you borrow, same as real life: borrow $300K, repay about $681K. Rent is there to cover the payments. If you can't afford it, put more down.</p>`;
 };}
 function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
@@ -1646,7 +1646,7 @@ function cfmInfo(act, arg){
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()*homeBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="propMort"){ const [lid,pc]=String(arg).split("|"), pct=+pc, L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], down=L.ask*pct, loan=L.ask-down, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",money(L.ask)],["You put down",money(down)],["Mortgage",money(loan)],["Payment",money(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Total you repay",money(pay*MORT_N)]],n:after(-down),yes:`Put down ${money(down)}`}; }
+  if (act==="propMort"){ const [lid,pc]=String(arg).split("|"), pct=+pc, L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], down=L.ask*pct, loan=L.ask-down, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",money(L.ask)],["You put down",money(down)],["Mortgage",money(loan)],["Rate","6.5%"],["Payment",money(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Interest you pay",money(pay*MORT_N-loan)],["Total you repay",money(pay*MORT_N)]],n:after(-down),yes:`Put down ${money(down)}`}; }
   if (act==="propMortPay"){ const m=mortOf(arg); if (!m) return null; const b=mortBal(m); return {e:"🏦",t:"Pay off the mortgage?",l:[["You pay",money(b)],["Saves",money(mortRate(m))+"/h"]],n:after(-b),yes:`Pay ${money(b)}`}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
