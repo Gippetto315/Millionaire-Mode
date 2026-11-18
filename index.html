@@ -514,6 +514,8 @@ const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
 const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
 function homeBonus(){ const h = homeProp(); return h ? 1 + HOME_PCT[PROPM[h.type].g||0]/100 : 1; }
+function homeCompare(u){ const p=S.props.find(x=>x.uid===u); if (!p) return null; const t=Date.now(), keep=S.home, tot=()=>Object.keys(S.biz).reduce((a,id)=>a+bizNetAt(id,t),0);
+  S.home=u; const w=tot(); S.home=null; const wo=tot(); S.home=keep; const live=w-wo, rent=propRent(p,t); return {live,rent,diff:live-rent}; }
 function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
 const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
 const hasRide = () => rideX() > 1;
@@ -1184,7 +1186,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794987000";
+const BUILD = "1794988500";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1413,7 +1415,8 @@ function sheetProp(u){ return () => {
   ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
-  ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${money(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${money(mortRate(m))}/h</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>S.cash?"disabled":""}>Pay off mortgage · ${money(mortBal(m))}</button>`:"";})()}
+  ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${money(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${money(mortRate(m))}/h</b></div><div><span>Payments left</span><b class="num">${Math.max(0,Math.ceil(MORT_N-mortK(m,Date.now())))} hourly</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,MORT_N-mortK(m,Date.now()))*H)}</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>S.cash?"disabled":""}>Pay off mortgage · ${money(mortBal(m))}</button>`:"";})()}
+  ${(()=>{const c=homeCompare(u); if (!c) return ""; const sg=x=>`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}/h</i>`; const lead=c.diff>=0?"Living here":"Renting it out"; return `<div class="lines" style="margin-bottom:8px"><div><span>Live here: businesses earn</span><b class="num">${sg(c.live)}</b></div><div><span>Rent it out: rent pays</span><b class="num">${sg(c.rent)}</b></div><div><span><b>${lead} earns more</b></span><b class="num">${sg(Math.abs(c.diff))}</b></div></div>`;})()}
   <button class="btn ${S.home===u?"ghost":"gold"}" data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${S.home===u?"Move out":"Live here (+"+HOME_PCT[d.g||0]+"% on every business)"}</button>
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
   ${sellPanel(p)}
