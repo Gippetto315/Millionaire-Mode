@@ -490,7 +490,12 @@ function upCost(id,l){ return BIZM[id].cost*.25*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
 const PROP_TREND = .0002;
 function propVal(p,t){ t=t||Date.now(); return propBaseVal(p)*econ(t)*Math.exp(PROP_TREND*(t-(p.uid ? (p.at || (p.at=t)) : t))/H); }
-function propRent(p,t){ return propVal(p,t)*.0246*.92; }
+const OCC_BLK = 8*H;
+function occAt(p,t){ const u = r01(p.uid||"x","occ",Math.floor(t/OCC_BLK)); return 1 - .25*u*u; }
+function occHours(p,a,b){ let h=0, t=a; while (t<b){ const e=Math.min(b,(Math.floor(t/OCC_BLK)+1)*OCC_BLK); h += occAt(p,t)*(e-t)/H; t=e; } return h; }
+function propRentFull(p,t){ return propVal(p,t)*.0246; }
+function propRentAvg(p,t){ return propRentFull(p,t)*.92; }
+function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
 function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
 function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
@@ -581,7 +586,7 @@ function incomeBetween(t0,t1){
   });
   if (bx > 0){ EXP_SPLIT.forEach(([n,f]) => lines.push([n, -bx*f])); tot -= bx; }
   let rent=0, pc=0;
-  S.props.forEach(p => { if (p.rented){ const rh=Math.max(0,t1-Math.max(t0,p.renoUntil))/H; rent += propRent(p,t1)*rh; } pc += propCost(p,t1)*hrs; });
+  S.props.forEach(p => { if (p.rented){ const a0=Math.max(t0,p.renoUntil); if (t1>a0) rent += propRentFull(p,t1)*occHours(p,a0,t1); } pc += propCost(p,t1)*hrs; });
   if (S.props.length){ if (rent) lines.push(["Rental income", rent]); lines.push(["Property upkeep & taxes", -pc]); tot += rent - pc; }
   const carry = S.items.reduce((a,i)=>a+itemCarry(i,t1)*hrs,0);
   if (carry > 0){ lines.push(["Vehicle insurance & upkeep", -carry]); tot -= carry; }
@@ -1105,7 +1110,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794967500";
+const BUILD = "1794981300";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1328,7 +1333,7 @@ function bizQtyPanel(id){
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent (92% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
@@ -1338,7 +1343,7 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRent(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
 };}
@@ -1404,16 +1409,16 @@ function sheetCash(){ return () => {
     return `<div><span>${esc(x.why||"A recent event changed your income.")}<br><small class="${up?"up":"down"}">${up?"▲":"▼"} ${eff} · ${esc(who)} · ${signed(d)}/h</small></span><b>${dur(x.until-t)}</b></div>`; }).join("");
   return `<div class="shead"><div class="tile gold">💵</div><div><h3>Your cash</h3><p>${money(S.cash)} now</p></div></div>
   ${a.length?`<div class="lbl">Events changing your income</div><div class="lines">${rows}</div>`:`<p class="note">No events right now. Your businesses are earning their normal rate.</p>`}`; }; }
-function sheetAssets(){ return () => {
-  const t=Date.now(), row=(e,n,v,g,m)=>`<div><span>${e} ${esc(n)}${g==null?"":`<br><small class="${g>=0?"up":"down"}">${g>=0?"▲":"▼"} ${Math.abs(g*100).toFixed(1)}% since you got it</small>`}${m==null?"":`<br><small>${mktTag(m)}</small>`}</span><b class="num">${money(v)}</b></div>`;
-  const grp=(title,list)=>list.length?`<div class="lbl">${title} · ${money(list.reduce((a,x)=>a+x.v,0))}</div><div class="lines" style="margin-bottom:6px">${list.sort((a,b)=>b.v-a.v).map(x=>row(x.e,x.n,x.v,x.g,x.m)).join("")}</div>`:"";
-  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t),m:econ(t)-1}));
-  const its=c=>S.items.filter(i=>ITEMM[i.id].c===c).map(i=>({e:ITEMM[i.id].e,n:i.name||ITEMM[i.id].n,v:itemVal(i,t),g:i.paid>0?itemVal(i,t)/i.paid-1:null,m:wob(i.id,t)-1}));
-  const stk=Object.entries(S.hold).filter(([k,h])=>h.sh>0).map(([k,h])=>({e:"📈",n:k+" · "+(+h.sh.toFixed(4))+" sh",v:h.sh*S.stk[k].p}));
+function sheetAssets(){ const f = () => {
+  const t=Date.now(), row=(e,n,v,g,m,d)=>`<div><span>${e} ${esc(n)}${g==null?"":`<br><small class="${g>=0?"up":"down"}">${g>=0?"▲":"▼"} ${Math.abs(g*100).toFixed(1)}% since you got it</small>`}${m==null?"":`<br><small>${mktTag(m)}</small>`}${d==null||Math.abs(d)<.00005?"":`<br><small class="${d>=0?"up":"down"}">${d>=0?"▲":"▼"} ${Math.abs(d*100).toFixed(2)}% last hour</small>`}</span><b class="num">${money(v)}</b></div>`;
+  const grp=(title,list)=>list.length?`<div class="lbl">${title} · ${money(list.reduce((a,x)=>a+x.v,0))}</div><div class="lines" style="margin-bottom:6px">${list.sort((a,b)=>b.v-a.v).map(x=>row(x.e,x.n,x.v,x.g,x.m,x.d)).join("")}</div>`:"";
+  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t),m:econ(t)-1,d:propVal(p,t)/propVal(p,t-H)-1}));
+  const its=c=>S.items.filter(i=>ITEMM[i.id].c===c).map(i=>({e:ITEMM[i.id].e,n:i.name||ITEMM[i.id].n,v:itemVal(i,t),g:i.paid>0?itemVal(i,t)/i.paid-1:null,m:wob(i.id,t)-1,d:itemVal(i,t)/itemVal(i,t-H)-1}));
+  const stk=Object.entries(S.hold).filter(([k,h])=>h.sh>0).map(([k,h])=>({e:"📈",n:k+" · "+(+h.sh.toFixed(4))+" sh",v:h.sh*S.stk[k].p,d:(()=>{const st=S.stk[k],ref=st.hist[Math.max(0,st.hist.length-61)]||st.p;return st.p/ref-1;})()}));
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
   return `<div class="shead"><div class="tile gold">🏷️</div><div><h3>Your assets</h3><p>Everything you own except cash</p></div></div>
   <div class="big num">${money(tot)}</div>
-  ${tot>.005?grp("Businesses",biz)+grp("Properties",props)+grp("Vehicles",its("veh"))+grp("Collectibles",its("col"))+grp("Investments",stk):`<p class="note">You don't own any assets yet. Businesses, properties, vehicles, collectibles and investments will show up here.</p>`}`; }; }
+  ${tot>.005?grp("Businesses",biz)+grp("Properties",props)+grp("Vehicles",its("veh"))+grp("Collectibles",its("col"))+grp("Investments",stk):`<p class="note">You don't own any assets yet. Businesses, properties, vehicles, collectibles and investments will show up here.</p>`}`; }; f.live = true; return f; }
 function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
   const rows=[["Cash",S.cash],["Businesses",bizVal()],["Properties",S.props.reduce((a,p)=>a+propVal(p,t),0)],["Vehicles",v("veh")],["Collectibles",v("col")],["Investments",stockVal()],["Debt",-(S.debt||0)]];
@@ -1744,7 +1749,7 @@ function tick(){
   if (win(t) !== win(t-1000) && (tab==="market"||tab==="home")) needRender = true;
   maybeEvent(t);
   if (needRender && !sliding) render(); else liveTick();
-  if (sheetOpen() && r.changed) drawSheet(); else if (sheetOpen()) liveTick();
+  if (sheetOpen() && (r.changed || (sheetFn && sheetFn.live && !cfm))) drawSheet(); else if (sheetOpen()) liveTick();
   if (t % 5000 < 1000) save();
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) { advance(Date.now()); save(); } else tick(); });
