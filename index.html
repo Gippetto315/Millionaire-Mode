@@ -490,6 +490,9 @@ function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === i
 const RENT_RATE = .0209, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
+const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,12];
+const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
+function homeBonus(){ const h = homeProp(); return h ? 1 + HOME_PCT[PROPM[h.type].g||0]/100 : 1; }
 function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
 const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
 const hasRide = () => rideX() > 1;
@@ -497,7 +500,7 @@ const rentedH = (i,t) => (i.rh||0) + (i.rent ? Math.max(0,(t-i.rentAt))/H : 0);
 const payH = (cost, net) => net > .0001 ? Math.round(cost/net).toLocaleString() + "h to earn it back" : "never earns it back";
 const carRent = (i,t) => i.rent ? itemVal(i,t)*RENT_RATE : 0;
 const rentAll = t => S.items.reduce((a,i)=>a+carRent(i,t),0);
-function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus() : 0; }
+function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus()*homeBonus() : 0; }
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function evInfo(id,t){ t=t||Date.now(); const a=S.mods.filter(x=>(x.b==="*"||x.b===id)&&t>=x.from&&t<x.until); if (!a.length) return null; return {m:a.reduce((p,x)=>p*x.m,1), end:Math.min(...a.map(x=>x.until)), all:a.some(x=>x.b==="*")}; }
@@ -509,7 +512,7 @@ const evTags = id => `<span class="pill" data-live="evu:${id}">${evText(id,true)
 function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 const SELL = .8;
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*SELL : 0; }
-const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus() - BIZM[id].exp;
+const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus()*homeBonus() - BIZM[id].exp;
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.25*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
@@ -539,13 +542,13 @@ const savVal = (t) => { t=t||Date.now(); return (S.sav||[]).reduce((a,v)=>a+v.p*
 const savLocked = () => (S.sav||[]).reduce((a,v)=>a+v.p,0);
 const savCap = () => Math.max(0, Math.max(.25*netWorth(), 50) - savLocked());
 const PROJ = {
-  startup:{e:"🚀",n:"Startup",lock:48,odds:"About 1 in 3 takes off",range:"Flop returns 0.1x to 0.5x, a hit pays 2x to 5.5x",roll:()=>Math.random()<.35?2+Math.random()*3.5:.1+Math.random()*.4,
+  startup:{e:"🚀",n:"Startup",lock:48,odds:"A coin flip: 5 in 10 take off",range:"Flop returns 0.1x to 0.5x, a hit pays 1.8x to 3x",roll:()=>Math.random()<.5?1.8+Math.random()*1.2:.1+Math.random()*.4,
     names:["Uber for Umbrellas","Dating App for Houseplants","The AI Toaster","Blockchain Lemonade","Sock Subscription Box","Pizza Delivery Drones","The Smart Fork","Meal Kits for Cats"],
     line:["Two founders, one whiteboard, zero revenue.","Pre-revenue, pre-product, pre-everything.","They said the same thing about the wheel."]},
-  movie:{e:"🎬",n:"Movie",lock:24,odds:"Most turn a small profit",range:"Flop pays 0.3x, hit pays up to 4x",roll:()=>{const r=Math.random();return r<.35?.3:r<.8?1.1+Math.random()*.3:2.5+Math.random()*1.5;},
+  movie:{e:"🎬",n:"Movie",lock:24,odds:"7 in 10 turn a profit",range:"Flop pays 0.3x, a hit pays 1.4x to 2x",roll:()=>Math.random()<.7?1.4+Math.random()*.6:.3,
     names:["Space Cowboys 4","The Last Accountant","Haunted Timeshare","Sharknado: Tax Season","Quiet Zombies","Heist at the DMV"],
     line:["The trailer tested well with the director's mother.","Big stars, bigger budget, no script yet.","Critics are already calling it a movie."]},
-  oil:{e:"🛢️",n:"Oil well",lock:6,odds:"4 in 10 strike oil",range:"Dry hole returns 0.2x to 0.6x, oil pays 2.2x to 3.3x",roll:()=>Math.random()<.4?2.2+Math.random()*1.1:.2+Math.random()*.4,
+  oil:{e:"🛢️",n:"Oil well",lock:6,odds:"7 in 10 strike oil",range:"Dry hole returns 0.2x to 0.6x, oil pays 1.4x to 1.8x",roll:()=>Math.random()<.7?1.4+Math.random()*.4:.2+Math.random()*.4,
     names:["Dusty Flats Well #3","Rattlesnake Ridge","Old Pete's Backyard","Lucky Mesa Rig","Prairie Dog Field","Gusher Gulch"],
     line:["The geologist is 60 percent sure. Of something.","Drilled by a man named Tex. Naturally.","Quick to find out, quick to regret."]},
   partner:{e:"🤝",n:"Silent partner",lock:48,odds:"Steady, no surprises",range:"Pays 1.2x",roll:()=>1.2,
@@ -768,7 +771,8 @@ const A = {
   bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*SELL; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
-  propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ p.rented=!p.rented; } },
+  propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (S.home===u){ toast("You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
+  propLive(u){ const p=S.props.find(x=>x.uid===u); if (!p) return; if (S.home===u){ S.home=null; return; } S.home=u; p.rented=false; },
   propSell(u){ const i=S.props.findIndex(x=>x.uid===u); if (i<0) return; const p=S.props[i]; if (p.renoUntil>Date.now()) { toast("Wait for the renovation to finish"); return; } const v=propVal(p); if (v > p.paid+p.reno) S.flips++; S.props.splice(i,1); gain(v,"sell",`Sold ${p.name}`); },
   itemBuy(c,lid){ const L=itemListings(c).find(x=>x.lid===lid); if (!L) return; const d=ITEMM[L.id]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.items.push({uid:uid(),id:L.id,cm:L.cm,base:L.base,at:Date.now(),paid:L.ask}); },
   itemSell(u){ const i=S.items.findIndex(x=>x.uid===u); if (i<0) return; const it=S.items[i]; const v=itemVal(it); S.items.splice(i,1); gain(v,"sell",`Sold ${it.name||ITEMM[it.id].n}`); },
@@ -1137,7 +1141,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794982600";
+const BUILD = "1794983900";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1221,7 +1225,7 @@ function viewMarket(){
     const grp=(name,rows,emptyTxt)=>`<div class="sechead" style="margin-top:6px"><h2>${name}</h2><small>${rows.length} owned</small></div>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="empty">${emptyTxt}</div>`}`;
     body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
     ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
-    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
+    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Our Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
     ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
     ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
@@ -1230,9 +1234,10 @@ function viewMarket(){
       return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h${modAt(b.id,Date.now())!==1?" "+evTags(b.id):""}`:`Earns ~${money(net)}/h per location`,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?(o.n>=25?"all 25 open":"#"+(o.n+1)):"first"} · +${money(newLocNet(b.id))}/h</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
     const L=propListings();
-    body = `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
+    const hp = homeProp();
+    body = (hp ? `<div class="sechead"><h2>Our Home</h2><small>+${HOME_PCT[PROPM[hp.type].g||0]}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${HOME_PCT[PROPM[hp.type].g||0]}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living in a nicer home gives all your businesses a bonus.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
-      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
+      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Our Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
     <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${money(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   } else {
@@ -1281,6 +1286,7 @@ function sheetProj(){ return () => { const L = projListings().find(x=>x.id===cur
   ${kv([["Locked for",d.lock+" hours"],["Odds",d.odds],["Payout",d.range],["This pitch ends in",dur(L.ends-Date.now())]])}
   <div class="lbl">How much do you put in?</div>
   <div class="btns three">${projTiers().map(a=>`<button class="btn stk" data-act="projPut" data-arg="${L.id}|${a}" ${a>S.cash||full?"disabled":""}><span>${money(a)}</span><small>Put in</small></button>`).join("")}</div>
+  <div class="amtrow" style="margin-top:10px"><span class="dollar">$</span><input id="projamt" type="text" inputmode="decimal" placeholder="Or type your own amount" value="${esc(projAmtV)}" autocomplete="off"><button class="btn" data-act="projPutC" ${full?"disabled":""}>Put in</button></div>
   <p class="note">${full?`You're already running ${PROJ_MAX} projects.`:"Your money is locked until the timer ends, and you learn the result then, even if you're away."}</p>`; }; }
 const estTxt = L => `${money(L.lo,{whole:true})} to ${money(L.hi,{whole:true})}`;
 function lotCard(L){
@@ -1342,7 +1348,7 @@ function sheetBiz(id){ return () => {
   ${kv([["Revenue",money(rev)+"/h"],["Operating costs",money(exp)+"/h"],["Profit",signed(rev-exp)+"/h"],["Margin",Math.round((rev-exp)/rev*100)+"%"],["Reputation",Math.round(55+lvl*9)+" / 100"],["Equity",money(bizEquity(id))]])}
   ${m!==1?(()=>{const e=evInfo(id);return `<p class="note ${m>1?"up":"down"}">${m>1?"Boosted":"Slowed"} by a recent event: ${evText(id,m>1).replace(/^[▲▼] /,"")} left, ${e&&e.all?"market-wide, hitting all your businesses":"hitting all "+n+" of your locations here"}.</p>`;})():""}
   ${bizQtyPanel(id)}
-  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:(l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`)+(m!==1?" "+evTags(id):""),act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns ${Math.round(SELL*100)}% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
+  ${o?`<div class="sechead" style="margin-top:14px"><h2>Your locations</h2><small>Tap one to upgrade it</small></div>${(()=>{const pm=planMax(id);return `<button class="btn gold" data-act="bizUpMax" data-arg="${id}" ${pm.n?"":"disabled"} style="margin-bottom:10px">${pm.n?`Max upgrades: ${pm.n} level${pm.n>1?"s":""} for ${money(pm.cost)}`:(L.every(x=>x>=5)?"Everything maxed":"Not enough for an upgrade")}</button>`;})()}<div class="list">${L.map((l,i)=>{const gain=b.rev*.5*setBonus()*vehBonus()*homeBonus()-b.exp*.3; return rowHtml({e:b.e,title:"Location "+(i+1),sub:(l>=5?"Level 5 of 5":`Level ${l} of 5 · +${money(gain)}/h net`)+(m!==1?" "+evTags(id):""),act:l>=5?"":"bizUp",arg:id+"|"+i,right:l>=5?`<b class="goldt">Max</b>`:`<b class="num ${upCost(id,l)>S.cash?"down":"up"}">${money(upCost(id,l))}</b>`});}).join("")}</div><p class="note">Each upgrade raises that location's revenue 50% and costs 30%. Each new location costs 10% more than the last. Selling returns ${Math.round(SELL*100)}% of what you put into that location, lowest level first.</p>`:`<p class="note">Earns about ${money(b.rev-b.exp)} an hour per location, even while you're away (up to 24 hours).</p>`}`;
 };}
 let bizQ = {};
 function buyCostN(id,k){ const o=S.biz[id], n=o?o.n:0, b=BIZM[id]; let c=0; for (let i=0;i<k;i++) c+=b.cost*Math.pow(1.10,n+i); return c; }
@@ -1363,6 +1369,7 @@ function sheetProp(u){ return () => {
   ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
+  <button class="btn ${S.home===u?"ghost":"gold"}" data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${S.home===u?"Move out":"Live here (+"+HOME_PCT[d.g||0]+"% on every business)"}</button>
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
   ${sellPanel(p)}
   <p class="note">Property values follow the economy's cycles. Renovation takes 3 minutes and pauses rent.</p>`;
@@ -1561,7 +1568,7 @@ function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t);
   const net = biz + prop + car - up, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
   return {biz,bx,prop,car,up,net,intr,after:net-intr}; }
-let curLoan = "", loanOneV = "";
+let curLoan = "", loanOneV = "", projAmtV = "";
 function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) === curLoan); if (!l) return sheetBank()();
   const n = loanNextStep(l), pay = Math.min(l.d, S.cash);
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>${money(l.o)} loan</h3><p>Taken ${dur(Date.now()-l.at)} ago</p></div></div>
@@ -1602,8 +1609,8 @@ let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
-document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
-document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",savamt:"savPutC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
@@ -1619,7 +1626,7 @@ function cfmInfo(act, arg){
   if (act==="bizUp"){ const [id,i]=arg.split("|"), b=BIZM[id], o=S.biz[id], l=migrateLocs(o)[+i], c=upCost(id,l), pl=planLoc(id,i); return {alt:pl.n>=2?{label:`Max: ${pl.n} levels to ${pl.to} for ${money(pl.cost)}`,act:"bizUpLoc",arg}:null,e:b.e,t:`Upgrade ${b.n} #${+i+1} to level ${l+1}?`,l:[["You pay",money(c)],["Revenue","+50% per level"]],n:after(-c),yes:`Upgrade for ${money(c)}`}; }
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
+  if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()*homeBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
   if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["You get",money(v)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
@@ -1693,6 +1700,7 @@ document.addEventListener("click", e => {
     case "propBuy": run(()=>A.propBuy(arg)); { const p=S.props[S.props.length-1]; if (p && Date.now()-p.at<2000) openSheet(sheetProp(p.uid)); } break;
     case "propReno": run(()=>A.propReno(arg)); break;
     case "propRent": run(()=>A.propRent(arg)); break;
+    case "propLive": run(()=>A.propLive(arg)); break;
     case "lpick": { const [u,f]=arg.split("|"); listPick[u]=+f; delete listCustom[u]; drawSheet(); break; }
     case "lcustom": { const el2=$("lprice"), a=parseAmt(el2?el2.value:""); if (a<1){ toast("Type a price first"); break; } listCustom[arg]=String(a); drawSheet(); break; }
     case "list": { const th=thingOf(arg); if (th){ const cp=listCustom[arg]?parseAmt(listCustom[arg]):0; run(()=>listThing(arg, cp || nice(thingVal(th,Date.now())*(listPick[arg]||1.1)))); delete listCustom[arg]; } break; }
@@ -1733,8 +1741,9 @@ document.addEventListener("click", e => {
     case "loanTake": loanAmt=""; run(()=>A.loanTake(arg)); break;
     case "loanPay": loanPayV=""; run(()=>A.loanPay(arg)); break;
     case "invTab": invTab=arg; render(); break;
-    case "openProj": curProj=arg; openSheet(sheetProj()); break;
+    case "openProj": curProj=arg; projAmtV=""; openSheet(sheetProj()); break;
     case "projPut": run(()=>A.projPut(arg)); closeSheet(); break;
+    case "projPutC": { const a=Math.min(parseAmt(projAmtV),S.cash); if (!(a>=1)){ toast(parseAmt(projAmtV)>=1?"Not enough cash":"Type an amount first"); break; } run(()=>A.projPut(curProj+"|"+a)); projAmtV=""; closeSheet(); break; }
     case "openLoan": curLoan=arg; loanOneV=""; openSheet(sheetLoan()); break;
     case "loanPayOne": loanOneV=""; run(()=>A.loanPayOne(arg)); break;
     case "savDays": savDays=+arg; drawSheet(); break;
