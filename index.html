@@ -798,6 +798,10 @@ const A = {
   savBreak(i){ S.sav=S.sav||[]; const v=S.sav[+i]; if (!v) return; S.sav.splice(+i,1); const g=v.p*.95; S.cash+=g; tx("spend","Savings broken early (5% fee)",g); },
   loanPayOne(arg){ loanMigrate(); const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if(!l) return; const a=Math.min(+a0,l.d,S.cash); if(!(a>=.01)) return; S.cash-=a; const toP=Math.min(l.p,a*l.p/Math.max(.01,l.d)); l.d-=a; l.p-=toP; l.pp=(l.pp||0)+toP;
     S.loans=S.loans.filter(x=>x.p>.005&&x.d>.005); loanSync(); if(!S.loans.length) loanClear(); tx("loan",S.debt?"Paid toward one loan":"Loan paid off",-a); },
+  loanPayNext(){ loanMigrate(); let rem = S.cash, paid = 0;
+    S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { const due = loanInstOf(l)*loanMulOf(l), a = Math.min(due, l.d, rem); if (!(a >= .005)) return; const toP = Math.min(l.p, a*l.p/Math.max(.01,l.d)); l.d -= a; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= a; paid += a; });
+    if (!(paid >= .005)) return; S.cash -= paid; S.loans = S.loans.filter(l => l.p > .005 && l.d > .005); loanSync(); if (!S.loans.length) loanClear();
+    tx("loan",S.debt?"Paid the next loan payment":"Loan paid off",-paid); },
   loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; let rem = a; S.cash -= a;
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { if (rem <= 0) return; const x = Math.min(rem, l.d), toP = Math.min(l.p, x*l.p/Math.max(.01,l.d)); l.d -= x; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= x; });
     S.loans = S.loans.filter(l => l.p > .005 && l.d > .005); loanSync(); if (!S.loans.length) loanClear();
@@ -1083,7 +1087,7 @@ const EVENTS = [
       {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H,why:"Economic downturn. Spending is down everywhere."}); return "Revenue drops 30% across your businesses for an hour."; }}
     ]};
   }},
-  {id:"deal", w:3, ok:()=>S.lvl>=2, make(){
+  {id:"deal", w:3, ok:()=>{ if (S.lvl<2) return false; const n=Date.now(); if (S.lastDeal==null){ S.lastDeal=n; S.dealGap=(96+Math.random()*24)*H; } return n-S.lastDeal > S.dealGap; }, make(){
     const pool=PROP.filter(p=>p.t<=S.lvl); const d=pool[Math.floor(Math.random()*pool.length)];
     const p={type:d.id,base:d.base*(.9+Math.random()*.2),cond:Math.round(25+Math.random()*30)}; const val=propVal(p), ask=val*.65;
     return {icon:"🏚️",title:"Distressed property",text:`A motivated seller needs out fast. A ${propCond(p.cond).toLowerCase()} ${d.n.toLowerCase()} worth ${money(val)} is yours for ${money(ask)}.`,choices:[
@@ -1115,7 +1119,7 @@ function maybeEvent(t){
   if (!pool.length) return;
   let r = Math.random()*pool.reduce((a,e)=>a+e.w,0), pk = pool[0];
   for (const e of pool){ if ((r-=e.w) < 0){ pk=e; break; } }
-  S.lastEv = pk.id; if (pk.bad) S.lastBad = t;
+  S.lastEv = pk.id; if (pk.bad) S.lastBad = t; if (pk.id==="deal"){ S.lastDeal = t; S.dealGap = (96+Math.random()*24)*H; }
   const ev = pk.make();
   showEvent(ev);
 }
@@ -1187,7 +1191,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794992000";
+const BUILD = "1794996000";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1207,7 +1211,7 @@ const LIVE = {
   cph: () => signed(perHour()),
   assets: () => money(assetsVal()+bizVal()),
   debt: () => money((S.debt||0)+mortDebt()),
-  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h · tap` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
+  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage pays ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h · tap` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
   nextms: () => S.lvl>=MS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,nextMs()[0]-netWorth()))} to ${nextMs()[1]}`,
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1649,7 +1653,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn" data-act="loanTakeC">Borrow</button></div>
   <div class="lbl">Pay back</div>
-  ${d>.005?`<button class="btn gold" data-act="loanPay" data-arg="${Math.min(loanDueNow(),S.cash).toFixed(2)}" ${S.cash<.01?"disabled":""} style="width:100%;margin-bottom:8px">Pay next payment · ${money(loanDueNow())}</button>`:""}
+  ${d>.005?`<button class="btn gold" data-act="loanPayNext" ${S.cash<.01||loanDueNow()<.01?"disabled":""} style="width:100%;margin-bottom:8px">Pay next payment · ${money(Math.min(loanDueNow(),S.cash))}</button>`:""}
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk ghost" data-act="loanPay" data-arg="${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanpay" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanPayV)}" autocomplete="off"><button class="btn" data-act="loanPayC">Pay</button></div>
   <div class="lbl">Savings</div>
@@ -1675,6 +1679,7 @@ function cfmInfo(act, arg){
   if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()), pay1=a*LOAN_PART*(1+LOAN_FEE); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Interest",loanLadder()],["Repaid within "+LOAN_GRACE_H+"h",money(a*(1+LOAN_FEE))],["On the normal schedule","about "+money(a*(1+LOAN_SCHED))],["Debt after",money((S.debt||0)+a*(1+LOAN_FEE))],["Every "+LOAN_EVERY_H+" hours","about "+money(pay1)+" and up"],["Payments",LOAN_PAYS+" over "+LOAN_PAYS*LOAN_EVERY_H+" hours"]],n:`Pay it back sooner and you pay less. If your cash can't cover a payment, the bank takes it anyway, your account goes negative, and extra interest builds until you're back above zero.`,yes:`Borrow ${money(a)}`}; }
   if (act==="projPut"){ const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if(!L) return null; const d=PROJ[L.kind], a=Math.min(+a0,S.cash); return {e:d.e,t:`Back ${L.name}?`,l:[["You put in",money(a)],["Locked for",d.lock+" hours"],["Payout",d.range]],n:after(-a),yes:`Put in ${money(a)}`}; }
   if (act==="loanPayOne"){ const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at), a=l?Math.min(+a0,l.d,S.cash):0; return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["Loan",l?money(l.o)+" · taken "+dur(Date.now()-l.at)+" ago":""],["You pay",money(a)],["Left on this loan",money(Math.max(0,(l?l.d:0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
+  if (act==="loanPayNext"){ const a=Math.min(loanDueNow(),S.cash); if (!(a>=.005)) return null; return {e:"🏦",t:`Pay the next payment, ${money(a)}?`,l:[["You pay",money(a)],["Covers",loansOf().length+" loan"+(loansOf().length>1?"s":"")],["Debt after",money(Math.max(0,(S.debt||0)-a))],["Next payment after",money(Math.max(0,loanDueNow()-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="loanPay"){ const a=Math.min(+arg,S.debt||0,S.cash); return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["You pay",money(a)],["Debt after",money(Math.max(0,(S.debt||0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="bizUpMax"){ const b=BIZM[arg], pm=planMax(arg); return {e:b.e,t:`Max out ${b.n}?`,l:[["Upgrades",String(pm.n)],["You pay",money(pm.cost)]],n:after(-pm.cost)+" Lowest levels go first until the money runs out.",yes:`Upgrade for ${money(pm.cost)}`}; }
   if (act==="bizUpLoc"){ const [id,i]=arg.split("|"), b=BIZM[id], pm=planLoc(id,i); return {e:b.e,t:`Max out ${b.n} #${+i+1}?`,l:[["Upgrades",String(pm.n)],["New level",pm.to+" of 5"],["You pay",money(pm.cost)]],n:after(-pm.cost),yes:`Upgrade for ${money(pm.cost)}`}; }
@@ -1699,7 +1704,7 @@ function cfmInfo(act, arg){
 function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>Please confirm</p></div></div>
   <div class="lines">${i.l.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div><p class="note" style="color:var(--muted)">${i.n}</p>
   <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>${i.alt?`<button class="btn gold" data-act="cfmalt" style="margin-top:10px">${i.alt.label}</button>`:""}`; }
-const NEEDS_CFM = ["propMort","propMortPay","savPut","savBreak","loanTake","loanPay","loanPayOne","projPut","bizUpMax","bizUpLoc","bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
+const NEEDS_CFM = ["loanPayNext","propMort","propMortPay","savPut","savBreak","loanTake","loanPay","loanPayOne","projPut","bizUpMax","bizUpLoc","bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
 document.addEventListener("click", e => {
   const tb = e.target.closest("[data-tab]");
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
@@ -1799,6 +1804,7 @@ document.addEventListener("click", e => {
     case "devvend": devPick = +arg; devAt = Date.now(); drawSheet(); setTimeout(()=>{ if (sheetFn && devPick===+arg) drawSheet(); }, 1350); break;
     case "bank": loanAmt=""; loanPayV=""; openSheet(sheetBank()); break;
     case "loanTake": loanAmt=""; run(()=>A.loanTake(arg)); break;
+    case "loanPayNext": run(()=>A.loanPayNext()); break;
     case "loanPay": loanPayV=""; run(()=>A.loanPay(arg)); break;
     case "invTab": invTab=arg; render(); break;
     case "openProj": curProj=arg; projAmtV=""; openSheet(sheetProj()); break;
