@@ -1106,7 +1106,7 @@ const EVENTS = [
       {label:"Ride it out",run(){ S.mods.push({b:"*",m:.7,from:Date.now(),until:Date.now()+H,why:"Economic downturn. Spending is down everywhere."}); return "Revenue drops 30% across your businesses for an hour."; }}
     ]};
   }},
-  {id:"deal", w:3, ok:()=>{ if (S.lvl<2) return false; const n=Date.now(); if (S.lastDeal==null){ S.lastDeal=n; S.dealGap=(96+Math.random()*24)*H; } return n-S.lastDeal > S.dealGap; }, make(){
+  {id:"deal", w:3, ok:()=>{ if (S.lvl<2) return false; const n=Date.now(); if (S.lastDeal==null){ S.lastDeal=n; S.dealGap=(66+Math.random()*12)*H; } return n-S.lastDeal > S.dealGap; }, make(){
     const pool=PROP.filter(p=>p.t<=S.lvl); const d=pool[Math.floor(Math.random()*pool.length)];
     const p={type:d.id,base:d.base*(.9+Math.random()*.2),cond:Math.round(25+Math.random()*30)}; const val=propVal(p), ask=val*.65;
     return {icon:"🏚️",title:"Distressed property",text:`A motivated seller needs out fast. A ${propCond(p.cond).toLowerCase()} ${d.n.toLowerCase()} worth ${money(val)} is yours for ${money(ask)}.`,choices:[
@@ -1210,7 +1210,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795069258";
+const BUILD = "1795069436";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
