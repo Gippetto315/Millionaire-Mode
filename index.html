@@ -1138,7 +1138,7 @@ function maybeEvent(t){
   if (!pool.length) return;
   let r = Math.random()*pool.reduce((a,e)=>a+e.w,0), pk = pool[0];
   for (const e of pool){ if ((r-=e.w) < 0){ pk=e; break; } }
-  S.lastEv = pk.id; if (pk.bad) S.lastBad = t; if (pk.id==="deal"){ S.lastDeal = t; S.dealGap = (96+Math.random()*24)*H; }
+  S.lastEv = pk.id; if (pk.bad) S.lastBad = t; if (pk.id==="deal"){ S.lastDeal = t; S.dealGap = (66+Math.random()*12)*H; }
   const ev = pk.make();
   showEvent(ev);
 }
