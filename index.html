@@ -835,15 +835,15 @@ const A = {
   acctDep(a){ if ((S.debt||0) > .005){ toast("Pay off your loans before saving"); return; } a=Math.min(+a,S.cash,savCap()); if (!(a>=.01)) return; acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = Date.now(); } c.b += a; S.cash -= a; tx("spend","Savings account deposit",-a); },
   acctWd(a){ acctSettle(); const c=acctOf(); a=Math.min(+a,c.b); if (!(a>=.01)) return; const i=acctTierAt(Date.now()), j=acctTierAfterWd(a); c.b -= a; S.cash += a; if (c.b < .005){ c.b = 0; c.st = Date.now(); } else if (j < i) c.st = Date.now() - ACCT_TIERS[j].d*24*H; tx("spend","Savings account withdrawal",a); },
   savBreak(i){ S.sav=S.sav||[]; const v=S.sav[+i]; if (!v) return; S.sav.splice(+i,1); const g=v.p*.95; S.cash+=g; tx("spend","Savings broken early (5% fee)",g); },
-  loanPayOne(arg){ loanMigrate(); const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if(!l) return; const a=Math.min(+a0,l.d,S.cash); if(!(a>=.01)) return; S.cash-=a; const toP=Math.min(l.p,a*l.p/Math.max(.01,l.d)); l.d-=a; l.p-=toP; l.pp=(l.pp||0)+toP;
-    S.loans=S.loans.filter(x=>x.p>.005&&x.d>.005); loanSync(); if(!S.loans.length) loanClear(); tx("loan",S.debt?"Paid toward one loan":"Loan paid off",-a); },
+  loanPayOne(arg){ loanMigrate(); const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if(!l) return; let a=Math.min(+a0,l.d,S.cash); if (l.d-a<.0099 && S.cash>=l.d) a=l.d; if(!(a>=.01)) return; S.cash-=a; const toP=Math.min(l.p,a*l.p/Math.max(.01,l.d)); l.d-=a; l.p-=toP; l.pp=(l.pp||0)+toP;
+    S.loans=S.loans.filter(x=>x.p>.005&&x.d>=.01); loanSync(); if(!S.loans.length) loanClear(); tx("loan",S.debt?"Paid toward one loan":"Loan paid off",-a); },
   loanPayNext(){ loanMigrate(); let rem = S.cash, paid = 0;
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { const due = loanInstOf(l)*loanMulOf(l), a = Math.min(due, l.d, rem); if (!(a >= .005)) return; const toP = Math.min(l.p, a*l.p/Math.max(.01,l.d)); l.d -= a; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= a; paid += a; });
-    if (!(paid >= .005)) return; S.cash -= paid; S.loans = S.loans.filter(l => l.p > .005 && l.d > .005); loanSync(); if (!S.loans.length) loanClear();
+    if (!(paid >= .005)) return; S.cash -= paid; S.loans = S.loans.filter(l => l.p > .005 && l.d >= .01); loanSync(); if (!S.loans.length) loanClear();
     tx("loan",S.debt?"Paid the next loan payment":"Loan paid off",-paid); },
-  loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if (!(a >= .01)) return; let rem = a; S.cash -= a;
+  loanPay(a){ loanMigrate(); a = Math.min(+a, S.debt||0, S.cash); if ((S.debt||0) - a < .0099 && S.cash >= (S.debt||0)) a = S.debt; if (!(a >= .01)) return; let rem = a; S.cash -= a;
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { if (rem <= 0) return; const x = Math.min(rem, l.d), toP = Math.min(l.p, x*l.p/Math.max(.01,l.d)); l.d -= x; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= x; });
-    S.loans = S.loans.filter(l => l.p > .005 && l.d > .005); loanSync(); if (!S.loans.length) loanClear();
+    S.loans = S.loans.filter(l => l.p > .005 && l.d >= .01); loanSync(); if (!S.loans.length) loanClear();
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
   hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
@@ -1231,7 +1231,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795122117";
+const BUILD = "1795122189";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
