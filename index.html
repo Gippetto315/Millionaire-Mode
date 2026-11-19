@@ -203,6 +203,20 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes drop{from{transform:translate(-50%,-20px);opacity:0}}
+.cel{font-family:-apple-system,system-ui,"SF Pro Display",sans-serif;position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden}
+.cel .p{position:absolute;top:-12vh;animation:celfall linear forwards;will-change:transform}
+@keyframes celfall{0%{transform:translate3d(0,0,0) rotate(0)}25%{transform:translate3d(var(--sw),32vh,0) rotate(120deg)}50%{transform:translate3d(calc(var(--sw)*-1),64vh,0) rotate(260deg)}75%{transform:translate3d(var(--sw),96vh,0) rotate(400deg)}100%{transform:translate3d(0,125vh,0) rotate(540deg)}}
+.cel .flash{position:absolute;inset:0;background:radial-gradient(circle,rgba(255,240,170,.85),rgba(255,214,90,.0) 70%);animation:celflash 1.4s ease-out forwards}
+@keyframes celflash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.cel .ban{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;font-weight:900;letter-spacing:.04em;color:#ffe08a;text-shadow:0 0 18px rgba(255,200,60,.9),0 4px 0 #6b4a05,0 0 40px rgba(0,0,0,.6);animation:celpop .7s cubic-bezier(.2,1.6,.4,1) both,celdance .9s ease-in-out .7s infinite}
+.cel .ban small{display:block;font-size:.34em;letter-spacing:.14em;color:#fff;margin-top:6px;text-shadow:0 2px 10px #000}
+.cel .ban{white-space:nowrap;max-width:96vw}.cel.c1 .ban{font-size:30px}.cel.c2 .ban{font-size:36px}.cel.c3 .ban{font-size:35px;color:#fff3c4}.cel .ban b{display:block;font-weight:400;line-height:1.1}.cel.c1 .ban b{font-size:1.5em}.cel.c2 .ban b{font-size:2.2em}.cel.c3 .ban b{font-size:3em}
+@keyframes celpop{0%{transform:translate(-50%,-50%) scale(0) rotate(-20deg)}100%{transform:translate(-50%,-50%) scale(1) rotate(0)}}
+@keyframes celdance{0%,100%{transform:translate(-50%,-50%) rotate(-4deg) scale(1)}50%{transform:translate(-50%,-50%) rotate(4deg) scale(1.08)}}
+.cel .sp{position:absolute;width:6px;height:6px;border-radius:50%;animation:celspark 1.3s ease-out forwards}
+@keyframes celspark{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+body.shake{animation:celshake .5s linear 6}
+@keyframes celshake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,-4px)}80%{transform:translate(4px,4px)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
 #splash{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 42%,#1b1810 0%,#0a0908 55%,#030303 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;overflow:hidden;cursor:pointer;transition:opacity .6s ease,transform .6s ease}
@@ -320,6 +334,8 @@ function money(x, opts){
   return (neg ? "-$" : "$") + s;
 }
 const wholeMoney = x => money(x,{full:true,whole:true});
+const pm = x => money(x,{whole:true});
+const psigned = x => (x>=0?"+":"")+pm(x);
 const signed = x => (x >= 0 ? "+" : "") + money(x);
 const pct = x => (x >= 0 ? "+" : "") + (x*100).toFixed(1) + "%";
 function dur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}h ${m}m`:m?`${m}:${String(ss).padStart(2,"0")}`:`0:${String(ss).padStart(2,"0")}`}
@@ -510,6 +526,24 @@ function fresh(){
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 function load(){ try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v === 1) return j; } catch(e){} return null; }
+function celebrate(k){
+  const E=[["💵","💰","🤑","✨","🎉","💸"],["💵","💰","🤑","💎","🎉","💸","🏆","✨"],["💵","💰","🤑","💎","🎉","💸","🏆","👑","🚀","✨","🔥"]][k-1];
+  const n=[44,95,210][k-1], dur=[7,9,14][k-1], sz=[[22,34],[38,58],[44,76]][k-1];
+  const root=document.createElement("div"); root.className="cel c"+k;
+  let h="";
+  if (k>=2) h+='<div class="flash"></div>';
+  for (let i=0;i<n;i++){ const d=Math.random()*dur*.55, t=2.6+Math.random()*2.4+k*.4, f=sz[0]+Math.random()*(sz[1]-sz[0]); h+=`<span class="p" style="left:${Math.random()*100}%;font-size:${f.toFixed(0)}px;animation-duration:${t.toFixed(2)}s;animation-delay:${d.toFixed(2)}s;--sw:${(Math.random()*60+10).toFixed(0)}px">${E[Math.floor(Math.random()*E.length)]}</span>`; }
+  const T=["MILLIONAIRE!","BILLIONAIRE!!","TRILLIONAIRE!!!"][k-1], sub=["You hit $1,000,000","You hit $1,000,000,000","You hit $1,000,000,000,000. Elon is on the phone."][k-1];
+  h+=`<div class="ban"><b>${["🤑","🤑🤑","👑🚀👑"][k-1]}</b>${T}<small>${sub}</small></div>`;
+  root.innerHTML=h; document.documentElement.appendChild(root);
+  if (k===3){ document.body.classList.add("shake"); setTimeout(()=>document.body.classList.remove("shake"),3200);
+    const cols=["#ffd54a","#ff6b6b","#4ade80","#60a5fa","#f472b6","#ffffff"];
+    for (let b=0;b<9;b++) setTimeout(()=>{ if(!root.isConnected) return; const x=15+Math.random()*70, y=15+Math.random()*45, c=cols[b%cols.length]; let g=""; for(let i=0;i<28;i++){ const a=i/28*Math.PI*2, r=70+Math.random()*90; g+=`<i class="sp" style="left:${x}%;top:${y}%;background:${c};box-shadow:0 0 8px ${c};--dx:${(Math.cos(a)*r).toFixed(0)}px;--dy:${(Math.sin(a)*r).toFixed(0)}px"></i>`; } root.insertAdjacentHTML("beforeend",g); },600+b*900); }
+  setTimeout(()=>{ root.style.transition="opacity .8s"; root.style.opacity="0"; setTimeout(()=>root.remove(),900); },dur*1000);
+}
+function celCheck(){ const c=S.cel||(S.cel={m:0,b:0,t:0}), pk=S.peak||0; let k=0;
+  [[1e6,"m",1],[1e9,"b",2],[1e12,"t",3]].forEach(([v,key,lv])=>{ if (pk>=v && !c[key]){ c[key]=1; k=lv; } });
+  if (k && S.cel._init) celebrate(k); S.cel._init=1; }
 function ownCash(){ S.lb = Math.max(0, Math.min(S.lb||0, Math.max(S.cash,0), S.prin||0)); return S.cash - S.lb; }
 function houseShort(need){ if (need <= ownCash()+1e-6) return false; toast(need <= S.cash+1e-6 ? "Loan money can't go toward a home. Use a mortgage, or your own cash" : "Not enough cash"); return true; }
 function tx(type, desc, amt){ S.tx.unshift({t:Date.now(),type,desc,amt,bal:S.cash}); if (S.tx.length > 80) S.tx.length = 80; }
@@ -578,7 +612,7 @@ function propRentFull(p,t){ return propVal(p,t)*.0091; }
 function propRentAvg(p,t){ return propRentFull(p,t)*.92; }
 function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
-function renoCost(p){ return p.base*(100-p.cond)/100*.18; }
+function renoCost(p){ return Math.round(p.base*(100-p.cond)/100*.18); }
 function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
 function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
@@ -753,6 +787,7 @@ function advance(t){
 function progress(){
   const nw = netWorth(); if (nw > S.peak) S.peak = nw;
   let l = 0; MS.forEach((m,i) => { if (S.peak >= m[0]) l = i; });
+  celCheck();
   const rk = rankIdx(); if (S.rk == null) S.rk = rk; else if (rk > S.rk){ S.rk = rk; toast(`Level ${rk+1}: ${RANKS[rk][1]}`); }
   if (l > S.lvl){ S.lvl = l; toast(`Milestone: ${MS[l][1]}. New opportunities unlocked`); needRender = true; }
   checkAch();
@@ -1084,21 +1119,22 @@ function listingsTick(t){
   return ch;
 }
 function sellPanel(th){
+  const mny = x => (th.type && PROPM[th.type]) ? pm(x) : money(x);
   const u = th.uid, t = Date.now(), v = thingVal(th,t), prop = isProp(th), basis = prop ? th.paid + th.reno : th.paid;
   if (prop && th.renoUntil > t) return `<p class="note">You can list it once the renovation is done.</p>`;
   if (th.ls){ const L = th.ls, r = L.p / v;
     return `<div class="card" style="display:flex;flex-direction:column;gap:10px;border-color:var(--gold-deep)">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">For sale at</div><b class="num" style="font:700 22px var(--display)">${money(L.p)}</b></div><span class="pill g">${sellOdds(r,prop)}</span></div>
-      <p class="note" style="margin:0;color:var(--muted)">Listed ${ago(L.at)} at ${Math.round(r*100)}% of today's value. ${L.p-basis>=0?"Profit if it sells":"Loss if it sells"}: <b class="${L.p-basis>=0?"up":"down"}">${signed(L.p-basis)}</b></p>
-      ${L.off?`<div class="card" style="background:var(--surface2);display:flex;flex-direction:column;gap:8px"><div><div class="lbl">A buyer offers</div><b class="num up" style="font:700 20px var(--display)">${money(L.off.a)}</b> <span class="note">expires in <b data-live="offx:${u}"></b></span></div><div class="btns"><button class="btn ghost" data-act="offNo" data-arg="${u}">Decline</button><button class="btn" data-act="offYes" data-arg="${u}">Accept ${money(L.off.a)}</button></div></div>`:""}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">For sale at</div><b class="num" style="font:700 22px var(--display)">${mny(L.p)}</b></div><span class="pill g">${sellOdds(r,prop)}</span></div>
+      <p class="note" style="margin:0;color:var(--muted)">Listed ${ago(L.at)} at ${Math.round(r*100)}% of today's value. ${L.p-basis>=0?"Profit if it sells":"Loss if it sells"}: <b class="${L.p-basis>=0?"up":"down"}">${prop?psigned(L.p-basis):signed(L.p-basis)}</b></p>
+      ${L.off?`<div class="card" style="background:var(--surface2);display:flex;flex-direction:column;gap:8px"><div><div class="lbl">A buyer offers</div><b class="num up" style="font:700 20px var(--display)">${mny(L.off.a)}</b> <span class="note">expires in <b data-live="offx:${u}"></b></span></div><div class="btns"><button class="btn ghost" data-act="offNo" data-arg="${u}">Decline</button><button class="btn" data-act="offYes" data-arg="${u}">Accept ${mny(L.off.a)}</button></div></div>`:""}
       <div class="btns"><button class="btn ghost" data-act="relist" data-arg="${u}">Change price</button><button class="btn ghost" data-act="unlist" data-arg="${u}">Take it down</button></div></div>`; }
   const cp = listCustom[u] ? parseAmt(listCustom[u]) : 0, pk = cp ? cp/v : (listPick[u] || 1.1), price = cp || nice(v*pk);
   return `<div class="lbl">Put it up for sale</div>
     <p class="note" style="margin-top:-8px;color:var(--muted)">Pick your asking price. The higher you go, the longer buyers take, and some prices never sell. Buyers may also send offers.</p>
-    <div class="btns three">${LIST_PCTS.map(f=>`<button class="btn stk ${!cp&&pk===f?"gold":"ghost"}" data-act="lpick" data-arg="${u}|${f}"><span>${Math.round(f*100)}%</span><small>${money(nice(v*f))}</small></button>`).join("")}</div>
-    <div class="lines"><div><span>Asking price</span><b class="num">${money(price)}</b></div><div><span>Odds</span><b>${sellOdds(pk,prop)}</b></div><div><span>${price-basis>=0?"Profit if it sells":"Loss if it sells"}</span><b class="num ${price-basis>=0?"up":"down"}">${signed(price-basis)}</b></div></div>
+    <div class="btns three">${LIST_PCTS.map(f=>`<button class="btn stk ${!cp&&pk===f?"gold":"ghost"}" data-act="lpick" data-arg="${u}|${f}"><span>${Math.round(f*100)}%</span><small>${mny(nice(v*f))}</small></button>`).join("")}</div>
+    <div class="lines"><div><span>Asking price</span><b class="num">${mny(price)}</b></div><div><span>Odds</span><b>${sellOdds(pk,prop)}</b></div><div><span>${price-basis>=0?"Profit if it sells":"Loss if it sells"}</span><b class="num ${price-basis>=0?"up":"down"}">${prop?psigned(price-basis):signed(price-basis)}</b></div></div>
     <div class="amtrow"><span class="dollar">$</span><input id="lprice" data-u="${u}" type="text" inputmode="decimal" placeholder="Or type your own price" value="${listCustom[u]||""}" autocomplete="off"><button class="btn ghost" data-act="lcustom" data-arg="${u}">Set</button></div>
-    <button class="btn gold" data-act="list" data-arg="${u}">List for ${money(price)}</button>`;
+    <button class="btn gold" data-act="list" data-arg="${u}">List for ${mny(price)}</button>`;
 }
 
 /* ================= events ================= */
@@ -1231,7 +1267,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795122189";
+const BUILD = "1795123497";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1258,7 +1294,7 @@ const LIVE = {
   nextms: () => { const r=rankIdx(); return r>=RANKS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,RANKS[r+1][0]-netWorth()))} to ${RANKS[r+1][1]}`; },
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
-  pv: u => { const p=S.props.find(x=>x.uid===u); return p?money(propVal(p)):""; },
+  pv: u => { const p=S.props.find(x=>x.uid===u); return p?pm(propVal(p)):""; },
   iv: u => { const i=S.items.find(x=>x.uid===u); return i?money(itemVal(i)):""; },
   reno: u => { const p=S.props.find(x=>x.uid===u); return p&&p.renoUntil>Date.now()?`Renovating, ${dur(p.renoUntil-Date.now())} left`:""; },
   proj: id => { const p=(S.proj||[]).find(x=>x.id===id); return p?dur(p.end-Date.now()):""; },
@@ -1329,11 +1365,11 @@ function viewMarket(){
     const L=propListings();
     const hp = homeProp();
     const mt = mortDebt();
-    body = (mt > .005 ? `<button class="lrow" data-act="bank"><div class="lines"><div><span>Mortgages owed · tap for details</span><b class="num down">${money(mt)}</b></div></div></button>` : "") + (hp ? `<div class="sechead"><h2>Your Home</h2><small>+${HOME_PCT[PROPM[hp.type].g||0]}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${HOME_PCT[PROPM[hp.type].g||0]}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living in a nicer home gives all your businesses a bonus.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
+    body = (mt > .005 ? `<button class="lrow" data-act="bank"><div class="lines"><div><span>Mortgages owed · tap for details</span><b class="num down">${pm(mt)}</b></div></div></button>` : "") + (hp ? `<div class="sechead"><h2>Your Home</h2><small>+${HOME_PCT[PROPM[hp.type].g||0]}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${HOME_PCT[PROPM[hp.type].g||0]}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living in a nicer home gives all your businesses a bonus.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
       return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${money(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${wholeMoney(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${pm(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${wholeMoney(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
   } else {
     const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
@@ -1460,12 +1496,12 @@ function bizQtyPanel(id){
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(hecon(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
-  ${(()=>{const re=p.rentTot||0, up=p.upTot||0, net=re-up, pct=into>0?Math.max(0,net)/into*100:0; return `<div class="lbl">Has it paid for itself?</div>${kv([["Rent earned so far",money(re)],["Upkeep paid so far",money(-up)],["Net earned",`<span class="${net>=0?"up":"down"}">${signed(net)}</span>`],["Paid back",`<span class="${net>=into?"up":""}">${pct.toFixed(1)}%</span> of ${money(into)}`]])}<p class="note">${net>=into?"It has paid for itself. Everything from here is profit.":"Counts rent after the day this update went live. Mortgage payments aren't included."}</p>`;})()}
+  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(hecon(Date.now())-1)}</small>`],["You put in",pm(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",pm(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${psigned(v-into)}</span>`]])}
+  ${(()=>{const re=p.rentTot||0, up=p.upTot||0, net=re-up, pct=into>0?Math.max(0,net)/into*100:0; return `<div class="lbl">Has it paid for itself?</div>${kv([["Rent earned so far",pm(re)],["Upkeep paid so far",pm(-up)],["Net earned",`<span class="${net>=0?"up":"down"}">${psigned(net)}</span>`],["Paid back",`<span class="${net>=into?"up":""}">${pct.toFixed(1)}%</span> of ${pm(into)}`]])}<p class="note">${net>=into?"It has paid for itself. Everything from here is profit.":"Counts rent after the day this update went live. Mortgage payments aren't included."}</p>`;})()}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
-  ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*hecon(Date.now())-v)} value)</button>`:""}
-  ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${money(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${money(mortRate(m))}/h</b></div><div><span>Payments left</span><b class="num">${Math.max(0,Math.ceil(mN(m)-mortK(m,Date.now())))} hourly</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,mN(m)-mortK(m,Date.now()))*H)}</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>ownCash()?"disabled":""}>Pay off mortgage · ${money(mortBal(m))}</button>${mortPlanOpts(m).length?`<div class="lbl">Pay it off faster</div><div class="btns three">${mortPlanOpts(m).map(o=>`<button class="btn stk gold" data-act="propMortPlan" data-arg="${u}|${o.f}"><span>${dur(o.n*H)}</span><small>${money(o.pay)}/h</small></button>`).join("")}</div><p class="note">A faster plan means bigger hourly payments and less interest overall. Saves ${money(mortPlanOpts(m)[0].save)} to ${money(mortPlanOpts(m).slice(-1)[0].save)}.</p>`:""}`:"";})()}
-  ${(()=>{const c=homeCompare(u); if (!c) return ""; const sg=x=>`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}/h</i>`; const lead=c.diff>=0?"Living here":"Renting it out"; return `<div class="lines" style="margin-bottom:8px"><div><span>Live here: businesses earn</span><b class="num">${sg(c.live)}</b></div><div><span>Rent it out: rent pays</span><b class="num">${sg(c.rent)}</b></div><div><span><b>${lead} earns more</b></span><b class="num">${sg(Math.abs(c.diff))}</b></div></div>`;})()}
+  ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${pm(renoCost(p))} (adds ${pm(propBaseVal({...p,cond:100})*hecon(Date.now())-v)} value)</button>`:""}
+  ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${pm(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${pm(mortRate(m))}/h</b></div><div><span>Payments left</span><b class="num">${Math.max(0,Math.ceil(mN(m)-mortK(m,Date.now())))} hourly</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,mN(m)-mortK(m,Date.now()))*H)}</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>ownCash()?"disabled":""}>Pay off mortgage · ${pm(mortBal(m))}</button>${mortPlanOpts(m).length?`<div class="lbl">Pay it off faster</div><div class="btns three">${mortPlanOpts(m).map(o=>`<button class="btn stk gold" data-act="propMortPlan" data-arg="${u}|${o.f}"><span>${dur(o.n*H)}</span><small>${pm(o.pay)}/h</small></button>`).join("")}</div><p class="note">A faster plan means bigger hourly payments and less interest overall. Saves ${pm(mortPlanOpts(m)[0].save)} to ${pm(mortPlanOpts(m).slice(-1)[0].save)}.</p>`:""}`:"";})()}
+  ${(()=>{const c=homeCompare(u); if (!c) return ""; const sg=x=>`<i style="font-style:normal" class="${x>=0?"up":"down"}">${((x)=>(x>=0?"+":"")+pm(x))(x)}/h</i>`; const lead=c.diff>=0?"Living here":"Renting it out"; return `<div class="lines" style="margin-bottom:8px"><div><span>Live here: businesses earn</span><b class="num">${sg(c.live)}</b></div><div><span>Rent it out: rent pays</span><b class="num">${sg(c.rent)}</b></div><div><span><b>${lead} earns more</b></span><b class="num">${sg(Math.abs(c.diff))}</b></div></div>`;})()}
   <button class="btn ${S.home===u?"ghost":"gold"}" data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${S.home===u?"Move out":"Live here (+"+HOME_PCT[d.g||0]+"% on every business)"}</button>
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
   ${sellPanel(p)}
@@ -1474,12 +1510,12 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*hecon(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",pm(l.val)],["Renovation cost",l.cond<100?pm(renoCost(p)):"None"],["Value renovated",pm(propBaseVal({...p,cond:100})*hecon(Date.now()))],["Rent if leased",pm(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"]])}
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>ownCash()?"disabled":""}>Pay cash · ${wholeMoney(l.ask)}</button>
   <div class="lbl" style="margin-top:12px">Or get a mortgage for:</div>
-  <div class="btns three" style="grid-template-columns:repeat(4,1fr)">${[.25,.5,.75,1].map(f=>{const am=Math.round(l.ask*f*100)/100, dn=l.ask-am; return `<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${am}" ${dn>ownCash()+1e-6?"disabled":""}><span>${Math.round(f*100)}%</span><small>${money(am)}</small><small>${money(am*MORT_PAYF)}/h</small></button>`;}).join("")}</div>
+  <div class="btns three" style="grid-template-columns:repeat(4,1fr)">${[.25,.5,.75,1].map(f=>{const am=Math.round(l.ask*f*100)/100, dn=l.ask-am; return `<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${am}" ${dn>ownCash()+1e-6?"disabled":""}><span>${Math.round(f*100)}%</span><small>${pm(am)}</small><small>${pm(am*MORT_PAYF)}/h</small></button>`;}).join("")}</div>
   <div class="amtrow" style="margin-top:10px"><span class="dollar">$</span><input id="mortamt" type="text" inputmode="decimal" placeholder="Or type your mortgage amount" value="${esc(mortAmtV)}" autocomplete="off"><button class="btn" data-act="propMortC" data-arg="${lid}">Mortgage</button></div>
-  ${ownCash()<S.cash-.005?`<p class="note">${money(S.cash-ownCash())} of your cash is loan money. It can't go toward a home, only your own cash can.</p>`:""}<p class="note">The rest of the price comes out of your cash as the down payment. A 100% mortgage means nothing down, if the bank allows it.</p>
+  ${ownCash()<S.cash-.005?`<p class="note">${pm(S.cash-ownCash())} of your cash is loan money. It can't go toward a home, only your own cash can.</p>`:""}<p class="note">The rest of the price comes out of your cash as the down payment. A 100% mortgage means nothing down, if the bank allows it.</p>
   <p class="note"><b>How it works:</b> a mortgage is a loan for the home. Each hour's payment comes out of your income on its own, and it's paid off in ${Math.round(MORT_N/24)} days. The rate is 6.5%, like a real 30-year mortgage, just sped up. That means you repay about ${(MORT_PAYF*MORT_N).toFixed(2)}x what you borrow, same as real life: borrow $300K, repay about $681K. Rent is there to cover the payments. If you can't afford it, put more down.</p>`;
 };}
 function sheetListing(c,lid){ return () => {
@@ -1747,12 +1783,12 @@ function cfmInfo(act, arg){
   if (act==="bizBuyN"){ const [id,k]=arg.split("|"), b=BIZM[id], c=buyCostN(id,+k), o=S.biz[id]; return {e:b.e,t:`Open ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You pay",money(c)],["Adds about",signed(newLocNet(arg.split("|")[0])*+k)+"/h"],["Locations after",((o?o.n:0)+ +k)+" of 25"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="bizSellN"){ const [id,k]=arg.split("|"), b=BIZM[id], o=S.biz[id], v=sellValN(id,+k); return {e:b.e,t:`Sell ${k} ${b.n} location${+k>1?"s":""}?`,l:[["You get",money(v)],["Locations left",String(o.n-(+k))]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="bizSell"){ const b=BIZM[arg], o=S.biz[arg], v=o.spent/o.n*SELL; return {e:b.e,t:`Sell one ${b.n} location?`,l:[["You get",money(v)],["Income lost",signed(-(b.rev*bizMult(migrateLocs(o)[lowIdx(o.ls)])*setBonus()*vehBonus()*homeBonus()-b.exp*expMult(o.ls[lowIdx(o.ls)])))+"/h"]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
-  if (act==="propMort"){ const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], loan=Math.min(+am,L.ask), down=L.ask-loan, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",wholeMoney(L.ask)],["Mortgage",money(loan)],["You put down",money(down)],["Rate","6.5%"],["Payment",money(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Interest you pay",money(pay*MORT_N-loan)],["Total you repay",money(pay*MORT_N)]],n:after(-down),yes:down>.005?`Put down ${money(down)}`:"Borrow it all"}; }
-  if (act==="propMortPlan"){ const [u,f]=String(arg).split("|"), m=mortOf(u); if (!m) return null; const o=mortPlanOpts(m).find(x=>x.f===+f); if (!o) return null; const left=mN(m)-mortK(m,Date.now()); return {e:"⏩",t:"Switch to a faster plan?",l:[["Payment now",money(m.pay)+"/h"],["Payment after",money(o.pay)+"/h"],["Paid off in",dur(o.n*H)+" instead of "+dur(left*H)],["Interest saved",money(o.save)]],n:"A bigger payment comes out of your income every hour. You owe the same today, but you pay less interest in total.",yes:"Switch plan"}; }
-  if (act==="propMortPay"){ const m=mortOf(arg); if (!m) return null; const b=mortBal(m); return {e:"🏦",t:"Pay off the mortgage?",l:[["You pay",money(b)],["Saves",money(mortRate(m))+"/h"]],n:after(-b),yes:`Pay ${money(b)}`}; }
-  if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
-  if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",money(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${money(c)}`}; }
-  if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno, m=mortOf(arg), bal=m?mortBal(m):0; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["Sale price",money(v)],...(bal>.005?[["Mortgage paid off",money(-bal)]]:[]),["You get",money(v-bal)],["You put in",money(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v-bal),yes:`Sell for ${money(v-bal)}`,sell:1}; }
+  if (act==="propMort"){ const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L) return null; const d=PROPM[L.type], loan=Math.min(+am,L.ask), down=L.ask-loan, pay=loan*MORT_PAYF; return {e:d.e,t:`Buy ${d.n} with a mortgage?`,l:[["Price",wholeMoney(L.ask)],["Mortgage",pm(loan)],["You put down",pm(down)],["Rate","6.5%"],["Payment",pm(pay)+"/h"],["Paid off in",Math.round(MORT_N/24)+" days"],["Interest you pay",pm(pay*MORT_N-loan)],["Total you repay",pm(pay*MORT_N)]],n:after(-down),yes:down>.005?`Put down ${pm(down)}`:"Borrow it all"}; }
+  if (act==="propMortPlan"){ const [u,f]=String(arg).split("|"), m=mortOf(u); if (!m) return null; const o=mortPlanOpts(m).find(x=>x.f===+f); if (!o) return null; const left=mN(m)-mortK(m,Date.now()); return {e:"⏩",t:"Switch to a faster plan?",l:[["Payment now",pm(m.pay)+"/h"],["Payment after",pm(o.pay)+"/h"],["Paid off in",dur(o.n*H)+" instead of "+dur(left*H)],["Interest saved",pm(o.save)]],n:"A bigger payment comes out of your income every hour. You owe the same today, but you pay less interest in total.",yes:"Switch plan"}; }
+  if (act==="propMortPay"){ const m=mortOf(arg); if (!m) return null; const b=mortBal(m); return {e:"🏦",t:"Pay off the mortgage?",l:[["You pay",pm(b)],["Saves",pm(mortRate(m))+"/h"]],n:after(-b),yes:`Pay ${pm(b)}`}; }
+  if (act==="propBuy"){ const L=propListings().find(x=>x.lid===arg); if (!L) return null; const d=PROPM[L.type]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",pm(L.ask)],["Market value",pm(L.val)]],n:after(-L.ask),yes:`Buy for ${pm(L.ask)}`}; }
+  if (act==="propReno"){ const p=S.props.find(x=>x.uid===arg), c=renoCost(p); return {e:PROPM[p.type].e,t:`Renovate ${p.name}?`,l:[["You pay",pm(c)],["Takes","3 minutes, rent paused"]],n:after(-c),yes:`Renovate for ${pm(c)}`}; }
+  if (act==="propSell"){ const p=S.props.find(x=>x.uid===arg), v=propVal(p), into=p.paid+p.reno, m=mortOf(arg), bal=m?mortBal(m):0; return {e:PROPM[p.type].e,t:`Sell ${p.name}?`,l:[["Sale price",pm(v)],...(bal>.005?[["Mortgage paid off",pm(-bal)]]:[]),["You get",pm(v-bal)],["You put in",pm(into)],["Profit",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]],n:after(v-bal),yes:`Sell for ${pm(v-bal)}`,sell:1}; }
   if (act==="itemBuy"){ const [c,l]=arg.split("|"), L=itemListings(c).find(x=>x.lid===l); if (!L) return null; const d=ITEMM[L.id]; return {e:d.e,t:`Buy ${d.n}?`,l:[["You pay",money(L.ask)],["Market value",money(L.val)]],n:after(-L.ask),yes:`Buy for ${money(L.ask)}`}; }
   if (act==="itemSell"){ const it=S.items.find(x=>x.uid===arg), v=itemVal(it); return {e:ITEMM[it.id].e,t:`Sell ${it.name||ITEMM[it.id].n}?`,l:[["You get",money(v)],["You paid",money(it.paid)],["Profit",`<span class="${v-it.paid>=0?"up":"down"}">${signed(v-it.paid)}</span>`]],n:after(v),yes:`Sell for ${money(v)}`,sell:1}; }
   if (act==="stkBuy"){ const [k,fr]=arg.split("|"), amt=S.cash*+fr, p=S.stk[k].p; return {e:`<span style="font:800 11px var(--display);color:var(--gold)">${k}</span>`,t:`Buy ${money(amt)} of ${k}?`,l:[["Share of your cash",Math.round(+fr*100)+"%"],["Price per share",money(p)],["Shares you get",(amt/p).toLocaleString("en-US",{maximumFractionDigits:4})]],n:after(-amt)+". Prices can drop as well as rise.",yes:`Buy ${money(amt)}`}; }
@@ -1762,7 +1798,8 @@ function cfmInfo(act, arg){
   if (act==="offYes"){ const th=thingOf(arg); if (!th||!th.ls||!th.ls.off) return null; const basis=isProp(th)?th.paid+th.reno:th.paid, a=th.ls.off.a, mm=isProp(th)?mortOf(th.uid):null, mb=mm?mortBal(mm):0; return {e:isProp(th)?PROPM[th.type].e:ITEMM[th.id].e,t:`Accept ${money(a)} for ${thingName(th)}?`,l:[["Offer",money(a)],...(mb>.005?[["Mortgage paid off",money(-mb)]]:[]),["You get",money(a-mb)],["You paid",money(basis)],["Profit",`<span class="${a-basis>=0?"up":"down"}">${signed(a-basis)}</span>`]],n:after(a),yes:`Accept ${money(a)}`,sell:1}; }
   return null;
 }
-function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>Please confirm</p></div></div>
+function acctBlocked(){ cfm={act:"acctBlocked",arg:"",info:{e:"🏦",t:"The bank says no",sub:"A word from your banker",l:[["Loans you owe",money(S.debt||0)]],n:"Here's the thing. You owe the bank money, so it won't pay you interest to hold yours. It's not about to hand you a savings rate on cash it already lent you at a higher one. Clear your loans and the savings account opens right up. A mortgage is a different story: that debt is backed by your home, so savers with a mortgage are welcome.",yes:"Go to my loans"}}; drawSheet(); }
+function cfmHtml(){ const i=cfm.info; return `<div class="shead"><div class="tile gold">${i.e}</div><div><h3>${esc(i.t)}</h3><p>${i.sub||"Please confirm"}</p></div></div>
   <div class="lines">${i.l.map(([k,v])=>`<div><span>${k}</span><b class="num">${v}</b></div>`).join("")}</div><p class="note" style="color:var(--muted)">${i.n}</p>
   <div class="btns"><button class="btn ghost" data-act="cfmno">Cancel</button><button class="btn ${i.sell?"gold":""}" data-act="cfmyes">${i.yes}</button></div>${i.alt?`<button class="btn gold" data-act="cfmalt" style="margin-top:10px">${i.alt.label}</button>`:""}`; }
 const NEEDS_CFM = ["propMortPlan","acctWd","loanPayNext","propMort","propMortPay","savPut","savBreak","loanTake","loanPay","loanPayOne","projPut","bizUpMax","bizUpLoc","bizBuyN","bizSellN","bizBuy","bizUp","bizSell","propBuy","propReno","itemBuy","stkBuy","stkSell","offYes","stkBuyAmt","stkSellAmt"];
@@ -1786,7 +1823,7 @@ document.addEventListener("click", e => {
     if (!take && a > (S.debt||0)+.005){ toast(`You only owe ${money(S.debt||0)}`); return; }
     if (!take && a > S.cash+.005){ toast(`You only have ${money(S.cash)}`); return; }
     arg = String(a); act = take ? "loanTake" : "loanPay"; const info=cfmInfo(act,arg); cfm={act,arg,info}; drawSheet(); return; }
-  else if (act==="acctDepC"){ const a=parseAmt(acctAmtV); if (a<.01){ toast("Type an amount first"); return; } if (a > S.cash+.005){ toast(`You only have ${money(S.cash)}`); return; } if (a > savCap()+.005){ toast(`You can put in ${money(savCap())} right now`); return; } acctAmtV=""; run(()=>A.acctDep(a)); return; }
+  else if (act==="acctDepC"){ if ((S.debt||0) > .005){ acctBlocked(); return; } const a=parseAmt(acctAmtV); if (a<.01){ toast("Type an amount first"); return; } if (a > S.cash+.005){ toast(`You only have ${money(S.cash)}`); return; } if (a > savCap()+.005){ toast(`You can put in ${money(savCap())} right now`); return; } acctAmtV=""; run(()=>A.acctDep(a)); return; }
   else if (act==="acctWdC"){ const a=parseAmt(acctAmtV); if (a<.01){ toast("Type an amount first"); return; } if (a > acctBal()+.005){ toast(`You only have ${money(acctBal())} in savings`); return; } arg=String(Math.min(a,acctBal())); act="acctWd"; const info=cfmInfo(act,arg); cfm={act,arg,info}; drawSheet(); return; }
   else if (act==="savPutC"){ const a=parseAmt(savAmt), d=parseInt(savDays);
     if (a < .01){ toast("Type an amount first"); return; }
@@ -1877,7 +1914,8 @@ document.addEventListener("click", e => {
     case "openLoan": curLoan=arg; loanOneV=""; openSheet(sheetLoan()); break;
     case "loanPayOne": loanOneV=""; run(()=>A.loanPayOne(arg)); break;
     case "bankTab": bankTab=arg; drawSheet(); break;
-    case "acctDep": run(()=>A.acctDep(arg)); break;
+    case "acctDep": if ((S.debt||0) > .005){ acctBlocked(); break; } run(()=>A.acctDep(arg)); break;
+    case "acctBlocked": bankTab="loans"; drawSheet(); break;
     case "acctWd": acctAmtV=""; run(()=>A.acctWd(arg)); break;
     case "savDays": savDays=+arg; drawSheet(); break;
     case "savPut": savAmt=""; run(()=>A.savPut(arg)); break;
