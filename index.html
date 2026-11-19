@@ -331,7 +331,7 @@ const MS = [
   [100,"The Beginning"],[1e3,"Hustler"],[1e4,"Entrepreneur"],[5e4,"Business Owner"],[1e5,"Investor"],
   [5e5,"Mogul"],[1e6,"Millionaire"],[1e7,"Tycoon"],[1e8,"Empire Builder"],[1e9,"Billionaire"]
 ];
-const RANKS = [[100,"The Beginning"],[300,"Pocket Change"],[1e3,"Hustler"],[2500,"Side Gig Pro"],[5e3,"Small Fry"],[1e4,"Entrepreneur"],[2e4,"Rising Star"],[35e3,"Go-Getter"],[5e4,"Business Owner"],[75e3,"Local Name"],[1e5,"Investor"],[175e3,"Portfolio Pro"],[25e4,"Dealmaker"],[35e4,"Big Fish"],[5e5,"Mogul"],[75e4,"Almost There"],[1e6,"Millionaire"],[2e6,"Multi-Millionaire"],[35e5,"High Roller"],[5e6,"Magnate"],[1e7,"Tycoon"],[25e6,"Titan"],[5e7,"Powerhouse"],[1e8,"Empire Builder"],[25e7,"Dynasty"],[5e8,"Giant"],[1e9,"Billionaire"]];
+const RANKS = [[100,"The Beginning"],[120,"Loose Change"],[150,"Pocket Change"],[190,"Paper Route"],[240,"Hustler"],[300,"Side Gig"],[370,"Gig Worker"],[460,"Small Fry"],[570,"Saver"],[710,"Money Maker"],[880,"Budget Boss"],[1100,"Entrepreneur"],[1400,"Corner Booth"],[1700,"Shopkeeper"],[2100,"Rising Star"],[2600,"Go-Getter"],[3300,"Deal Spotter"],[4100,"Business Owner"],[5000,"Main Street"],[6300,"Local Name"],[7800,"Regular Landlord"],[9700,"Investor"],[12000,"Smart Money"],[15000,"Portfolio Pro"],[19000,"Wheeler Dealer"],[23000,"Dealmaker"],[29000,"Big Fish"],[36000,"Heavy Hitter"],[45000,"Rainmaker"],[55000,"Mogul in Training"],[69000,"Mogul"],[86000,"Almost There"],[110000,"Seven Figures Soon"],[130000,"Millionaire"],[160000,"Comfortable"],[200000,"Wealthy"],[250000,"Multi-Millionaire"],[320000,"Estate Owner"],[390000,"Skyline Owner"],[490000,"High Roller"],[610000,"Power Broker"],[760000,"Tycoon in Training"],[940000,"Magnate"],[1200000,"Capitalist"],[1500000,"Corporate Raider"],[1800000,"Industrialist"],[2200000,"Titan of Trade"],[2800000,"Tycoon"],[3500000,"Market Mover"],[4300000,"Kingmaker"],[5400000,"Financier"],[6700000,"Titan"],[8300000,"Baron"],[10000000,"Dynasty Founder"],[13000000,"Powerhouse"],[16000000,"Conglomerate"],[20000000,"Eight-Figure Legend"],[25000000,"Old Money"],[31000000,"Empire Builder"],[38000000,"Global Player"],[47000000,"Heir Apparent"],[59000000,"Dynasty"],[73000000,"Sovereign"],[91000000,"Landmark Name"],[110000000,"Billion Chaser"],[140000000,"Giant"],[180000000,"Colossus"],[220000000,"Legend"],[270000000,"Super Tycoon"],[340000000,"Untouchable"],[420000000,"Apex"],[520000000,"Hall of Fame"],[650000000,"Near Billionaire"],[800000000,"Final Stretch"],[1000000000,"Billionaire"]];
 const rankIdx = () => { let l = 0; RANKS.forEach((m,i) => { if ((S.peak||0) >= m[0]) l = i; }); return l; };
 // cost = first location; rev/exp per hour per location
 const BIZ = [
@@ -806,10 +806,10 @@ function propListings(){
   const w = win(), t = Date.now();
   const lad = []; PROP.forEach(d => { (lad[d.g]||(lad[d.g]=[])).push(d); }); const tb = i => Math.min(...lad[i].map(d=>d.base));
   if (!S.plAnc || S.plAnc.w !== w){ let a = 0; lad.forEach((g,i) => { if (tb(i)*.95 <= Math.max(0,S.cash)/MORT_DOWNS[0]+2000) a = i; }); let m = a; lad.forEach((g,i) => { if (tb(i) <= 3*Math.max(150000,Math.max(0,S.cash)/MORT_DOWNS[0]+2000)) m = Math.max(m,i); }); S.plAnc = {w, a, m}; }
-  const A = S.plAnc.a, M = S.plAnc.m, offs = [-1,0,0,1,2,3];
+  const A = S.plAnc.a, M = S.plAnc.m, tiers = [0, Math.min(1,M), Math.floor(A/2), Math.max(0,A-1), A, A, Math.min(M,A+1), Math.min(M,A+2)];
   const out = [];
-  for (let k=0; k<offs.length; k++){
-    const grp = lad[Math.max(0,Math.min(M,A+offs[k]))], d = grp[Math.floor(r01("p",w,k,"i")*grp.length)];
+  for (let k=0; k<tiers.length; k++){
+    const grp = lad[Math.max(0,Math.min(M,tiers[k]))], d = grp[Math.floor(r01("p",w,k,"i")*grp.length)];
     const cond = Math.round(20 + r01("p",w,k,"c")*70);
     const base = d.base*(.88+r01("p",w,k,"b")*.24);
     const p = {type:d.id,base,cond};
@@ -1230,7 +1230,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795110726";
+const BUILD = "1795121758";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
