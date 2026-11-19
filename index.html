@@ -565,7 +565,7 @@ function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
 function bizVal(){ return Object.keys(S.biz).reduce((a,id)=>a+bizEquity(id),0); }
-const LOAN_TIERS = [[0,.055],[24,.09],[36,.11]], LOAN_FEE = LOAN_TIERS[0][1], LOAN_GRACE = LOAN_TIERS[1][0]*3600000, LATE_RATE = .11/12, LOAN_PART = .09, LOAN_EVERY_H = 6, LOAN_EVERY = LOAN_EVERY_H*3600000;
+const LOAN_TIERS = [[0,.01],[3,.055],[24,.09],[36,.11]], LOAN_FEE = LOAN_TIERS[0][1], LOAN_GRACE = LOAN_TIERS[1][0]*3600000, LATE_RATE = .11/12, LOAN_PART = .09, LOAN_EVERY_H = 6, LOAN_EVERY = LOAN_EVERY_H*3600000;
 const LOAN_PAYS = Math.ceil(1/LOAN_PART - 1e-9), LOAN_PCT = Math.round(LOAN_PART*100), LOAN_FEE_PCT = +(LOAN_FEE*100).toFixed(2), LOAN_GRACE_H = Math.round(LOAN_GRACE/3600000);
 const loanPct = x => +(x*100).toFixed(2) + "%";
 const loanLadder = () => LOAN_TIERS.map((tr,k) => loanPct(tr[1]) + (k===0 ? " first "+LOAN_TIERS[1][0]+"h" : k<LOAN_TIERS.length-1 ? " next "+(LOAN_TIERS[k+1][0]-tr[0])+"h" : " after that")).join(" · ");
@@ -616,7 +616,7 @@ const loanRatioAt = l => Math.min(2.5, .5 + .2*l);
 const loanRatio = () => loanRatioAt(S.lvl);
 const loanCap = () => Math.max(Math.max(0,netWorth())*loanRatio(), 100*(S.lvl+1));
 const overdrawn = () => S.cash < -.005;
-const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor((Math.floor(loanCap()*100)/100 - (S.debt||0))/(1+LOAN_FEE)*100)/100);
+const loanRoom = () => overdrawn() ? 0 : Math.max(0, Math.floor((Math.floor(loanCap()*100)/100 - (S.debt||0))/(1+LOAN_TIERS[1][1])*100)/100);
 const loanIntr = () => Math.max(0, (S.debt||0) - (S.prin||0));
 const loansOf = () => S.loans || (S.loans = []);
 const loanMulOf = l => l.p > .005 ? Math.max(1, l.d/l.p) : 1;
@@ -637,7 +637,7 @@ function loanPayment(ev){ const was = overdrawn(); let due = 0;
   if (overdrawn() && !was) toast("The bank took the payment and your account went negative. Extra interest builds until you're back above zero", true); }
 function loanRun(from, t){ loanMigrate(); let cur = from, guard = 0;
   while (S.loans.length && guard++ < 90){ const hit = S.dueAt && S.dueAt <= t, ev = hit ? Math.max(S.dueAt, cur) : t, late = overdrawn() ? LATE_RATE : 0;
-    S.loans.forEach(l => { l.d += l.p * late * Math.max(0, ev - cur) / H; LOAN_TIERS.forEach((tr,k) => { if (!k) return; const T = l.at + tr[0]*H; if (cur < T && T <= ev) l.d += l.p * (tr[1] - LOAN_TIERS[k-1][1]); }); }); loanSync(); cur = ev;
+    S.loans.forEach(l => { l.d += l.p * late * Math.max(0, ev - cur) / H; LOAN_TIERS.forEach((tr,k) => { if (!k || (k===1 && !l.g)) return; const T = l.at + tr[0]*H; if (cur < T && T <= ev) l.d += l.p * (tr[1] - LOAN_TIERS[k-1][1]); }); }); loanSync(); cur = ev;
     if (!hit) break; loanPayment(ev); } }
 function perHour(t){
   t=t||Date.now(); let v=0;
@@ -806,7 +806,7 @@ function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough ca
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
   carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
-  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); const nowT = Date.now(); if (!S.loans.length || !S.dueAt) S.dueAt = nowT + LOAN_EVERY; S.loans.push({p:a, d:a*(1+LOAN_FEE), i:LOAN_PART*a, pp:0, at:nowT, o:a}); S.cash += a; loanSync(); tx("loan","Took out a loan",a); },
+  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); const nowT = Date.now(); if (!S.loans.length || !S.dueAt) S.dueAt = nowT + LOAN_EVERY; S.loans.push({p:a, d:a*(1+LOAN_FEE), i:LOAN_PART*a, pp:0, at:nowT, o:a, g:1}); S.cash += a; loanSync(); tx("loan","Took out a loan",a); },
   projPut(arg){ const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if (!L) return; S.proj=S.proj||[]; if (S.proj.length>=PROJ_MAX){ toast(`You can run ${PROJ_MAX} projects at once`); return; }
     const a=Math.min(+a0,S.cash); if (!(a>=1)) return; const d=PROJ[L.kind]; S.cash-=a; S.projDone=(S.projDone||[]).concat(id).slice(-40);
     S.proj.push({id,kind:L.kind,name:L.name,amt:a,at:Date.now(),end:Date.now()+d.lock*3600000,mult:d.roll()}); tx("spend",`Invested in ${L.name}`,-a); },
@@ -1209,7 +1209,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795068808";
+const BUILD = "1795068928";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1713,7 +1713,7 @@ function cfmInfo(act, arg){
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="savPut"){ const [a0,d0]=arg.split("|"), d=+d0, a=+a0, r=savRate(d); return {e:"🐷",t:`Lock away ${money(a)}?`,l:[["Locked for",d+" day"+(d>1?"s":"")],["Interest",(r*100).toFixed(1).replace(/\.0$/,"")+"%"],["You get back",money(a*(1+r))],["Unlocks",new Date(Date.now()+d*24*H).toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit"})]],n:after(-a)+" You can't spend it until then. Breaking early loses the interest plus a 5% fee.",yes:`Lock ${money(a)}`}; }
   if (act==="savBreak"){ const v=(S.sav||[])[+arg]; if (!v) return null; return {e:"🐷",t:"Break this deposit?",l:[["You get",money(v.p*.95)],["Interest lost",money(v.p*v.r)],["Fee","5% · "+money(v.p*.05)]],n:`It still had ${dur(v.end-Date.now())} to go.`,yes:`Take ${money(v.p*.95)}`,sell:1}; }
-  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()), pay1=a*LOAN_PART*(1+LOAN_FEE); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Interest",loanLadder()],["Repaid within "+LOAN_GRACE_H+"h",money(a*(1+LOAN_FEE))],["On the normal schedule","about "+money(a*(1+LOAN_SCHED))],["Debt after",money((S.debt||0)+a*(1+LOAN_FEE))],["Every "+LOAN_EVERY_H+" hours","about "+money(pay1)+" and up"],["Payments",LOAN_PAYS+" over "+LOAN_PAYS*LOAN_EVERY_H+" hours"]],n:`Pay it back sooner and you pay less. If your cash can't cover a payment, the bank takes it anyway, your account goes negative, and extra interest builds until you're back above zero.`,yes:`Borrow ${money(a)}`}; }
+  if (act==="loanTake"){ const a=Math.min(+arg,loanRoom()), pay1=a*LOAN_PART*(1+LOAN_TIERS[1][1]); return {e:"🏦",t:`Borrow ${money(a)}?`,l:[["You get",money(a)],["Interest",loanLadder()],["Repaid within "+LOAN_GRACE_H+"h",money(a*(1+LOAN_FEE))],["On the normal schedule","about "+money(a*(1+LOAN_SCHED))],["Debt after",money((S.debt||0)+a*(1+LOAN_FEE))],["Every "+LOAN_EVERY_H+" hours","about "+money(pay1)+" and up"],["Payments",LOAN_PAYS+" over "+LOAN_PAYS*LOAN_EVERY_H+" hours"]],n:`Pay it back sooner and you pay less. If your cash can't cover a payment, the bank takes it anyway, your account goes negative, and extra interest builds until you're back above zero.`,yes:`Borrow ${money(a)}`}; }
   if (act==="projPut"){ const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if(!L) return null; const d=PROJ[L.kind], a=Math.min(+a0,S.cash); return {e:d.e,t:`Back ${L.name}?`,l:[["You put in",money(a)],["Locked for",d.lock+" hours"],["Payout",d.range]],n:after(-a),yes:`Put in ${money(a)}`}; }
   if (act==="loanPayOne"){ const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at), a=l?Math.min(+a0,l.d,S.cash):0; return {e:"🏦",t:`Pay back ${money(a)}?`,l:[["Loan",l?money(l.o)+" · taken "+dur(Date.now()-l.at)+" ago":""],["You pay",money(a)],["Left on this loan",money(Math.max(0,(l?l.d:0)-a))]],n:after(-a),yes:`Pay ${money(a)}`}; }
   if (act==="acctWd"){ acctSettle(); const c=acctOf(), a=Math.min(+arg,c.b), i=acctTierAt(Date.now()), j=acctTierAfterWd(a); if (!(a>=.01)) return null; return {e:"🐷",t:`Withdraw ${money(a)}?`,l:[["You get",money(a)],["Left in savings",money(c.b-a)],["Tier",j<i?`${ACCT_TIERS[i].n} down to ${ACCT_TIERS[j].n}`:ACCT_TIERS[i].n]],n:after(a)+(j<i?" Taking out more than 10% drops you one tier.":""),yes:`Withdraw ${money(a)}`}; }
