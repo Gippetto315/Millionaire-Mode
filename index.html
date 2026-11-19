@@ -692,6 +692,7 @@ function sample(t){ const lastS = S.hist[S.hist.length-1]; if (!lastS || t - las
 function advance(t){
   const from = S.nocap ? S.last : Math.max(S.last, t - CAP);
   const inc = incomeBetween(from, t);
+  S.props.forEach(p => { if (p.rentTot == null){ p.rentTot = 0; p.upTot = 0; } const hrs = Math.max(0,t-from)/H; p.upTot += propCost(p,t)*hrs; if (p.rented){ const a0 = Math.max(from, p.renoUntil||0); if (t > a0) p.rentTot += propRentFull(p,t)*occHours(p,a0,t); } });
   loanMigrate();
   credit(inc.total);
   loanRun(from, t);
@@ -1191,7 +1192,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1794996000";
+const BUILD = "1794997000";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1418,6 +1419,7 @@ function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
   ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${(()=>{const re=p.rentTot||0, up=p.upTot||0, net=re-up, pct=into>0?Math.max(0,net)/into*100:0; return `<div class="lbl">Has it paid for itself?</div>${kv([["Rent earned so far",money(re)],["Upkeep paid so far",money(-up)],["Net earned",`<span class="${net>=0?"up":"down"}">${signed(net)}</span>`],["Paid back",`<span class="${net>=into?"up":""}">${pct.toFixed(1)}%</span> of ${money(into)}`]])}<p class="note">${net>=into?"It has paid for itself. Everything from here is profit.":"Counts rent after the day this update went live. Mortgage payments aren't included."}</p>`;})()}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
   ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${money(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${money(mortRate(m))}/h</b></div><div><span>Payments left</span><b class="num">${Math.max(0,Math.ceil(MORT_N-mortK(m,Date.now())))} hourly</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,MORT_N-mortK(m,Date.now()))*H)}</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>S.cash?"disabled":""}>Pay off mortgage · ${money(mortBal(m))}</button>`:"";})()}
