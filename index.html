@@ -335,6 +335,7 @@ function money(x, opts){
 }
 const wholeMoney = x => money(x,{full:true,whole:true});
 const pm = x => money(x,{whole:true});
+const nwMoney = x => { const a=Math.abs(x); if (a<1e6) return money(x); if (a<1e9) return money(x,{full:true,whole:true}); return (x<0?"-$":"$") + (a>=1e12 ? (a/1e12).toFixed(6)+"T" : (a/1e9).toFixed(6)+"B"); };
 const psigned = x => (x>=0?"+":"")+pm(x);
 const signed = x => (x >= 0 ? "+" : "") + money(x);
 const pct = x => (x >= 0 ? "+" : "") + (x*100).toFixed(1) + "%";
@@ -1269,7 +1270,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795129491";
+const BUILD = "1795130407";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1283,7 +1284,7 @@ const LIVE = {
   evu: id => evText(id,true),
   evd: id => evText(id,false),
   cash: () => money(S.cash),
-  nw: () => money(netWorth()),
+  nw: () => nwMoney(netWorth()),
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
@@ -1310,6 +1311,7 @@ function liveTick(){
   document.querySelectorAll("[data-live]").forEach(el => {
     const [k, a] = el.dataset.live.split(":"); const f = LIVE[k]; if (!f) return; const v = f(a); if (el.textContent !== v) el.textContent = v;
     if (k === "cph") el.style.color = perHour() < 0 ? "var(--red)" : "var(--em)";
+    if (k === "nw") el.style.fontSize = v.length > 11 ? "clamp(24px,8vw,32px)" : "";
     if (k === "cash") el.style.color = S.cash < -.005 ? "var(--red)" : "";
   });
   const hb = document.querySelector('[data-act="hustle"]'); if (hb) hb.disabled = Date.now()-S.shiftAt < 60000;
@@ -1325,7 +1327,7 @@ function viewHome(){
   return `
   <section class="hero">
     <button class="nwbtn" data-act="nwinfo" aria-label="What makes up your net worth"><span class="lbl">Net worth <span class="info">i</span></span>
-    <span class="nw num" data-live="nw">${money(netWorth())}</span></button>
+    <span class="nw num" data-live="nw">${nwMoney(netWorth())}</span></button>
     <div class="lvrow"><span class="rank">Lv ${rI+1} · ${RANKS[rI][1]}</span>
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
@@ -1596,7 +1598,7 @@ function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
   const rows=[["Cash",S.cash],["Businesses",bizVal()],["Properties",S.props.reduce((a,p)=>a+propVal(p,t),0)],["Vehicles",v("veh")],["Collectibles",v("col")],["Investments",stockVal()],["Debt",-(S.debt||0)],...(mortDebt()>.005?[["Mortgages",-mortDebt()]]:[])];
   return `<div class="shead"><div class="tile gold">💰</div><div><h3>Your net worth</h3><p>Everything you have, added up</p></div></div>
-  <div class="big num" data-live="nw">${money(netWorth())}</div>
+  <div class="big num" data-live="nw">${nwMoney(netWorth())}</div>
   <div class="lines">${rows.map(([k,x])=>`<div><span>${k}</span><b class="num">${money(x)}</b></div>`).join("")}</div>
   <ul class="ilist">
     <li><span><b>Why it keeps climbing:</b> your businesses and rentals pay you every second, so cash ticks up all the time.</span></li>
