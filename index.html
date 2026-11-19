@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>try{if(localStorage.getItem("mm-theme")==="light")document.documentElement.classList.add("light")}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <style>html,body,*{touch-action:manipulation}</style>
@@ -24,6 +25,18 @@
   --body:"Manrope",system-ui,-apple-system,sans-serif;
   color-scheme:dark;
 }
+html.light{--bg:#f3f6f4;--surface:#ffffff;--surface2:#eaf0ec;--line:#d3ddd7;--text:#101a15;--muted:#55645c;--dim:#7d8b83;--em:#0f9d63;--em-deep:#0c7a4e;--gold:#b9861c;--gold-deep:#d9b24f;--red:#d63a30;color-scheme:light}
+html.light .top{background:linear-gradient(var(--bg) 75%,transparent)}
+html.light .nw{background:linear-gradient(180deg,#0b3d28 0%,#0f9d63 100%);-webkit-background-clip:text;background-clip:text}
+html.light .tile{background:radial-gradient(circle at 35% 30%,#ffffff,#e3ebe6)}
+html.light .tile.gold{background:radial-gradient(circle at 35% 30%,#fff3d1,#f2dfaa);border-color:#e0c36f}
+html.light .dock{background:rgba(255,255,255,.94)}
+html.light .scrim{background:rgba(20,30,25,.4)}
+html.light .toast{background:linear-gradient(180deg,#fff6dc,#f6e7bb);color:#5a4210}
+html.light .toast.em{background:linear-gradient(180deg,#e3f7ec,#cdeedd);color:#0c7a4e}
+html.light .ach div.got,html.light .lot.head{background:linear-gradient(180deg,#fff6dc,var(--surface))}
+html.light .stat .unit b{color:#8a6a22}
+html.light .btn.ghost{color:var(--text)}
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
 body{margin:0;color:var(--text);font:600 15px/1.4 var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
@@ -483,6 +496,8 @@ const propCond = c => c >= 95 ? "Renovated" : c >= 70 ? "Good" : c >= 45 ? "Worn
 
 /* ================= economy curves ================= */
 function econ(t){const h=t/H;return 1+.06*Math.sin(2*Math.PI*h/30+1)+.03*Math.sin(2*Math.PI*h/7.3+2)}
+// housing: a slow wobble smaller than the steady climb, so home values only ever rise
+function hecon(t){return 1+.004*Math.sin(2*Math.PI*(t/H)/168+1)}
 const mktTag = x => `<span class="${x>=0?"up":"down"}">Market ${x>=0?"high":"low"} ${Math.abs(x*100).toFixed(1)}%</span>`;
 function wob(id,t){const h=t/H,p1=8+r01(id,"p1")*20,p2=2+r01(id,"p2")*5;return 1+.06*Math.sin(2*Math.PI*h/p1+r01(id,"f1")*6.28)+.03*Math.sin(2*Math.PI*h/p2+r01(id,"f2")*6.28)}
 
@@ -544,8 +559,8 @@ const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus()*homeBonus() - BIZM[id
 function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
 function upCost(id,l){ return BIZM[id].cost*.25*(l+1); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
-const PROP_TREND = .0002;
-function propVal(p,t){ t=t||Date.now(); return propBaseVal(p)*econ(t)*Math.exp(PROP_TREND*(t-(p.uid ? (p.at || (p.at=t)) : t))/H); }
+const PROP_TREND = .00022;
+function propVal(p,t){ t=t||Date.now(); return propBaseVal(p)*hecon(t)*Math.exp(PROP_TREND*(t-(p.uid ? (p.at || (p.at=t)) : t))/H); }
 const MORT_N = 360, MORT_I = .0054, MORT_PAYF = MORT_I/(1-Math.pow(1+MORT_I,-MORT_N)), MORT_DOWNS = [.10,.25,.50];
 const mortOf = u => (S.mort||[]).find(m=>m.uid===u);
 const mortK = (m,t) => Math.max(0, Math.min(MORT_N, (t-m.at)/H));
@@ -1212,7 +1227,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795091691";
+const BUILD = "1795093041";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1404,7 +1419,7 @@ function viewProfile(){
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--muted);font-size:13px;margin:0">Copy a backup code and paste it somewhere safe, like Notes. If you delete and re-add the app, paste the code here and tap Restore to get everything back.</p>
   <textarea id="bkt" rows="3" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Paste a backup code here to restore" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;resize:vertical"></textarea>
   <div class="btns three"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkpaste">Paste</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
-  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>
+  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn ghost" data-act="theme" style="margin-bottom:10px">${document.documentElement.classList.contains("light")?"Switch to dark background":"Switch to light background"}</button><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>
   <section class="sec"><button class="btn gold" data-act="devopen" style="width:100%">About the developer</button></section>`;
 }
 
@@ -1441,10 +1456,10 @@ function bizQtyPanel(id){
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(econ(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
+  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(hecon(Date.now())-1)}</small>`],["You put in",money(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",money(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${signed(v-into)}</span>`]])}
   ${(()=>{const re=p.rentTot||0, up=p.upTot||0, net=re-up, pct=into>0?Math.max(0,net)/into*100:0; return `<div class="lbl">Has it paid for itself?</div>${kv([["Rent earned so far",money(re)],["Upkeep paid so far",money(-up)],["Net earned",`<span class="${net>=0?"up":"down"}">${signed(net)}</span>`],["Paid back",`<span class="${net>=into?"up":""}">${pct.toFixed(1)}%</span> of ${money(into)}`]])}<p class="note">${net>=into?"It has paid for itself. Everything from here is profit.":"Counts rent after the day this update went live. Mortgage payments aren't included."}</p>`;})()}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
-  ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*econ(Date.now())-v)} value)</button>`:""}
+  ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${money(renoCost(p))} (adds ${money(propBaseVal({...p,cond:100})*hecon(Date.now())-v)} value)</button>`:""}
   ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${money(mortBal(m))}</b></div><div><span>Mortgage payment</span><b class="num">${money(mortRate(m))}/h</b></div><div><span>Payments left</span><b class="num">${Math.max(0,Math.ceil(MORT_N-mortK(m,Date.now())))} hourly</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,MORT_N-mortK(m,Date.now()))*H)}</b></div></div><button class="btn ghost" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>ownCash()?"disabled":""}>Pay off mortgage · ${money(mortBal(m))}</button>`:"";})()}
   ${(()=>{const c=homeCompare(u); if (!c) return ""; const sg=x=>`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}/h</i>`; const lead=c.diff>=0?"Living here":"Renting it out"; return `<div class="lines" style="margin-bottom:8px"><div><span>Live here: businesses earn</span><b class="num">${sg(c.live)}</b></div><div><span>Rent it out: rent pays</span><b class="num">${sg(c.rent)}</b></div><div><span><b>${lead} earns more</b></span><b class="num">${sg(Math.abs(c.diff))}</b></div></div>`;})()}
   <button class="btn ${S.home===u?"ghost":"gold"}" data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${S.home===u?"Move out":"Live here (+"+HOME_PCT[d.g||0]+"% on every business)"}</button>
@@ -1455,7 +1470,7 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*econ(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
+  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",money(l.val)],["Renovation cost",l.cond<100?money(renoCost(p)):"None"],["Value renovated",money(propBaseVal({...p,cond:100})*hecon(Date.now()))],["Rent if leased",money(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",money(propCost(p))+"/h"]])}
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>ownCash()?"disabled":""}>Pay cash · ${wholeMoney(l.ask)}</button>
   <div class="lbl" style="margin-top:12px">Or get a mortgage for:</div>
   <div class="btns three" style="grid-template-columns:repeat(4,1fr)">${[.25,.5,.75,1].map(f=>{const am=Math.round(l.ask*f*100)/100, dn=l.ask-am; return `<button class="btn stk gold" data-act="propMort" data-arg="${lid}|${am}" ${dn>ownCash()+1e-6?"disabled":""}><span>${Math.round(f*100)}%</span><small>${money(am)}</small><small>${money(am*MORT_PAYF)}/h</small></button>`;}).join("")}</div>
@@ -1528,7 +1543,7 @@ function sheetCash(){ return () => {
 function sheetAssets(){ const f = () => {
   const t=Date.now(), row=(e,n,v,g,m,d)=>`<div><span>${e} ${esc(n)}${g==null?"":`<br><small class="${g>=0?"up":"down"}">${g>=0?"▲":"▼"} ${Math.abs(g*100).toFixed(1)}% since you got it</small>`}${m==null?"":`<br><small>${mktTag(m)}</small>`}${d==null||Math.abs(d)<.00005?"":`<br><small class="${d>=0?"up":"down"}">${d>=0?"▲":"▼"} ${Math.abs(d*100).toFixed(2)}% last hour</small>`}</span><b class="num">${money(v)}</b></div>`;
   const grp=(title,list)=>list.length?`<div class="lbl">${title} · ${money(list.reduce((a,x)=>a+x.v,0))}</div><div class="lines" style="margin-bottom:6px">${list.sort((a,b)=>b.v-a.v).map(x=>row(x.e,x.n,x.v,x.g,x.m,x.d)).join("")}</div>`:"";
-  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t),m:econ(t)-1,d:propVal(p,t)/propVal(p,t-H)-1}));
+  const props=S.props.map(p=>({e:PROPM[p.type].e,n:p.name,v:propVal(p,t),m:hecon(t)-1,d:propVal(p,t)/propVal(p,t-H)-1}));
   const its=c=>S.items.filter(i=>ITEMM[i.id].c===c).map(i=>({e:ITEMM[i.id].e,n:i.name||ITEMM[i.id].n,v:itemVal(i,t),g:i.paid>0?itemVal(i,t)/i.paid-1:null,m:wob(i.id,t)-1,d:itemVal(i,t)/itemVal(i,t-H)-1}));
   const stk=Object.entries(S.hold).filter(([k,h])=>h.sh>0).map(([k,h])=>({e:"📈",n:k+" · "+(+h.sh.toFixed(4))+" sh",v:h.sh*S.stk[k].p,d:(()=>{const st=S.stk[k],ref=st.hist[Math.max(0,st.hist.length-61)]||st.p;return st.p/ref-1;})()}));
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
@@ -1871,6 +1886,7 @@ document.addEventListener("click", e => {
     case "gnext": gStep++; drawSheet(); break;
     case "gback": gStep--; drawSheet(); break;
     case "gskip": case "gdone": markGuide(); closeSheet(); render(); if (pendingWelcome){ const w=pendingWelcome; pendingWelcome=null; showWelcome(w[0],w[1]); } break;
+    case "theme": { const on = document.documentElement.classList.toggle("light"); try{ localStorage.setItem("mm-theme", on?"light":"dark"); }catch(e){} const m=document.querySelector('meta[name=theme-color]'); if (m) m.content = on?"#f3f6f4":"#090c0b"; render(); break; }
     case "reset":
       if (Date.now()-resetArm < 4000){ S = fresh(); lotsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
       else { resetArm = Date.now(); el.textContent = "Tap again to erase everything"; setTimeout(()=>{ const b=$("resetbtn"); if (b) b.textContent="Reset game"; }, 4000); }
