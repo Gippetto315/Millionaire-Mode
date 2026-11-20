@@ -577,12 +577,12 @@ function celCheck(){ const c=S.cel||(S.cel={m:0,b:0,t:0}), pk=S.peak||0; let k=0
   [[1e6,"m",1],[1e9,"b",2],[1e12,"t",3]].forEach(([v,key,lv])=>{ if (pk>=v && !c[key]){ c[key]=1; k=lv; } });
   if (k && S.cel._init) celebrate(k); S.cel._init=1; }
 /* hourly voice: plays on the hour while the app is open */
-const VOICE = { a:null, last:-1, ok:false };
+const VOICE = { a:null, last:(()=>{ try{ return +localStorage.getItem("mm-vlast")||-1; }catch(e){ return -1; } })(), ok:false };
 const voiceOn = () => { try{ return localStorage.getItem("mm-voice") !== "off"; }catch(e){ return true; } };
 function voiceAudio(){ if (!VOICE.a){ VOICE.a = new Audio("voice.m4a"); VOICE.a.preload = "auto"; } return VOICE.a; }
 function voiceUnlock(){ if (VOICE.ok) return; try{ const a=voiceAudio(); a.muted=true; const r=a.play(); const done=()=>{ a.pause(); a.currentTime=0; a.muted=false; VOICE.ok=true; }; if (r && r.then) r.then(done).catch(()=>{ a.muted=false; }); else done(); }catch(e){} }
 function voiceNow(){ try{ const a=voiceAudio(); a.muted=false; a.currentTime=0; const r=a.play(); if (r && r.catch) r.catch(()=>{}); }catch(e){} }
-function voiceCheck(){ const d=new Date(); if (document.hidden || !voiceOn()) return; const key=d.getFullYear()*1e6+d.getMonth()*1e4+d.getDate()*100+d.getHours(); if (d.getMinutes()<2 && VOICE.last!==key && VOICE.ok){ VOICE.last=key; voiceNow(); } }
+function voiceCheck(){ const d=new Date(); if (document.hidden || !voiceOn()) return; const key=d.getFullYear()*1e6+d.getMonth()*1e4+d.getDate()*100+d.getHours(); if (d.getMinutes()===0 && VOICE.last!==key && VOICE.ok){ VOICE.last=key; try{ localStorage.setItem("mm-vlast", String(key)); }catch(e){} voiceNow(); } }
 document.addEventListener("pointerdown", voiceUnlock, {passive:true});
 setInterval(voiceCheck, 5000);
 function ownCash(){ S.lb = Math.max(0, Math.min(S.lb||0, Math.max(S.cash,0), S.prin||0)); return S.cash - S.lb; }
@@ -839,7 +839,9 @@ function credit(amt){
   if (amt >= 0){ S.cash += amt; S.earned += amt; }
   else S.cash = Math.max(0, S.cash + amt);
 }
+function stkBackfill(){ STK.forEach(x => { const st = S.stk[x.s]; if (st.bf || st.hist.length >= 1440) return; st.bf = 1; let m = st.n - st.hist.length + 1, p = st.hist.length ? st.hist[0] : st.p; while (st.hist.length < 1440){ const ret = x.mu + (econ(m*MIN)-1)*.002 + x.sd*gauss(x.s, m); p = p/Math.exp(ret); st.hist.unshift(Math.round(p*1e4)/1e4); m--; } }); }
 function stepStocks(t){
+  stkBackfill();
   const target = Math.floor(t/MIN); let changed=false;
   STK.forEach(x => {
     const st = S.stk[x.s];
@@ -849,7 +851,7 @@ function stepStocks(t){
       const z = gauss(x.s, st.n), cyc = (econ(st.n*MIN)-1)*.002;
       const ret = x.mu + cyc + x.sd*z;
       st.p = Math.max(x.p*.02, st.p*Math.exp(ret));
-      st.hist.push(st.p); if (st.hist.length > 180) st.hist.shift();
+      st.hist.push(Math.round(st.p*1e4)/1e4); if (st.hist.length > 1440) st.hist.shift();
       { const au=S.auto&&S.auto[x.s], hh=S.hold[x.s]; if (au && hh && hh.cost>0){ const r=st.p*hh.sh/hh.cost-1; if ((au.up&&r>=au.up)||(au.dn&&r<=-au.dn)){ try{ const got=hh.sh*st.p; A.stkSell(x.s,1); delete S.auto[x.s]; toast(`🤖 Autopilot sold all ${x.s} for ${money(got)} (${r>=0?"+":""}${Math.round(r*100)}%)`, true); }catch(e){} } } }
       if (Math.abs(z) > 2.6 && target - st.n < 60 && x.s !== "BOND"){
         const up = z > 0, nm = x.n;
@@ -1384,7 +1386,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795210100";
+const BUILD = "1795210300";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1665,10 +1667,11 @@ function sheetItem(u){ return () => {
   ${sellPanel(i)}`;
 };}
 function sheetStock(s){ return () => {
-  const x=STKM[s], st=S.stk[s], h=S.hold[s], val=h?h.sh*st.p:0, ref=st.hist[Math.max(0,st.hist.length-61)]||st.p;
+  const x=STKM[s], st=S.stk[s], h=S.hold[s], val=h?h.sh*st.p:0, ref=st.hist[Math.max(0,st.hist.length-61)]||st.p, hs=st.hist.slice(-stkRange*60), r0=hs[0]||st.p, hrs=Math.round(hs.length/60*10)/10;
   return `<div class="shead"><div class="tile gold" style="font:800 12px var(--display);color:var(--gold)">${s}</div><div><h3>${x.n}</h3><p>${x.k} · ${x.risk} risk</p></div></div>
-  <div class="card chart" style="padding:10px">${sparkSvg(st.hist.slice(-120),st.p>=ref?"#1fc983":"#ff6b62")}<div class="chartfoot"><span>2h ago</span><span>now</span></div></div>
-  ${kv([["Price",money(st.p)],["1h change",`<span class="${st.p>=ref?"up":"down"}">${pct(st.p/ref-1)}</span>`],["You hold",h?money(val):"Nothing"],["Profit / loss",h?`<span class="${val-h.cost>=0?"up":"down"}">${signed(val-h.cost)}</span>`:"—"]])}
+  <div class="chips" style="margin-bottom:8px">${[2,6,12,24].map(n=>`<button class="chip ${stkRange===n?"on":""}" data-act="srange" data-arg="${n}">${n}h</button>`).join("")}</div>
+  <div class="card chart" style="padding:10px">${sparkSvg(hs,st.p>=r0?"#1fc983":"#ff6b62")}<div class="chartfoot"><span>${hrs}h ago</span><span>now</span></div></div>
+  ${kv([["Price",money(st.p)],["1h change",`<span class="${st.p>=ref?"up":"down"}">${pct(st.p/ref-1)}</span>`],[hrs+"h change",`<span class="${st.p>=r0?"up":"down"}">${pct(st.p/r0-1)}</span>`],["You hold",h?money(val):"Nothing"],["Profit / loss",h?`<span class="${val-h.cost>=0?"up":"down"}">${signed(val-h.cost)}</span>`:"—"]])}
   <div class="lbl">Buy</div>
   <p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your cash (${money(S.cash)}) to put into ${s}. You'll confirm before anything is bought.</p>
   <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}><span>${n}</span><small>${money(S.cash*f)}</small></button>`).join("")}</div>
@@ -1832,7 +1835,7 @@ function sheetDev(){ return () => { const cur = devPick>=0 ? VEND[devPick] : nul
   <div class="vm-feet"><i></i><i></i></div>
   </div>
   <button class="btn gold" data-act="close" style="width:100%;margin-top:14px">BACK TO THE MONEY</button>`; }; }
-let marginOpen = false, upNV = "", loanAmt = "", loanPayV = "", savAmt = "", savDays = 7, acctAmtV = "", mortXV = "", bankTab = "money";
+let marginOpen = false, upNV = "", loanAmt = "", loanPayV = "", savAmt = "", savDays = 7, acctAmtV = "", mortXV = "", bankTab = "money", stkRange = 2;
 function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   Object.keys(S.biz).forEach(id => { biz += bizNetAt(id,t); bx += bizExp(id); });
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) prop += propRent(p,t); up += propCost(p,t); });
@@ -1986,6 +1989,7 @@ document.addEventListener("click", e => {
     case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
     case "carRent": run(()=>A.carRent(arg)); break;
     case "hustle": run(A.hustle); break;
+    case "srange": run(()=>{ stkRange=+arg; }); break;
     case "hsSave": run(A.hsSave); break;
     case "openActivity": openSheet(sheetActivity()); break;
     case "openBiz": openSheet(sheetBiz(arg)); break;
@@ -2082,7 +2086,7 @@ document.addEventListener("click", e => {
     case "gnext": gStep++; drawSheet(); break;
     case "gback": gStep--; drawSheet(); break;
     case "gskip": case "gdone": markGuide(); closeSheet(); render(); if (pendingWelcome){ const w=pendingWelcome; pendingWelcome=null; showWelcome(w[0],w[1]); } break;
-    case "voice": { const on = voiceOn(); try{ localStorage.setItem("mm-voice", on?"off":"on"); }catch(e){} if (!on) voiceNow(); render(); break; }
+    case "voice": { const on = voiceOn(); try{ localStorage.setItem("mm-voice", on?"off":"on"); }catch(e){} render(); break; }
     case "theme": { const on = document.documentElement.classList.toggle("light"); try{ localStorage.setItem("mm-theme", on?"light":"dark"); }catch(e){} const m=document.querySelector('meta[name=theme-color]'); if (m) m.content = on?"#f3f6f4":"#090c0b"; render(); break; }
     case "reset":
       if (Date.now()-resetArm < 4000){ S = fresh(); lotsTick(Date.now()); save(); closeSheet(); tab="home"; render(); toast("New game. You have $100. Go."); resetArm=0; }
