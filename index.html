@@ -989,7 +989,8 @@ const A = {
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { if (rem <= 0) return; const x = Math.min(rem, l.d), toP = Math.min(l.p, x*l.p/Math.max(.01,l.d)); l.d -= x; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= x; });
     S.loans = S.loans.filter(l => l.p > .005 && l.d >= .01); loanSync(); if (!S.loans.length) loanClear();
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
-  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.cash += pay; S.earned += pay; tx("income","Side hustle shift",pay); },
+  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.earned += pay; S.hsTot=(S.hsTot||0)+pay; if (S.hsOn && !((S.debt||0) > .005) && savCap() >= pay){ acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = t; } c.b += pay; tx("income","Side hustle shift (to savings)",pay); } else { S.cash += pay; tx("income","Side hustle shift",pay); } },
+  hsSave(){ if (!S.hsOn && (S.debt||0) > .005){ toast("Pay off your loans before saving"); return; } S.hsOn = !S.hsOn; },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
   bizUpN(arg){ const [id,n0]=String(arg).split('|'), n=Math.floor(+n0), o=S.biz[id]; if (!o||!(n>=1)) return; const L=migrateLocs(o); let done=0; for (;done<n;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; done++; } if (done<n) toast(done?`Did ${done} of ${n}. Out of cash`:"Not enough cash"); },
   bizUpMax(id){ const o=S.biz[id]; if (!o) return; const L=migrateLocs(o); for(;;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; } },
@@ -1287,8 +1288,8 @@ const EVENTS = [
     ]};
   }},
   {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
-    const el=ownedBiz().filter(i=>bizEquity(i)>=100), id=el[Math.floor(Math.random()*el.length)], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*SELL, big=Math.random()<.3, offer=o.spent/o.n*(big?1.8+Math.random()*.9:.95+Math.random()*.45);
-    return {icon:big?"💰":"🤝",title:big?"Offer too good to pass up?":"Acquisition offer",text:big?`A big chain wants one of your ${b.n} locations and is paying well over the odds. Its book value is ${money(each)}. They're offering ${money(offer)}.`:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
+    const el=ownedBiz().filter(i=>bizEquity(i)>=100), id=el[Math.floor(Math.random()*el.length)], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*SELL, r=Math.random(), big=r<.1, low=r>=.8, offer=o.spent/o.n*(big?1.8+Math.random()*.9:low?.4+Math.random()*.35:.85+Math.random()*.45);
+    return {icon:big?"💰":low?"🥶":"🤝",title:big?"Offer too good to pass up?":low?"Lowball offer":"Acquisition offer",text:big?`A big chain wants one of your ${b.n} locations and is paying well over the odds. Its book value is ${money(each)}. They're offering ${money(offer)}.`:low?`A buyer is sniffing around one of your ${b.n} locations and hoping you're desperate. Its book value is ${money(each)}. They're offering ${money(offer)}.`:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
       {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
       {label:"Decline",run(){ return "You kept the location."; }}
     ]};
@@ -1382,7 +1383,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795209400";
+const BUILD = "1795209800";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1453,7 +1454,9 @@ function viewHome(){
     <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span><span class="unit" data-live="debtmort" style="color:var(--red)"></span></button>
   </div>
-  <section class="sec"><div class="card hustle"><button class="btn" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div></div></section>
+  <section class="sec"><div class="card hustle"><button class="btn" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div>
+    <button class="btn ${S.hsOn?"bank":"ghost"}" data-act="hsSave" style="min-height:44px">${S.hsOn?"Shifts go to savings: On":"Shifts go to savings: Off"}</button>
+    <div class="lines" style="grid-column:1/-1"><div><span>Made from side hustle</span><b class="num up">${money(S.hsTot||0)}</b></div></div>${S.hsOn&&(S.debt||0)>.005?`<p class="note" style="grid-column:1/-1">Paused while you owe the bank. Shifts go to cash until your loans are paid.</p>`:""}</div></section>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
@@ -1982,6 +1985,7 @@ document.addEventListener("click", e => {
     case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
     case "carRent": run(()=>A.carRent(arg)); break;
     case "hustle": run(A.hustle); break;
+    case "hsSave": run(A.hsSave); break;
     case "openActivity": openSheet(sheetActivity()); break;
     case "openBiz": openSheet(sheetBiz(arg)); break;
     case "openProp": openSheet(sheetProp(arg)); break;
