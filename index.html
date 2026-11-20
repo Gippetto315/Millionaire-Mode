@@ -1022,7 +1022,8 @@ const A = {
 };
 const HUSTLE = [3, 10, 30, 80, 200, 550, 1500, 5000, 18000, 75000];
 const hustleBase = l => HUSTLE[Math.min(l, HUSTLE.length-1)];
-const hustlePay = () => Math.round(hustleBase(S.lvl)*rideX()*100)/100;
+const hustleSure = () => Math.round(hustleBase(S.lvl)*rideX()*100)/100;
+const hustlePay = () => { const b = hustleSure(); return Math.round((b + Math.random()*Math.max(.25, b*.06))*100)/100; };
 
 /* ================= auctions: live room ================= */
 const RIVALS = {
@@ -1383,7 +1384,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795209800";
+const BUILD = "1795210100";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1411,7 +1412,7 @@ const LIVE = {
   adv: () => advActive() ? "· "+dur(S.advUntil-Date.now())+" left" : "",
   debtmort: () => mortDebt() > .005 ? `Mortgage ${wholeMoney(mortDebt())}` : "",
   nextms: () => { const r=rankIdx(); return r>=RANKS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,RANKS[r+1][0]-netWorth()))} to ${RANKS[r+1][1]}`; },
-  hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
+  hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (about +${money(hustleSure())})`; },
   win: () => dur(WIN - Date.now()%WIN),
   pv: u => { const p=S.props.find(x=>x.uid===u); return p?pm(propVal(p)):""; },
   iv: u => { const i=S.items.find(x=>x.uid===u); return i?money(itemVal(i)):""; },
@@ -1455,7 +1456,7 @@ function viewHome(){
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span><span class="unit" data-live="debtmort" style="color:var(--red)"></span></button>
   </div>
   <section class="sec"><div class="card hustle"><button class="btn" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div>
-    <button class="btn ${S.hsOn?"bank":"ghost"}" data-act="hsSave" style="min-height:44px">${S.hsOn?"Shifts go to savings: On":"Shifts go to savings: Off"}</button>
+    <button class="chip" data-act="hsSave" style="grid-column:1/-1;justify-self:start;padding:6px 12px;font-size:12px;background:#2b2e34;border-color:#3a3e46;color:${S.hsOn?"#d9dce2":"#8b909b"}">${S.hsOn?"Shifts to savings: On":"Shifts to savings: Off"}</button>
     <div class="lines" style="grid-column:1/-1"><div><span>Made from side hustle</span><b class="num up">${money(S.hsTot||0)}</b></div></div>${S.hsOn&&(S.debt||0)>.005?`<p class="note" style="grid-column:1/-1">Paused while you owe the bank. Shifts go to cash until your loans are paid.</p>`:""}</div></section>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
