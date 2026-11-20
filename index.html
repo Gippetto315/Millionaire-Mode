@@ -77,9 +77,9 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .prog small{color:var(--muted);font-size:12px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.stat b{font:700 18px/1.15 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat b{font:700 18px/1.15 var(--display);white-space:nowrap;overflow:hidden}
 .stat b.em{color:var(--em)}
-.stat .unit{font-size:12px;color:var(--muted);font-weight:700;margin-top:-2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .unit{font-size:12px;color:var(--muted);font-weight:700;margin-top:-2px;white-space:normal;line-height:1.25}
 .stat .unit b{font:800 12px var(--body);color:#c48a22}.stat b.gold{color:var(--gold)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
 .chart svg{display:block;width:100%;height:120px}
@@ -358,20 +358,31 @@ const BIZ = [
   {id:"vend",n:"Vending Machines",e:"🥤",t:0,cost:79.57,rev:12.24,exp:4.17},
   {id:"lawn",n:"Lawn Care Co.",e:"🌱",t:0,cost:452.27,rev:59.84,exp:21.06},
   {id:"wash",n:"Car Wash",e:"🧼",t:1,cost:2462.66,rev:282.95,exp:94.64},
+  {id:"laundry",n:"Laundromat",e:"🧺",t:1,cost:5800,rev:600,exp:210},
   {id:"truck",n:"Food Truck",e:"🌮",t:1,cost:11657.97,rev:1170.40,exp:422.20},
+  {id:"coffee",n:"Coffee Shop",e:"☕",t:2,cost:28000,rev:2600,exp:900},
   {id:"store",n:"Convenience Store",e:"🏪",t:2,cost:55003.40,rev:4715.01,exp:1561.36},
+  {id:"gym",n:"Gym",e:"🏋️",t:3,cost:110000,rev:8400,exp:2950},
   {id:"rest",n:"Restaurant",e:"🍽️",t:3,cost:242155.18,rev:15265.23,exp:5365.06},
+  {id:"dental",n:"Dental Practice",e:"🦷",t:4,cost:410000,rev:24000,exp:8600},
   {id:"plumb",n:"Plumbing Company",e:"🔧",t:4,cost:596759.24,rev:33055.62,exp:11968.22},
-  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1412161,rev:75038.70,exp:25285.49},
-  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2245461,rev:108314.61,exp:36845.13},
-  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:3934048,rev:179577.43,exp:63776.26},
-  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:11743183,rev:495773.72,exp:179754.89},
-  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:43706501,rev:1674373,exp:609523.59},
-  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:122336142,rev:3948555,exp:1358730},
-  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:305218067,rev:9397738,exp:3241346},
-  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:660284146,rev:18463855,exp:6557432},
-  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1796341005,rev:45017017,exp:16452480},
-  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:5825197502,rev:137393253,exp:47597757}
+  {id:"auto",n:"Auto Repair Shop",e:"🛠️",t:4,cost:1.41216e+06,rev:75038.70,exp:25285.49},
+  {id:"retail",n:"Retail Store",e:"🛍️",t:5,cost:2.24546e+06,rev:108314.61,exp:36845.13},
+  {id:"club",n:"Nightclub",e:"🪩",t:5,cost:3e+06,rev:142000,exp:50000},
+  {id:"build",n:"Construction Co.",e:"🏗️",t:5,cost:3.93405e+06,rev:179577.43,exp:63776.26},
+  {id:"brew",n:"Brewery",e:"🍺",t:6,cost:6.8e+06,rev:305000,exp:108000},
+  {id:"hotel",n:"Hotel",e:"🏨",t:6,cost:1.17432e+07,rev:495773.72,exp:179754.89},
+  {id:"studio",n:"Movie Studio",e:"🎬",t:7,cost:2.4e+07,rev:960000,exp:345000},
+  {id:"mfg",n:"Manufacturing Co.",e:"🏭",t:7,cost:4.37065e+07,rev:1.67437e+06,exp:609523.59},
+  {id:"recorp",n:"Real Estate Corp.",e:"🏢",t:7,cost:1.22336e+08,rev:3.94856e+06,exp:1.35873e+06},
+  {id:"casino",n:"Casino",e:"🎰",t:8,cost:2.1e+08,rev:6.6e+06,exp:2.3e+06},
+  {id:"chain",n:"Hotel Chain",e:"🛎️",t:8,cost:3.05218e+08,rev:9.39774e+06,exp:3.24135e+06},
+  {id:"dealer",n:"Dealership Network",e:"🚘",t:8,cost:6.60284e+08,rev:1.84639e+07,exp:6.55743e+06},
+  {id:"airline",n:"Airline",e:"✈️",t:9,cost:1.1e+09,rev:3e+07,exp:1.1e+07},
+  {id:"tech",n:"Technology Company",e:"💻",t:9,cost:1.79634e+09,rev:4.5017e+07,exp:1.64525e+07},
+  {id:"rocket",n:"Rocket Company",e:"🚀",t:9,cost:3.5e+09,rev:9.2e+07,exp:3.3e+07},
+  {id:"intl",n:"International Corp.",e:"🌐",t:9,cost:5.8252e+09,rev:1.37393e+08,exp:4.75978e+07},
+  {id:"sports",n:"Sports Team",e:"🏟️",t:9,cost:1.2e+10,rev:2.8e+08,exp:1e+08}
 ];
 const BIZM = Object.fromEntries(BIZ.map(b => [b.id, b]));
 const PROP = [
@@ -677,7 +688,19 @@ const PROJ = {
     line:["You provide the cash. They provide the sweat.","A real business with real customers.","Boring on purpose."]},
   art:{e:"🖼️",n:"Art & wine fund",lock:96,odds:"Slow, and usually grows",range:"0.8x to 1.6x",roll:()=>Math.random()<.85?1.3+Math.random()*.3:.8,
     names:["Estate Wine Fund","Modern Art Syndicate","Vintage Whisky Cask","Sculpture Garden Fund","Rare Vinyl Vault","Fine Art Pool"],
-    line:["Nobody understands it, so it must be valuable.","Your money sits in a cellar, aging.","Experts agree. Some of them."]}
+    line:["Nobody understands it, so it must be valuable.","Your money sits in a cellar, aging.","Experts agree. Some of them."]},
+  space:{e:"🛸",n:"Space program",wild:1,max:15,lock:72,odds:"1 in 6 reaches orbit",range:"Most crash and return 0.1x to 0.3x, a launch pays 8x to 15x",roll:()=>Math.random()<1/6?8+Math.random()*7:.1+Math.random()*.2,
+    names:["Moon Taxi Co.","Orbital Hotel","Asteroid Mining Crew","Mars Colony Starter Kit","Backyard Rocket Club","Zero-G Pizza"],
+    line:["The rocket is mostly duct tape and optimism.","Houston, we have a funding round.","One small step for you. One giant bill for them."]},
+  lotto:{e:"🎟️",n:"Lottery syndicate",wild:1,max:40,lock:12,odds:"1 in 12 hits the jackpot",range:"Lose most of it, 0.1x. A jackpot pays 25x to 40x",roll:()=>Math.random()<1/12?25+Math.random()*15:.1,
+    names:["Gas Station Jackpot Pool","Office Scratch-Off Club","Lucky Seven Syndicate","Quick Pick Collective","Grandma's Numbers","Big Draw Friday"],
+    line:["Statistically absurd. Spiritually thrilling.","Someone has to win. It's probably not you.","Your numbers: birthdays, mostly."]},
+  meme:{e:"🐸",n:"Shit coin",wild:1,max:6,lock:3,odds:"4 in 10 moon",range:"A rug pull returns 0.05x to 0.4x, a moon pays 2x to 6x",roll:()=>Math.random()<.4?2+Math.random()*4:.05+Math.random()*.35,
+    names:["PepeFrogCoin","DogeMoonFlip","BananaToken","Sir Barks-a-Lot Coin","LunchMoney","Ape Strong Coin"],
+    line:["The whitepaper is one emoji.","Founded by an anonymous cat. Allegedly.","Up 400% on vibes alone."]},
+  treasure:{e:"🏴‍☠️",n:"Treasure hunt",wild:1,max:20,lock:36,odds:"1 in 8 finds the chest",range:"Empty digs return 0.1x to 0.3x, the chest pays 12x to 20x",roll:()=>Math.random()<1/8?12+Math.random()*8:.1+Math.random()*.2,
+    names:["Captain Pete's Lost Map","Shipwreck of the Golden Gull","Blackbeard's Back Nine","Cursed Cove Expedition","Sunken Galleon Crew","Map Found in a Bottle"],
+    line:["X marks the spot. Probably.","The map was drawn on a napkin. A good napkin.","Your crew has a shovel and strong feelings."]}
 };
 const PROJ_SLOT = 4*3600000, PROJ_MAX = 6;
 const PTX_N = 4;
@@ -691,14 +714,18 @@ const PTX_STAT = {
   movie:f=>`test screening score ${Math.round(48+f*45)}/100`,
   oil:f=>`${Math.round(400+f*5200).toLocaleString()} feet down, ${Math.round(f*120)} barrels so far`,
   partner:f=>`sales up ${Math.round(3+f*9)}% this week`,
-  art:f=>`last appraisal came in ${Math.round(2+f*14)}% higher`
+  art:f=>`last appraisal came in ${Math.round(2+f*14)}% higher`,
+  space:f=>`${Math.round(f*100)}% of the rocket is built, fuel tank is ${Math.round(20+f*80)}% full`,
+  lotto:f=>`${Math.round(1+f*5)} of 6 numbers look familiar`,
+  meme:f=>`${Math.round(200+f*9000).toLocaleString()} holders, ${Math.round(f*900)} frog memes posted`,
+  treasure:f=>`${Math.round(1+f*9)} shovels broken, ${Math.round(f*60)}% of the map decoded`
 };
 function projTexts(p,t){ const out=[], d=PROJ[p.kind], hit=p.mult>=1, span=p.end-p.at;
   for (let k=1;k<=PTX_N;k++){ const at=p.at+span*k/(PTX_N+1); if (at>t) break;
     const fr=k/(PTX_N+1), honest=r01(p.id,"ptx",k)<.7, mood=p.kind==="partner"?"meh":((hit===honest)?"good":"bad");
     const pool=PTX_MOOD[mood], m=pool[Math.floor(r01(p.id,"pm",k)*pool.length)];
     const sf=mood==="good"?.5+.5*fr:mood==="bad"?.15*fr:.5;
-    const tm=mood==="good"?(p.kind==="oil"||p.kind==="movie"?1.6:2.2):mood==="bad"?.35:p.mult, est=p.amt*(1+(tm-1)*fr)*(1+(r01(p.id,"pv",k)-.5)*.2);
+    const tm=mood==="good"?(PROJ[p.kind].wild?4:p.kind==="oil"||p.kind==="movie"?1.6:2.2):mood==="bad"?.35:p.mult, est=p.amt*(1+(tm-1)*fr)*(1+(r01(p.id,"pv",k)-.5)*.2);
     out.push({t:at,p,e:m[0],text:`${m[1]} We're at ${PTX_STAT[p.kind](sf)}. Your stake looks like about ${money(est)} right now.`}); }
   return out; }
 const allProjTexts = t => (S.proj||[]).flatMap(p=>projTexts(p,t)).sort((a,b)=>b.t-a.t);
@@ -814,7 +841,7 @@ function advance(t){
   credit(inc.total);
   loanRun(from, t);
   if (S.proj && S.proj.length){ S.proj.forEach(p => { if (p.mult < .1) p.mult = .1 + Math.random()*.4; }); const keep=[]; S.plog=S.plog||[]; S.proj.forEach(p=>{ if (p.end<=t){ const g=p.amt*p.mult; S.cash+=g; const d=PROJ[p.kind], good=g>=p.amt;
-      const txt = g<=0 ? `${p.name} flopped. You lost ${money(p.amt)}.` : good ? `${p.name} paid ${money(g)} on ${money(p.amt)} (${+(p.mult).toFixed(2)}x).` : `${p.name} underperformed. You got back ${money(g)} of ${money(p.amt)}.`;
+      const txt = p.mult>=5 ? `🎰 JACKPOT! ${p.name} paid ${money(g)} on ${money(p.amt)} (${Math.round(p.mult*100-100).toLocaleString()}% return)` : g<=0 ? `${p.name} flopped. You lost ${money(p.amt)}.` : good ? `${p.name} paid ${money(g)} on ${money(p.amt)} (${+(p.mult).toFixed(2)}x).` : `${p.name} underperformed. You got back ${money(g)} of ${money(p.amt)}.`;
       S.plog.unshift({t:p.end,text:txt,up:good,e:d.e}); if (S.plog.length>8) S.plog.length=8; tx(g>0?"income":"spend",`Project: ${p.name}`,g-p.amt); toast(txt, true); } else keep.push(p); }); S.proj=keep; }
   if (S.sav && S.sav.length){ const keep=[]; S.sav.forEach(v=>{ if (v.end<=t){ const g=v.p*(1+v.r); S.cash+=g; tx("income","Savings matured",g); toast(`Savings paid out ${money(g)}`, true); } else keep.push(v); }); S.sav=keep; }
   S.pending += inc.total;
@@ -1319,7 +1346,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795163365";
+const BUILD = "1795166669";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1337,12 +1364,12 @@ const LIVE = {
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
-  assets: () => money(assetsVal()+bizVal()),
-  debt: () => money((S.debt||0)+mortDebt()),
+  assets: () => { const x=assetsVal()+bizVal(); return x>=1e6 ? wholeMoney(x) : money(x); },
+  debt: () => { const x=(S.debt||0)+mortDebt(); return x>=1e6 ? wholeMoney(x) : money(x); },
   acctbal: () => money(acctBal()),
   accthr: () => money(acctHour()),
   acctearn: () => money(acctEarned()),
-  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage pays ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h · tap` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN · tap" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
+  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage pays ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
   nextms: () => { const r=rankIdx(); return r>=RANKS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,RANKS[r+1][0]-netWorth()))} to ${RANKS[r+1][1]}`; },
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1363,6 +1390,7 @@ function liveTick(){
     if (k === "nw") el.style.fontSize = v.length > 11 ? "clamp(24px,8vw,32px)" : "";
     if (k === "cash") el.style.color = S.cash < -.005 ? "var(--red)" : "";
   });
+  document.querySelectorAll(".stat > b").forEach(el => { el.style.fontSize=""; let z=18; while (el.scrollWidth>el.clientWidth+1 && z>9){ z-=1; el.style.fontSize=z+"px"; } });
   const hb = document.querySelector('[data-act="hustle"]'); if (hb) hb.disabled = Date.now()-S.shiftAt < 60000;
 }
 
@@ -1447,7 +1475,7 @@ function viewInvest(){
     <div class="lvrow">${hv?`<span class="pill ${pl>=0?"":"r"}">${pl>=0?"Up":"Down"} ${money(Math.abs(pl))} (${pct(basis?hv/basis-1:0)})</span>`:`<span class="pill m">${projLocked()?money(projLocked())+" locked in projects":"You haven't invested yet"}</span>`}${S.realized?`<span class="note">Locked-in profit from sales: ${signed(S.realized)}</span>`:""}</div></section>
   <div class="seg"><button class="${invTab==="stocks"?"on":""}" data-act="invTab" data-arg="stocks">Stocks${mine.length?` <span class="n">${mine.length}</span>`:""}</button><button class="${invTab==="projects"?"on":""}" data-act="invTab" data-arg="projects">Projects${(S.proj||[]).length?` <span class="n">${S.proj.length} running</span>`:""}</button></div>
   ${invTab==="projects"?`<section class="sec"><div class="sechead"><h2>Projects</h2><small>New pitches every few hours</small></div>
-    <div class="list">${projListings().map(L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>pays up to</span><b class="num">${({startup:"3x",movie:"2x",oil:"1.8x",partner:"1.2x",art:"1.6x"})[L.kind]}</b>`,act:"openProj",arg:L.id});}).join("")||`<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`}</div>
+    ${(()=>{const row=L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>pays up to</span><b class="num">${({startup:"3x",movie:"2x",oil:"1.8x",partner:"1.2x",art:"1.6x"})[L.kind]||d.max+"x"}</b>`,act:"openProj",arg:L.id});}; const all=projListings(), safe=all.filter(L=>!PROJ[L.kind].wild), wild=all.filter(L=>PROJ[L.kind].wild); if (!all.length) return `<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`; return `${safe.length?`<div class="lbl">Safe bets</div><div class="list">${safe.map(row).join("")}</div>`:""}${wild.length?`<div class="lbl" style="margin-top:14px">🎰 Long shots, go big or go broke</div><div class="list">${wild.map(row).join("")}</div>`:""}`;})()}
     ${(S.proj||[]).length?`<div class="list" style="margin-top:8px">${S.proj.map(p=>rowHtml({e:PROJ[p.kind].e,title:p.name,sub:`<span class="pill g">Locked</span> <span data-live="proj:${p.id}"></span>`,right:`<b class="num">${money(p.amt)}</b><span>in</span>`})).join("")}</div>`:""}
     ${(S.proj||[]).length?`<div class="sechead" style="margin-top:14px"><h2>Texts</h2><small>From the people with your money</small></div>${(()=>{const tx=allProjTexts(Date.now()).slice(0,8); return tx.length?`<div class="chat">${tx.map(m=>`<div class="bub"><div class="bwho">${PROJ[m.p.kind].e} ${esc(m.p.name)} <span>${ago(m.t)}</span></div><div class="btxt">${m.e} ${esc(m.text)}</div></div>`).join("")}</div>`:`<div class="empty">No texts yet. They'll check in as things happen.</div>`;})()}`:""}
     ${(S.plog||[]).length?`<div class="list" style="margin-top:8px">${S.plog.slice(0,4).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${n.e} ${esc(n.text)}</strong><span>${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Win":"Loss"}</span></div></div>`).join("")}</div>`:""}</section>`:`
@@ -1546,7 +1574,7 @@ function bizQtyPanel(id){
   <div class="amtrow"><span class="dollar">#</span><input id="bqin" data-id="${id}" type="text" inputmode="numeric" placeholder="Type a number" value="${bizQ[id]>1&&![5,10].includes(bizQ[id])?bizQ[id]:""}" autocomplete="off"><button class="btn ghost" data-act="bqset" data-arg="${id}">Set</button></div>
   <div class="btns"><button class="btn" data-act="bizBuyN" data-arg="${id}|${bq}" ${bq<1||bc>S.cash?"disabled":""}><span>${bq<1?"Max 25 locations":"Open "+bq+" for "+money(bc)}</span></button>${o?`<button class="btn ghost" data-act="bizSellN" data-arg="${id}|${sq}">Sell ${sq} +${money(sellValN(id,sq))}</button>`:""}</div>
   
-  ${bq>=1&&bc>S.cash?(()=>{const need=Math.ceil((bc-S.cash)*100)/100, rm=loanRoom(); return `<button class="btn bank" data-act="loanTake" data-arg="${need}" ${need>rm?"disabled":""} style="width:100%">Take out a loan for ${money(need)}</button>`;})():""}`;
+  ${(()=>{ const full=n<25, tot=unitCost(id)+upCost(id,0), rm=loanRoom(), need=Math.ceil((bc-S.cash)*100)/100, short=bq>=1&&bc>S.cash; const b1=short?`<button class="btn bank" data-act="loanTake" data-arg="${need}" style="flex:1" ${need>rm?"disabled":""}>Loan for ${money(need)}</button>`:"", b2=full?`<button class="btn bank" data-act="bizBuyLoan" data-arg="${id}" style="flex:1" ${tot>rm?"disabled":""}>Loan: business + upgrade ${money(tot)}</button>`:""; return (b1||b2)?`<div style="display:flex;gap:8px;margin-top:10px">${b1}${b2}</div>`:""; })()}`;
 }
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
