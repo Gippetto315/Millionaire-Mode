@@ -811,6 +811,8 @@ function perHour(t){
   return v;
 }
 
+const grossHour = t => { t=t||Date.now(); let v=0; Object.keys(S.biz).forEach(id => v += bizRev(id)*modAt(id,t)); S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); }); return v + rentAll(t); };
+
 /* income over [t0,t1] with event modifiers integrated exactly */
 const EXP_SPLIT = [["Business running costs",.55],["Business taxes",.30],["Business insurance",.15]];
 function incomeBetween(t0,t1){
@@ -991,7 +993,7 @@ const A = {
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { if (rem <= 0) return; const x = Math.min(rem, l.d), toP = Math.min(l.p, x*l.p/Math.max(.01,l.d)); l.d -= x; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= x; });
     S.loans = S.loans.filter(l => l.p > .005 && l.d >= .01); loanSync(); if (!S.loans.length) loanClear();
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
-  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.shiftAt=t; S.shifts++; S.earned += pay; S.hsTot=(S.hsTot||0)+pay; if (S.hsOn && !((S.debt||0) > .005) && savCap() >= pay){ acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = t; } c.b += pay; tx("income","Side hustle shift (to savings)",pay); } else { S.cash += pay; tx("income","Side hustle shift",pay); } },
+  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.hsNext = 0; S.shiftAt=t; S.shifts++; S.earned += pay; S.hsTot=(S.hsTot||0)+pay; if (S.hsOn && !((S.debt||0) > .005) && savCap() >= pay){ acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = t; } c.b += pay; tx("income","Side hustle shift (to savings)",pay); } else { S.cash += pay; tx("income","Side hustle shift",pay); } },
   hsSave(){ if (!S.hsOn && (S.debt||0) > .005){ toast("Pay off your loans before saving"); return; } S.hsOn = !S.hsOn; },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
   bizUpN(arg){ const [id,n0]=String(arg).split('|'), n=Math.floor(+n0), o=S.biz[id]; if (!o||!(n>=1)) return; const L=migrateLocs(o); let done=0; for (;done<n;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; done++; } if (done<n) toast(done?`Did ${done} of ${n}. Out of cash`:"Not enough cash"); },
@@ -1025,7 +1027,7 @@ const A = {
 const HUSTLE = [3, 10, 30, 80, 200, 550, 1500, 5000, 18000, 75000];
 const hustleBase = l => HUSTLE[Math.min(l, HUSTLE.length-1)];
 const hustleSure = () => Math.round(hustleBase(S.lvl)*rideX()*100)/100;
-const hustlePay = () => { const b = hustleSure(); return Math.round((b + Math.random()*Math.max(.25, b*.06))*100)/100; };
+const hustlePay = () => { const b = hustleSure(); if (!S.hsNext || S.hsBase !== b){ S.hsBase = b; const sp = Math.min(10, b*.4); S.hsNext = Math.max(.01, Math.round((b + (Math.random()*2-1)*sp)*100)/100); } return S.hsNext; };
 
 /* ================= auctions: live room ================= */
 const RIVALS = {
@@ -1386,7 +1388,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795216800";
+const BUILD = "1795217900";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1404,6 +1406,7 @@ const LIVE = {
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
+  gph: () => signed(grossHour()),
   assets: () => { const x=assetsVal()+bizVal(); return x>=1e6 ? wholeMoney(x) : money(x); },
   debt: () => { const x=(S.debt||0); return x>=1e6 ? wholeMoney(x) : money(x); },
   mortsub: () => mortDebt()>.005 ? `Mortgage owed ${wholeMoney(mortDebt())}` : "",
@@ -1414,7 +1417,7 @@ const LIVE = {
   adv: () => advActive() ? "· "+dur(S.advUntil-Date.now())+" left" : "",
   debtmort: () => mortDebt() > .005 ? `Mortgage ${wholeMoney(mortDebt())}` : "",
   nextms: () => { const r=rankIdx(); return r>=RANKS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,RANKS[r+1][0]-netWorth()))} to ${RANKS[r+1][1]}`; },
-  hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (about +${money(hustleSure())})`; },
+  hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
   pv: u => { const p=S.props.find(x=>x.uid===u); return p?pm(propVal(p)):""; },
   iv: u => { const i=S.items.find(x=>x.uid===u); return i?money(itemVal(i)):""; },
@@ -1452,7 +1455,7 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
+    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> net per hour</span><span class="unit"><b class="num" data-live="gph"></b> gross per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span><span class="unit" data-live="debtmort" style="color:var(--red)"></span></button>
@@ -1602,7 +1605,7 @@ function render(){
 
 /* ================= sheets ================= */
 const advActive = () => (S.advUntil||0) > Date.now();
-const advFee = () => Math.max(25, Math.round(netWorth()*.003));
+const advFee = () => Math.max(25, Math.round(netWorth()*.00025));
 function sheetBiz(id){ return () => {
   const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, L=o?migrateLocs(o):[], lvl=o?L.reduce((a,x)=>a+x,0)/Math.max(1,L.length):0;
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
