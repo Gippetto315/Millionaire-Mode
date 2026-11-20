@@ -135,6 +135,7 @@ html.light .btn.bank{background:linear-gradient(180deg,#5fa4f5,#2a6fd0);color:#f
 .hustle .btn{grid-column:1/-1;min-height:48px}
 .empty{color:var(--muted);font-size:13.5px;padding:14px;border:1px dashed var(--line);border-radius:16px;text-align:center}
 .note{color:var(--dim);font-size:12px}
+.chat{display:flex;flex-direction:column;gap:8px}.bub{align-self:flex-start;max-width:88%;background:var(--surface2);border:1px solid var(--line);border-radius:18px 18px 18px 6px;padding:9px 13px}.bwho{font:700 12px var(--body);color:var(--gold);margin-bottom:3px}.bwho span{color:var(--dim);font-weight:600;margin-left:4px}.btxt{font-size:14px;line-height:1.35;color:var(--text)}
 /* dock */
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:rgba(12,16,14,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px max(10px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-right,0px))}
 .dock nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
@@ -631,7 +632,11 @@ function propRentAvg(p,t){ return propRentFull(p,t)*occAt(p,t); }
 function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
 function renoCost(p){ return Math.round(p.base*(100-p.cond)/100*.18); }
-function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
+const BOOM_BLK = 48*H, BOOM_P = .003, BOOM_RAMP = 14*24*H;
+function boomLog(it,t){ const d=ITEMM[it.id]; if (!d || d.c!=="col" || !it.at) return 0; let L=0; const e0=Math.floor(it.at/BOOM_BLK)+1, e1=Math.floor(t/BOOM_BLK); for (let e=e0;e<=Math.min(e1,e0+800);e++){ if (r01(it.uid||it.id,"boom",e) < BOOM_P){ const f=Math.max(0,Math.min(1,(t-e*BOOM_BLK)/BOOM_RAMP)); L += Math.log(Math.pow(10,1+r01(it.uid||it.id,"bmag",e)*.8))*f*f*(3-2*f); } } return Math.min(L, Math.log(80)); }
+function itemVal(it,t){ t=t||Date.now(); const d=ITEMM[it.id]; return it.base*Math.exp(boomLog(it,t))*wob(it.id,t)*Math.exp(d.a*(t-it.at)/H)*(it.rh||it.rent ? Math.exp(-RENT_WEAR*rentedH(it,t)) : 1); }
+function boomCheck(){ const t=Date.now(); (S.items||[]).forEach(it=>{ const L=boomLog(it,t); if (it.bk==null){ it.bk=L; return; } if (L>it.bk+.5){ const d=ITEMM[it.id]; it.bk=L; toast(`🚀 ${d.n} is climbing fast. Now worth ${money(itemVal(it,t))}`, true); } }); }
+setInterval(()=>{ try{ boomCheck(); }catch(e){} }, 20000);
 function itemCarry(it,t){ return itemVal(it,t)*ITEMM[it.id].carry; }
 function stockVal(){ return Object.entries(S.hold).reduce((a,[s,h]) => a + h.sh*S.stk[s].p, 0); }
 function assetsVal(t){ t=t||Date.now(); return S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>a+itemVal(i,t),0) + stockVal(); }
@@ -675,11 +680,36 @@ const PROJ = {
     line:["Nobody understands it, so it must be valuable.","Your money sits in a cellar, aging.","Experts agree. Some of them."]}
 };
 const PROJ_SLOT = 4*3600000, PROJ_MAX = 6;
+const PTX_N = 4;
+const PTX_MOOD = {
+  good:[["😎","Honestly? We're crushing it."],["🔥","Can't talk long, phones won't stop ringing."],["🥹","I think this is actually working."],["💪","Feeling really good about this one."],["🚀","Buckle up."]],
+  bad:[["😬","Gonna be straight with you. It's rough."],["😓","Not my best week."],["🫠","We're fine. Totally fine."],["😰","Please don't check the numbers yet."],["🙃","Still hopeful. Mostly."]],
+  meh:[["🤷","Hard to say yet."],["😐","Steady. Nothing crazy."]]
+};
+const PTX_STAT = {
+  startup:f=>`${Math.round(40+f*900).toLocaleString()} users, ${Math.round(f*40)} paying`,
+  movie:f=>`test screening score ${Math.round(48+f*45)}/100`,
+  oil:f=>`${Math.round(400+f*5200).toLocaleString()} feet down, ${Math.round(f*120)} barrels so far`,
+  partner:f=>`sales up ${Math.round(3+f*9)}% this week`,
+  art:f=>`last appraisal came in ${Math.round(2+f*14)}% higher`
+};
+function projTexts(p,t){ const out=[], d=PROJ[p.kind], hit=p.mult>=1, span=p.end-p.at;
+  for (let k=1;k<=PTX_N;k++){ const at=p.at+span*k/(PTX_N+1); if (at>t) break;
+    const fr=k/(PTX_N+1), honest=r01(p.id,"ptx",k)<.7, mood=p.kind==="partner"?"meh":((hit===honest)?"good":"bad");
+    const pool=PTX_MOOD[mood], m=pool[Math.floor(r01(p.id,"pm",k)*pool.length)];
+    const sf=mood==="good"?.5+.5*fr:mood==="bad"?.15*fr:.5;
+    const tm=mood==="good"?(p.kind==="oil"||p.kind==="movie"?1.6:2.2):mood==="bad"?.35:p.mult, est=p.amt*(1+(tm-1)*fr)*(1+(r01(p.id,"pv",k)-.5)*.2);
+    out.push({t:at,p,e:m[0],text:`${m[1]} We're at ${PTX_STAT[p.kind](sf)}. Your stake looks like about ${money(est)} right now.`}); }
+  return out; }
+const allProjTexts = t => (S.proj||[]).flatMap(p=>projTexts(p,t)).sort((a,b)=>b.t-a.t);
+function ptxCheck(){ const t=Date.now(), all=allProjTexts(t); if (S.ptxN==null){ S.ptxN=all.length; return; } if (all.length>S.ptxN && all[0]){ toast(`📱 ${all[0].p.name}: ${all[0].e} new text`, true); } S.ptxN=all.length; }
+setInterval(()=>{ try{ ptxCheck(); }catch(e){} }, 15000);
 const projLocked = () => (S.proj||[]).reduce((a,p)=>a+p.amt,0);
 function projListings(){ const t=Date.now(), slot=Math.floor(t/PROJ_SLOT), done=S.projDone||[];
   return Object.keys(PROJ).map(k=>{ const d=PROJ[k], id=slot+"-"+k; if (done.includes(id)) return null;
     return {id,kind:k,name:d.names[Math.floor(r01("pn",k,slot)*d.names.length)],line:d.line[Math.floor(r01("pl",k,slot)*d.line.length)],ends:(slot+1)*PROJ_SLOT}; }).filter(Boolean); }
 const projTiers = () => { const nw=Math.max(netWorth(),100); return [.02,.05,.10].map(f=>Math.max(20,Math.round(nw*f))); };
+const projSmall = () => [20,100,1000,10000,100000].filter(a=>a<projTiers()[0]).slice(-3);
 const savVal = (t) => savVal0(t) + acctBal(t);
 const grossWorth = () => S.cash + assetsVal() + bizVal() + savVal() + projLocked();
 function netWorth(){ return grossWorth() - (S.debt||0) - mortDebt(); }
@@ -760,6 +790,7 @@ function stepStocks(t){
       const ret = x.mu + cyc + x.sd*z;
       st.p = Math.max(x.p*.02, st.p*Math.exp(ret));
       st.hist.push(st.p); if (st.hist.length > 180) st.hist.shift();
+      { const au=S.auto&&S.auto[x.s], hh=S.hold[x.s]; if (au && hh && hh.cost>0){ const r=st.p*hh.sh/hh.cost-1; if ((au.up&&r>=au.up)||(au.dn&&r<=-au.dn)){ try{ const got=hh.sh*st.p; A.stkSell(x.s,1); delete S.auto[x.s]; toast(`🤖 Autopilot sold all ${x.s} for ${money(got)} (${r>=0?"+":""}${Math.round(r*100)}%)`, true); }catch(e){} } } }
       if (Math.abs(z) > 2.6 && target - st.n < 60 && x.s !== "BOND"){
         const up = z > 0, nm = x.n;
         const ups = [`${nm} jumps after a strong earnings report`,`Buyers pile into ${nm}`,`${nm} lands a major new contract`];
@@ -1287,7 +1318,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795147745";
+const BUILD = "1795148291";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1415,8 +1446,9 @@ function viewInvest(){
     <div class="lvrow">${hv?`<span class="pill ${pl>=0?"":"r"}">${pl>=0?"Up":"Down"} ${money(Math.abs(pl))} (${pct(basis?hv/basis-1:0)})</span>`:`<span class="pill m">${projLocked()?money(projLocked())+" locked in projects":"You haven't invested yet"}</span>`}${S.realized?`<span class="note">Locked-in profit from sales: ${signed(S.realized)}</span>`:""}</div></section>
   <div class="seg"><button class="${invTab==="stocks"?"on":""}" data-act="invTab" data-arg="stocks">Stocks${mine.length?` <span class="n">${mine.length}</span>`:""}</button><button class="${invTab==="projects"?"on":""}" data-act="invTab" data-arg="projects">Projects${(S.proj||[]).length?` <span class="n">${S.proj.length} running</span>`:""}</button></div>
   ${invTab==="projects"?`<section class="sec"><div class="sechead"><h2>Projects</h2><small>New pitches every few hours</small></div>
-    <div class="list">${projListings().map(L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>from</span><b class="num">${money(projTiers()[0])}</b>`,act:"openProj",arg:L.id});}).join("")||`<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`}</div>
+    <div class="list">${projListings().map(L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>pays up to</span><b class="num">${({startup:"3x",movie:"2x",oil:"1.8x",partner:"1.2x",art:"1.6x"})[L.kind]}</b>`,act:"openProj",arg:L.id});}).join("")||`<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`}</div>
     ${(S.proj||[]).length?`<div class="list" style="margin-top:8px">${S.proj.map(p=>rowHtml({e:PROJ[p.kind].e,title:p.name,sub:`<span class="pill g">Locked</span> <span data-live="proj:${p.id}"></span>`,right:`<b class="num">${money(p.amt)}</b><span>in</span>`})).join("")}</div>`:""}
+    ${(S.proj||[]).length?`<div class="sechead" style="margin-top:14px"><h2>Texts</h2><small>From the people with your money</small></div>${(()=>{const tx=allProjTexts(Date.now()).slice(0,8); return tx.length?`<div class="chat">${tx.map(m=>`<div class="bub"><div class="bwho">${PROJ[m.p.kind].e} ${esc(m.p.name)} <span>${ago(m.t)}</span></div><div class="btxt">${m.e} ${esc(m.text)}</div></div>`).join("")}</div>`:`<div class="empty">No texts yet. They'll check in as things happen.</div>`;})()}`:""}
     ${(S.plog||[]).length?`<div class="list" style="margin-top:8px">${S.plog.slice(0,4).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${n.e} ${esc(n.text)}</strong><span>${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Win":"Loss"}</span></div></div>`).join("")}</div>`:""}</section>`:`
   <section class="sec"><div class="sechead"><h2>What you own</h2><small>${mine.length} of ${STK.length}</small></div>
     ${mine.length?`<div class="list">${mine.map(x=>{const st=S.stk[x.s],h=S.hold[x.s],v=h.sh*st.p,g=v-h.cost;
@@ -1436,8 +1468,9 @@ function sheetProj(){ return () => { const L = projListings().find(x=>x.id===cur
   <p class="note" style="margin-top:0">${esc(L.line)}</p>
   ${kv([["Locked for",d.lock+" hours"],["Odds",d.odds],["Payout",d.range],["This pitch ends in",dur(L.ends-Date.now())]])}
   <div class="lbl">How much do you put in?</div>
+  ${projSmall().length?`<div class="btns three" style="margin-bottom:8px">${projSmall().map(a=>`<button class="btn stk ghost" data-act="projPut" data-arg="${L.id}|${a}" ${a>S.cash||full?"disabled":""}><span>${money(a)}</span><small>Small bet</small></button>`).join("")}</div>`:""}
   <div class="btns three">${projTiers().map(a=>`<button class="btn stk" data-act="projPut" data-arg="${L.id}|${a}" ${a>S.cash||full?"disabled":""}><span>${money(a)}</span><small>Put in</small></button>`).join("")}</div>
-  <div class="amtrow" style="margin-top:10px"><span class="dollar">$</span><input id="projamt" type="text" inputmode="decimal" placeholder="Or type your own amount" value="${esc(projAmtV)}" autocomplete="off"><button class="btn" data-act="projPutC" ${full?"disabled":""}>Put in</button></div>
+  <div class="amtrow" style="margin-top:10px"><span class="dollar">$</span><input id="projamt" type="text" inputmode="decimal" placeholder="Any amount, $1 and up" value="${esc(projAmtV)}" autocomplete="off"><button class="btn" data-act="projPutC" ${full?"disabled":""}>Put in</button></div>
   <p class="note">${full?`You're already running ${PROJ_MAX} projects.`:"Your money is locked until the timer ends, and you learn the result then, even if you're away."}</p>`; }; }
 const estTxt = L => `${money(L.lo,{whole:true})} to ${money(L.hi,{whole:true})}`;
 function lotCard(L){
@@ -1564,6 +1597,9 @@ function sheetStock(s){ return () => {
   <p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your cash (${money(S.cash)}) to put into ${s}. You'll confirm before anything is bought.</p>
   <div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkBuy" data-arg="${s}|${f}" ${S.cash<.01?"disabled":""}><span>${n}</span><small>${money(S.cash*f)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="stkamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(stkAmt)}" autocomplete="off"><button class="btn" data-act="stkBuyAmt" data-arg="${s}">Buy</button></div>
+  ${h?`<div class="lbl">Autopilot</div><p class="note" style="margin-top:-8px;color:var(--muted)">Your computer watches ${s} every minute, even while you're away, and sells it all if it hits your number.</p>
+  <div class="note" style="margin-bottom:6px">Sell when it's up</div><div class="btns four" style="margin-bottom:10px">${[[0,"Off"],[.2,"+20%"],[.5,"+50%"],[1,"+100%"]].map(([v,n])=>`<button class="btn stk ${((S.auto&&S.auto[s]&&S.auto[s].up)||0)===v?"gold":"ghost"}" data-act="stkAuto" data-arg="${s}|up|${v}"><span>${n}</span></button>`).join("")}</div>
+  <div class="note" style="margin-bottom:6px">Bail out if it drops</div><div class="btns four" style="margin-bottom:10px">${[[0,"Off"],[.1,"-10%"],[.25,"-25%"],[.4,"-40%"]].map(([v,n])=>`<button class="btn stk ${((S.auto&&S.auto[s]&&S.auto[s].dn)||0)===v?"gold":"ghost"}" data-act="stkAuto" data-arg="${s}|dn|${v}"><span>${n}</span></button>`).join("")}</div>`:""}
   ${h?`<div class="lbl">Sell</div><p class="note" style="margin-top:-8px;color:var(--muted)">Pick how much of your ${s} (${money(val)}) to sell. You'll confirm before anything is sold.</p><div class="btns four">${[[.1,"10%"],[.25,"25%"],[.5,"50%"],[1,"All"]].map(([f,n])=>`<button class="btn stk" data-act="stkSell" data-arg="${s}|${f}"><span>${n}</span><small>${money(val*f)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="stksell" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(stkSellAmt)}" autocomplete="off"><button class="btn" data-act="stkSellAmt" data-arg="${s}">Sell</button></div>`:""}
   <p class="note">Simulated prices. Returns are never guaranteed.</p>`;
@@ -1904,6 +1940,7 @@ document.addEventListener("click", e => {
     case "offNo": run(()=>declineOffer(arg)); break;
     case "itemBuy": { const [c,l]=arg.split("|"); run(()=>A.itemBuy(c,l)); const i=S.items[S.items.length-1]; if (i && Date.now()-i.at<2000) openSheet(sheetItem(i.uid)); break; }
     case "stkBuy": { const [s,f]=arg.split("|"); run(()=>A.stkBuy(s,+f)); break; }
+    case "stkAuto": { const [sy,k,v]=arg.split("|"); S.auto=S.auto||{}; const o=S.auto[sy]||(S.auto[sy]={}); o[k]=+v; if (!o.up&&!o.dn) delete S.auto[sy]; save&&save(); drawSheet(); break; }
     case "stkSell": { const [s,f]=arg.split("|"); run(()=>A.stkSell(s,+f)); break; }
     case "stkBuyAmt": { const [s,a]=arg.split("|"); run(()=>A.stkBuy(s, Math.min(1, +a/S.cash))); stkAmt=""; drawSheet(); break; }
     case "stkSellAmt": { const [s,a]=arg.split("|"); const h=S.hold[s]; if (h) run(()=>A.stkSell(s, Math.min(1, +a/(h.sh*S.stk[s].p)))); stkSellAmt=""; drawSheet(); break; }
