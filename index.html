@@ -1346,7 +1346,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795166669";
+const BUILD = "1795166826";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1365,11 +1365,12 @@ const LIVE = {
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
   assets: () => { const x=assetsVal()+bizVal(); return x>=1e6 ? wholeMoney(x) : money(x); },
-  debt: () => { const x=(S.debt||0)+mortDebt(); return x>=1e6 ? wholeMoney(x) : money(x); },
+  debt: () => { const x=(S.debt||0); return x>=1e6 ? wholeMoney(x) : money(x); },
+  mortsub: () => mortDebt()>.005 ? `Mortgage owed ${wholeMoney(mortDebt())}` : "",
   acctbal: () => money(acctBal()),
   accthr: () => money(acctHour()),
   acctearn: () => money(acctEarned()),
-  debtsub: () => !(S.debt > .005) && mortDebt() > .005 ? `Mortgage pays ${money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))}/h` : S.debt > .005 ? (overdrawn() ? "OVERDRAWN" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
+  debtsub: () => S.debt > .005 ? (overdrawn() ? "OVERDRAWN" : `Pay ${money(loanDueNow())} in ${dur((S.dueAt||0)-Date.now())}`) : "Tap for the bank",
   nextms: () => { const r=rankIdx(); return r>=RANKS.length-1 ? "Top rank reached. Keep building." : `${money(Math.max(0,RANKS[r+1][0]-netWorth()))} to ${RANKS[r+1][1]}`; },
   hustle: () => { const w = 60000-(Date.now()-S.shiftAt); return w>0 ? `Ready in ${dur(w)}` : `Work a shift (+${money(hustlePay())})`; },
   win: () => dur(WIN - Date.now()%WIN),
@@ -1411,8 +1412,8 @@ function viewHome(){
   <div class="stats">
     <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
-    <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
-    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)+mortDebt()>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
+    <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b><span class="unit" data-live="mortsub" style="color:var(--red)"></span></button>
+    <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span></button>
   </div>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
