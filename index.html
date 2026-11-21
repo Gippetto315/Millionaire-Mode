@@ -813,6 +813,8 @@ function perHour(t){
 
 const grossHour = t => { t=t||Date.now(); let v=0; Object.keys(S.biz).forEach(id => v += bizRev(id)*modAt(id,t)); S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); }); return v + rentAll(t); };
 
+const netHour = () => perHour() - ((S.debt||0) > .005 ? loanDueNow()/LOAN_EVERY_H : 0);
+
 /* income over [t0,t1] with event modifiers integrated exactly */
 const EXP_SPLIT = [["Business running costs",.55],["Business taxes",.30],["Business insurance",.15]];
 function incomeBetween(t0,t1){
@@ -954,7 +956,7 @@ function itemListings(c){
 function propListings(){
   const w = win(), t = Date.now();
   const lad = []; PROP.forEach(d => { (lad[d.g]||(lad[d.g]=[])).push(d); }); const tb = i => Math.min(...lad[i].map(d=>d.base));
-  if (!S.plAnc || S.plAnc.w !== w){ let a = 0; lad.forEach((g,i) => { if (tb(i)*.95 <= Math.max(0,S.cash)/MORT_DOWNS[0]+2000) a = i; }); let m = a; lad.forEach((g,i) => { if (tb(i) <= 3*Math.max(150000,Math.max(0,S.cash)/MORT_DOWNS[0]+2000)) m = Math.max(m,i); }); S.plAnc = {w, a, m}; }
+  if (!S.plAnc || S.plAnc.w !== w){ let a = 0; lad.forEach((g,i) => { if (tb(i)*.95 <= Math.max(0,mortCap()-mortDebt())+2000) a = i; }); let m = a; lad.forEach((g,i) => { if (tb(i) <= 3*Math.max(150000,Math.max(0,mortCap()-mortDebt())+2000)) m = Math.max(m,i); }); S.plAnc = {w, a, m}; }
   const A = S.plAnc.a, M = S.plAnc.m, tiers = [0, Math.min(1,M), Math.floor(A/2), Math.max(0,A-1), A, A, Math.min(M,A+1), Math.min(M,A+2)];
   const out = [];
   for (let k=0; k<tiers.length; k++){
@@ -1388,7 +1390,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795224900";
+const BUILD = "1795231800";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1407,7 +1409,7 @@ const LIVE = {
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
   gph: () => signed(grossHour()),
-  nph: () => signed(perHour()),
+  nph: () => signed(netHour()),
   assets: () => { const x=assetsVal()+bizVal(); return x>=1e6 ? wholeMoney(x) : money(x); },
   debt: () => { const x=(S.debt||0); return x>=1e6 ? wholeMoney(x) : money(x); },
   mortsub: () => mortDebt()>.005 ? `Mortgage owed ${wholeMoney(mortDebt())}` : "",
@@ -1433,7 +1435,7 @@ const LIVE = {
 function liveTick(){
   document.querySelectorAll("[data-live]").forEach(el => {
     const [k, a] = el.dataset.live.split(":"); const f = LIVE[k]; if (!f) return; const v = f(a); if (el.textContent !== v) el.textContent = v;
-    if (k === "nph") el.style.color = perHour() < 0 ? "var(--red)" : "";
+    if (k === "nph") el.style.color = netHour() < 0 ? "var(--red)" : "";
     if (k === "cph") el.style.color = perHour() < 0 ? "var(--red)" : "var(--em)";
     if (k === "nw") el.style.fontSize = v.length > 11 ? "clamp(24px,8vw,32px)" : "";
     if (k === "cash") el.style.color = S.cash < -.005 ? "var(--red)" : "";
@@ -1464,7 +1466,7 @@ function viewHome(){
   </div>
   <section class="sec"><div class="card hustle"><button class="btn" data-act="hustle" data-live="hustle"></button><div class="tile gold">💼</div><div class="rmain"><strong>Side hustle</strong><span>${hasRide()?`Delivery gigs with your ride: ${rideX()}x pay`:"One paid shift a minute. A bike adds a quarter, a scooter half, a car doubles it, a supercar triples it"}${S.lvl<MS.length-1?` · Next rank pays ${money(hustleBase(S.lvl+1)*rideX())}`:""}</span></div>
     <button class="chip" data-act="hsSave" style="grid-column:1/-1;justify-self:start;padding:6px 12px;font-size:12px;background:#2b2e34;border-color:#3a3e46;color:${S.hsOn?"#d9dce2":"#8b909b"}">${S.hsOn?"Shifts to savings: On":"Shifts to savings: Off"}</button>
-    <div class="lines" style="grid-column:1/-1"><div><span>Made from side hustle</span><b class="num up">${money(S.hsTot||0)}</b></div></div>${S.hsOn&&(S.debt||0)>.005?`<p class="note" style="grid-column:1/-1">Paused while you owe the bank. Shifts go to cash until your loans are paid.</p>`:""}</div></section>
+    <div class="lines" style="grid-column:1/-1"><div><span>Current savings</span><b class="num" data-live="acctbal"></b></div></div>${S.hsOn&&(S.debt||0)>.005?`<p class="note" style="grid-column:1/-1">Paused while you owe the bank. Shifts go to cash until your loans are paid.</p>`:""}</div></section>
   <section class="sec"><div class="sechead"><h2>Wealth</h2><small>Last 48h</small></div>
     <div class="card chart">${wealthChart(hv)}<div class="chartfoot"><span>${money(Math.min(...hv))}</span><span>${money(Math.max(...hv))}</span></div></div></section>
   ${deals.length?`<section class="sec"><div class="sechead"><h2>Opportunities</h2><small>Below market value</small></div><div class="list">${deals.map(l=>{const d=ITEMM[l.id];return rowHtml({e:d.e,title:d.n,sub:`Ask ${money(l.ask)} · worth ${money(l.val)}`,right:`<span class="pill">${Math.round((1-l.ask/l.val)*100)}% off</span>`,act:"openListing",arg:d.c+"|"+l.lid,gold:d.c==="col"});}).join("")}</div></section>`:""}
@@ -1862,7 +1864,7 @@ function sheetActivity(){ return () => `<div class="shead"><div class="tile gold
 function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Math.min(d,S.cash), f=cashFlow(), sg=x=>Math.abs(x)<.005?money(0):`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}</i>`;
   const assets=assetsVal()+bizVal();
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>The Bank</h3><p>All your money in one place</p></div></div>
-  <div class="btns three" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">${[["money","Money"],["loans","Loans"],["save","Savings"],["mort","Mortgages"]].map(([k,n])=>`<button class="btn stk ${bankTab===k?"":"ghost"}" data-act="bankTab" data-arg="${k}"><span>${n}</span></button>`).join("")}</div>
+  <div class="btns three" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">${[["money","Money"],["save","Savings"],["loans","Loans"],["mort","Mortgages"]].map(([k,n])=>`<button class="btn stk ${bankTab===k?"":"ghost"}" data-act="bankTab" data-arg="${k}"><span>${n}</span></button>`).join("")}</div>
   ${bankTab==="money"?`
   <div class="lbl">Your money</div>
   ${kv([["Net worth",money(netWorth())],["Cash",money(S.cash)],["Assets",money(assets)],["Loans owed",`<i style="font-style:normal" class="${d>0?"down":""}">${money(d)}</i>`],...(mortDebt()>.005?[["Mortgages owed",`<i style="font-style:normal" class="down">${money(mortDebt())}</i>`],["Total debt",`<i style="font-style:normal" class="down">${money(d+mortDebt())}</i>`]]:[]),["Lifetime earnings",money(S.earned)],["Peak net worth",money(S.peak)]])}
