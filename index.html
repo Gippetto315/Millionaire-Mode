@@ -420,6 +420,7 @@ const PROP = [
   {id:"farm",n:"Working Farm",e:"🚜",t:4,base:650000,g:5},
   {id:"beach",n:"Beach House",e:"🏖️",t:4,base:700000,g:5},
   {id:"fourplex",n:"Fourplex",e:"🏢",t:5,base:700000,g:5},
+  {id:"condobld",n:"Condo Building (8 units)",e:"🏙️",t:5,base:1500000,g:6},
   {id:"cattle",n:"Cattle Ranch",e:"🐄",t:5,base:1400000,g:6},
   {id:"vineyard",n:"Vineyard",e:"🍇",t:5,base:1800000,g:6},
   {id:"chalet",n:"Ski Chalet",e:"🎿",t:5,base:1100000,g:6},
@@ -611,7 +612,7 @@ const RENT_RATE = .0209, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
-const UNITS = {duplex:2, fourplex:4, aptbld:12};
+const UNITS = {duplex:2, fourplex:4, condobld:8, aptbld:12};
 const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
 const homePct = p => 1 + Math.floor((PROPM[p.type].g||0)/3);
 function homeBonus(){ const h = homeProp(); return h ? 1 + homePct(h)/100 : 1; }
@@ -1278,7 +1279,7 @@ const EVENTS = [
   {id:"surge", w:3, ok:()=>ownedBiz().length>0, make(){
     const id=pickBiz(), b=BIZM[id], rev=bizRev(id);
     return {icon:"🔥",title:"Customer surge",text:`A local influencer posted about your ${b.n}. The line is out the door.`,choices:[
-      {label:`Hire temp staff (${money(rev*.4)})`,cost:rev*.4,run(){ spend(rev*.4,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H,why:`An influencer sent a crowd to your ${b.n} and you hired temp staff.`}); return `${b.n} earns double revenue for the next hour.`; }},
+      {label:`Hire temp staff (${money(rev*.15)})`,cost:rev*.15,run(){ spend(rev*.15,"event",`Temp staff at ${b.n}`); S.mods.push({b:id,m:2,from:Date.now(),until:Date.now()+H,why:`An influencer sent a crowd to your ${b.n} and you hired temp staff.`}); return `${b.n} earns double revenue for the next hour.`; }},
       {label:"Ride the wave",run(){ const g=rev*.5; gain(g,"event",`Surge sales at ${b.n}`); S.earned+=g; return `Your current staff squeezed out ${money(g)} in extra sales.`; }}
     ]};
   }},
@@ -1393,7 +1394,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795246386";
+const BUILD = "1795275624";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1613,7 +1614,7 @@ function render(){
 /* ================= sheets ================= */
 const advActive = () => (S.advUntil||0) > Date.now();
 const ADV_L = ["Best pick","Top 2","Top 3","Top 4"], advN = () => S.advN||2;
-const advFee = n => { const k = (n||advSel)-1, m = [.6,1,1.4,2][k] || 1, f = [.25,.4,.6,.85][k] || .4; return Math.max(Math.round(25*m), Math.round(Math.max(0,perHour())*f)); };
+const advFee = n => { const k = (n||advSel)-1, m = [.6,1,1.4,2][k] || 1, f = [.125,.2,.3,.425][k] || .2; return Math.max(Math.round(12.5*m), Math.round(Math.max(0,perHour())*f)); };
 function sheetBiz(id){ return () => {
   const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, L=o?migrateLocs(o):[], lvl=o?L.reduce((a,x)=>a+x,0)/Math.max(1,L.length):0;
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
