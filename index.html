@@ -811,8 +811,6 @@ function perHour(t){
   return v;
 }
 
-const grossHour = t => { t=t||Date.now(); let v=0; Object.keys(S.biz).forEach(id => v += bizRev(id)*modAt(id,t)); S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); }); return v + rentAll(t); };
-
 /* income over [t0,t1] with event modifiers integrated exactly */
 const EXP_SPLIT = [["Business running costs",.55],["Business taxes",.30],["Business insurance",.15]];
 function incomeBetween(t0,t1){
@@ -1005,7 +1003,7 @@ const A = {
   bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*SELL; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
   propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (houseShort(L.ask)) return; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   bizBuyLoan(id){ const o=S.biz[id]; if ((o?o.n:0)>=25) return; const c=unitCost(id), u=upCost(id,0), tot=Math.round((c+u)*100)/100; if (tot>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } const c0=S.cash; A.loanTake(tot); if (S.cash<c0+tot-1e-6) return; S.lb=Math.max(0,(S.lb||0)-tot); const n0=(o?o.n:0); A.bizBuy(id); const b=S.biz[id]; if (!b||b.n<=n0) return; const L=migrateLocs(b); A.bizUp(id,L.length-1); },
-  advHire(){ const f=advFee(); if (!spend(f,"buy","Business advisor (1 hour)")) return; S.advUntil=Date.now()+H; toast("🧑‍💼 Advisor hired for 1 hour"); },
+  advHire(){ const f=advFee(); if (!spend(f,"buy",`Business advisor (${ADV_L[advSel-1]}, 1 hour)`)) return; S.advUntil=Date.now()+H; S.advN=advSel; toast("🧑‍💼 Advisor hired for 1 hour"); },
   propRenoLoan(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (c>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } A.loanTake(c); S.lb=Math.max(0,(S.lb||0)-c); if (!spend(c,"buy",`Renovation (loan): ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (S.home===u){ toast("You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
@@ -1027,7 +1025,7 @@ const A = {
 const HUSTLE = [3, 10, 30, 80, 200, 550, 1500, 5000, 18000, 75000];
 const hustleBase = l => HUSTLE[Math.min(l, HUSTLE.length-1)];
 const hustleSure = () => Math.round(hustleBase(S.lvl)*rideX()*100)/100;
-const hustlePay = () => { const b = hustleSure(); if (!S.hsNext || S.hsBase !== b){ S.hsBase = b; const sp = Math.min(10, b*.4); S.hsNext = Math.max(.01, Math.round((b + (Math.random()*2-1)*sp)*100)/100); } return S.hsNext; };
+const hustlePay = () => { const b = hustleSure(); if (!S.hsNext || S.hsBase !== b){ S.hsBase = b; const sp = b*.01; S.hsNext = Math.max(.01, Math.round((b + (Math.random()*2-1)*sp)*100)/100); } return S.hsNext; };
 
 /* ================= auctions: live room ================= */
 const RIVALS = {
@@ -1388,7 +1386,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795217900";
+const BUILD = "1795224500";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1406,7 +1404,6 @@ const LIVE = {
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
   cph: () => signed(perHour()),
-  gph: () => signed(grossHour()),
   assets: () => { const x=assetsVal()+bizVal(); return x>=1e6 ? wholeMoney(x) : money(x); },
   debt: () => { const x=(S.debt||0); return x>=1e6 ? wholeMoney(x) : money(x); },
   mortsub: () => mortDebt()>.005 ? `Mortgage owed ${wholeMoney(mortDebt())}` : "",
@@ -1455,8 +1452,8 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> net per hour</span><span class="unit"><b class="num" data-live="gph"></b> gross per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
-    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
+    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> net per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
+    <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="cph" style="color:var(--em)"></b> net per hour</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span><span class="unit" data-live="debtmort" style="color:var(--red)"></span></button>
   </div>
@@ -1489,7 +1486,7 @@ function viewMarket(){
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
   } else if (mcat==="biz"){
     const pb = b => unitCost(b.id)/Math.max(1e-9,newLocNet(b.id)), open_ = BIZ.filter(b=>b.t<=S.lvl&&(S.biz[b.id]?S.biz[b.id].n:0)<25&&newLocNet(b.id)>0), rank_ = open_.slice().sort((a,b)=>pb(a)-pb(b)), bestB = rank_[0]||null, secondB = rank_[1]||null, thirdB = rank_[2]||null, fourthB = rank_[3]||null;
-    body = `${advActive()?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>🧑‍💼 Advisor on call</b> <span class="note" data-live="adv"></span><p class="note" style="margin:6px 0 0">⭐ marks the business that pays itself back fastest right now, 🥈 the runner-up, 🥉 third, then 4th. Each location you own makes the next one 10% pricier, so the best pick changes as you grow.</p></div>`:`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>🧑‍💼 Business advisor</b><p class="note" style="margin:6px 0 10px">Your advisor ranks every business by how fast it pays itself back, then tells you which to buy first. One hour of advice costs ${money(advFee())}.</p><button class="btn gold" data-act="advHire" ${S.cash<advFee()?"disabled":""}>Hire for 1 hour · ${money(advFee())}</button></div>`}<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp); const star=advActive()&&!lock&&bestB&&bestB.id===b.id?`<span class="pill">⭐ Best buy</span> `:advActive()&&!lock&&secondB&&secondB.id===b.id?`<span class="pill">🥈 2nd best</span> `:advActive()&&!lock&&thirdB&&thirdB.id===b.id?`<span class="pill">🥉 3rd best</span> `:advActive()&&!lock&&fourthB&&fourthB.id===b.id?`<span class="pill">4th best</span> `:""; const back=advActive()&&!lock&&newLocNet(b.id)>0&&(!o||o.n<25)?` · back in ${dur(pb(b)*H)}`:"";
+    body = `${advActive()?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>🧑‍💼 Advisor on call · ${ADV_L[advN()-1]}</b> <span class="note" data-live="adv"></span><p class="note" style="margin:6px 0 0">⭐ marks the business that pays itself back fastest right now, 🥈 the runner-up, 🥉 third, then 4th. Each location you own makes the next one 10% pricier, so the best pick changes as you grow.</p></div>`:`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>🧑‍💼 Business advisor</b><p class="note" style="margin:6px 0 10px">Your advisor ranks every business by how fast it pays itself back, then tells you which to buy first. Pick how many top businesses you want ranked. The more you want, the more it costs.</p><select id="advsel" style="width:100%;padding:12px;margin-bottom:10px;border-radius:12px;background:var(--surface2);color:var(--text);border:1px solid var(--line);font:700 14px var(--body)">${ADV_L.map((n,i)=>`<option value="${i+1}" ${advSel===i+1?"selected":""}>${n} · ${money(advFee(i+1))}</option>`).join("")}</select><button class="btn gold" data-act="advHire" ${S.cash<advFee()?"disabled":""}>Hire ${ADV_L[advSel-1]} for 1 hour · ${money(advFee())}</button></div>`}<div class="list">${BIZ.map(b=>{const o=S.biz[b.id],lock=b.t>S.lvl; const net=(b.rev-b.exp); const star=advActive()&&!lock&&bestB&&bestB.id===b.id?`<span class="pill">⭐ Best buy</span> `:advActive()&&!lock&&advN()>=2&&secondB&&secondB.id===b.id?`<span class="pill">🥈 2nd best</span> `:advActive()&&!lock&&advN()>=3&&thirdB&&thirdB.id===b.id?`<span class="pill">🥉 3rd best</span> `:advActive()&&!lock&&advN()>=4&&fourthB&&fourthB.id===b.id?`<span class="pill">4th best</span> `:""; const back=advActive()&&!lock&&newLocNet(b.id)>0&&(!o||o.n<25)?` · back in ${dur(pb(b)*H)}`:"";
       return rowHtml({e:b.e,title:b.n,locked:lock,sub:lock?`Unlocks at ${msName(b.t)}`:star+(o?`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · ${signed(bizNetAt(b.id,Date.now()))}/h${modAt(b.id,Date.now())!==1?" "+evTags(b.id):""}`:`Earns ~${money(net)}/h per location`)+back,right:lock?`<span class="pill m">Locked</span>`:`<b class="num">${money(unitCost(b.id))}</b><span>${o?(o.n>=25?"all 25 open":"#"+(o.n+1)):"first"} · +${money(newLocNet(b.id))}/h</span>`,act:lock?"":"openBiz",arg:b.id});}).join("")}</div>`;
   } else if (mcat==="prop"){
     const L=propListings();
@@ -1605,7 +1602,8 @@ function render(){
 
 /* ================= sheets ================= */
 const advActive = () => (S.advUntil||0) > Date.now();
-const advFee = () => Math.max(25, Math.round(netWorth()*.00025));
+const ADV_L = ["Best pick","Top 2","Top 3","Top 4"], advN = () => S.advN||2;
+const advFee = n => { const m = [.6,1,1.4,2][(n||advSel)-1] || 1; return Math.max(Math.round(25*m), Math.round(netWorth()*.0025*m)); };
 function sheetBiz(id){ return () => {
   const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, L=o?migrateLocs(o):[], lvl=o?L.reduce((a,x)=>a+x,0)/Math.max(1,L.length):0;
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
@@ -1838,7 +1836,7 @@ function sheetDev(){ return () => { const cur = devPick>=0 ? VEND[devPick] : nul
   <div class="vm-feet"><i></i><i></i></div>
   </div>
   <button class="btn gold" data-act="close" style="width:100%;margin-top:14px">BACK TO THE MONEY</button>`; }; }
-let marginOpen = false, upNV = "", loanAmt = "", loanPayV = "", savAmt = "", savDays = 7, acctAmtV = "", mortXV = "", bankTab = "money", stkRange = 2;
+let marginOpen = false, upNV = "", loanAmt = "", loanPayV = "", savAmt = "", savDays = 7, acctAmtV = "", mortXV = "", bankTab = "money", stkRange = 2, advSel = 2;
 function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   Object.keys(S.biz).forEach(id => { biz += bizNetAt(id,t); bx += bizExp(id); });
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) prop += propRent(p,t); up += propCost(p,t); });
@@ -1903,12 +1901,13 @@ let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
+document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+e.target.value; render(); } });
 document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",acctamt:"acctDepC",mortx:"propMortXC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
   const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
-  if (act==="advHire"){ const f=advFee(); return {e:"🧑‍💼",t:"Hire a business advisor?",l:[["Fee",money(f)],["Lasts","1 hour"]],n:"Your advisor shows which business pays itself back fastest, updated live as prices rise.",yes:`Pay ${money(f)}`}; }
+  if (act==="advHire"){ const f=advFee(); return {e:"🧑‍💼",t:"Hire a business advisor?",l:[["Covers",ADV_L[advSel-1]],["Fee",money(f)],["Lasts","1 hour"]],n:"Your advisor shows which business pays itself back fastest, updated live as prices rise.",yes:`Pay ${money(f)}`}; }
   if (act==="bizBuyLoan"){ const b=BIZM[arg], o=S.biz[arg], c=unitCost(arg), u=upCost(arg,0), tot=c+u, pay1=tot*LOAN_PART*(1+LOAN_TIERS[1][1]); return {e:b.e,t:`Borrow to open ${b.n}?`,l:[["Business",money(c)],["+1 upgrade",money(u)],["Loan",money(tot)],["Repaid within "+LOAN_GRACE_H+"h",money(tot*(1+LOAN_FEE))],["Every "+LOAN_EVERY_H+" hours","about "+money(pay1)+" and up"]],n:"A regular bank loan covers the business and its first upgrade, so it opens at level 1. Pay it back fast and you pay far less. Miss a payment and the 15% fee applies.",yes:`Borrow ${money(tot)}`}; }
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {alt:(o?o.n:0)<25&&c+upCost(arg,0)<=loanRoom()+1e-6?{label:`Borrow it: business + 1 upgrade for ${money(c+upCost(arg,0))}`,act:"bizBuyLoan",arg,cls:"bank"}:null,e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
   if (act==="savPut"){ const [a0,d0]=arg.split("|"), d=+d0, a=+a0, r=savRate(d); return {e:"🐷",t:`Lock away ${money(a)}?`,l:[["Locked for",d+" day"+(d>1?"s":"")],["Interest",(r*100).toFixed(1).replace(/\.0$/,"")+"%"],["You get back",money(a*(1+r))],["Unlocks",new Date(Date.now()+d*24*H).toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit"})]],n:after(-a)+" You can't spend it until then. Breaking early loses the interest plus a 5% fee.",yes:`Lock ${money(a)}`}; }
