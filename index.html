@@ -659,7 +659,7 @@ const mortCap = () => 4*Math.max(0,netWorth());
 const OCC_BLK = 8*H;
 function occAt(p,t){ return Math.max(.05, Math.min(1, (p.cond==null?100:p.cond)/100)); }
 function occHours(p,a,b){ let h=0, t=a; while (t<b){ const e=Math.min(b,(Math.floor(t/OCC_BLK)+1)*OCC_BLK); h += occAt(p,t)*(e-t)/H; t=e; } return h; }
-function propRentFull(p,t){ return propVal(p,t)*.0091; }
+function propRentFull(p,t){ return propVal(p,t)*.0125; }
 function propRentAvg(p,t){ return propRentFull(p,t)*occAt(p,t); }
 function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
@@ -1390,7 +1390,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795232200";
+const BUILD = "1795241800";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1650,7 +1650,7 @@ function sheetProp(u){ return () => {
 function sheetPListing(lid){ return () => {
   const l=propListings().find(x=>x.lid===lid); if (!l) return null; const d=PROPM[l.type], p={...l};
   return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${d.n}</h3><p>${propCond(l.cond)} condition</p></div></div>
-  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",pm(l.val)],["Renovation cost",l.cond<100?pm(renoCost(p)):"None"],["Value renovated",pm(propBaseVal({...p,cond:100})*hecon(Date.now()))],["Rent if leased",pm(propRentAvg(p))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentAvg(p)-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"]])}
+  ${kv([["Asking price",wholeMoney(l.ask)],["Market value",pm(l.val)],["Renovation cost",l.cond<100?pm(renoCost(p)):"None"],["Value renovated",pm(propBaseVal({...p,cond:100})*hecon(Date.now()))],["Rent once renovated",pm(propRentFull({...p,cond:100}))+"/h<br><small>"+payH(l.ask+(l.cond<100?renoCost(p):0),propRentFull({...p,cond:100})-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"]])}
   <button class="btn" data-act="propBuy" data-arg="${lid}" ${l.ask>ownCash()?"disabled":""}>Pay cash · ${wholeMoney(l.ask)}</button>
   <div class="lbl" style="margin-top:12px">Or get a mortgage for:</div>
   <div class="btns three" style="grid-template-columns:repeat(4,1fr)">${[.25,.5,.75,1].map(f=>{const am=Math.round(l.ask*f*100)/100, dn=l.ask-am; return `<button class="btn stk bank" data-act="propMort" data-arg="${lid}|${am}" ${dn>ownCash()+1e-6?"disabled":""}><span>${Math.round(f*100)}%</span><small>${pm(am)}</small><small>${mortAPR(am,l.ask).toFixed(2).replace(/\.?0+$/,"")}% · ${pm(am*payF(aprI(mortAPR(am,l.ask))))}/h</small></button>`;}).join("")}</div>
