@@ -1390,7 +1390,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795231800";
+const BUILD = "1795232200";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1610,7 +1610,7 @@ function render(){
 /* ================= sheets ================= */
 const advActive = () => (S.advUntil||0) > Date.now();
 const ADV_L = ["Best pick","Top 2","Top 3","Top 4"], advN = () => S.advN||2;
-const advFee = n => { const m = [.6,1,1.4,2][(n||advSel)-1] || 1; return Math.max(Math.round(25*m), Math.round(netWorth()*.0025*m)); };
+const advFee = n => { const k = (n||advSel)-1, m = [.6,1,1.4,2][k] || 1, f = [.25,.4,.6,.85][k] || .4; return Math.max(Math.round(25*m), Math.round(Math.max(0,perHour())*f)); };
 function sheetBiz(id){ return () => {
   const b=BIZM[id], o=S.biz[id], t=Date.now(), n=o?o.n:0, L=o?migrateLocs(o):[], lvl=o?L.reduce((a,x)=>a+x,0)/Math.max(1,L.length):0;
   const rev=o?bizRev(id)*modAt(id,t):b.rev, exp=o?bizExp(id):b.exp, c=unitCost(id), m=modAt(id,t);
