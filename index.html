@@ -195,6 +195,7 @@ html.light .btn.bank{background:linear-gradient(180deg,#5fa4f5,#2a6fd0);color:#f
 .ms{display:flex;flex-direction:column;gap:6px}
 .ms div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:13.5px}
 .ms div.got{border-color:var(--em-deep)}
+.msg{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);color:var(--text);font:inherit;font-size:14px;text-align:left}.msg.open{border-color:var(--em-deep)}.msg.full b{color:var(--em)}.msg span{color:var(--muted);font-size:13px}
 .ms div.got b{color:var(--em)}
 .ms div span{color:var(--muted)}
 .timer{font-weight:800;color:var(--gold)}
@@ -211,7 +212,7 @@ html.light .btn.bank{background:linear-gradient(180deg,#5fa4f5,#2a6fd0);color:#f
 .call.s1 span,.call.s2 span{color:var(--gold)}
 .rivals{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .rv{font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
-.rv.out{opacity:.4;text-decoration:line-through}.rv.top{border-color:var(--red);color:var(--red)}
+.rv.sel{border-color:var(--text);color:var(--text)}.rv.out{opacity:.4;text-decoration:line-through}.rv.top{border-color:var(--red);color:var(--red)}
 .sold{font:800 42px/1 var(--display);color:var(--gold);letter-spacing:.06em;transform:rotate(-6deg);border:4px solid var(--gold);border-radius:12px;padding:8px 18px;align-self:center;animation:stamp .35s cubic-bezier(.2,1.6,.4,1)}
 .scrim.still .sold{animation:none}
 @keyframes stamp{from{transform:rotate(-6deg) scale(2.2);opacity:0}}
@@ -367,6 +368,10 @@ const MS = [
   [5e5,"Mogul"],[1e6,"Millionaire"],[1e7,"Tycoon"],[1e8,"Empire Builder"],[1e9,"Billionaire"]
 ];
 const RANKS = [[100,"The Beginning"],[130,"Loose Change"],[170,"Pocket Change"],[230,"Paper Route"],[310,"Hustler"],[400,"Side Gig"],[530,"Gig Worker"],[710,"Small Fry"],[930,"Saver"],[1200,"Money Maker"],[1600,"Budget Boss"],[2200,"Entrepreneur"],[2800,"Corner Booth"],[3800,"Shopkeeper"],[5000,"Rising Star"],[6600,"Go-Getter"],[8700,"Deal Spotter"],[11000,"Business Owner"],[15000,"Main Street"],[20000,"Local Name"],[27000,"Regular Landlord"],[35000,"Investor"],[46000,"Smart Money"],[61000,"Portfolio Pro"],[81000,"Wheeler Dealer"],[110000,"Dealmaker"],[140000,"Big Fish"],[190000,"Heavy Hitter"],[250000,"Rainmaker"],[330000,"Mogul in Training"],[430000,"Mogul"],[570000,"Almost There"],[760000,"Seven Figures Soon"],[1000000,"Millionaire"],[1200000,"Comfortable"],[1500000,"Wealthy"],[1900000,"Multi-Millionaire"],[2300000,"Estate Owner"],[2800000,"Skyline Owner"],[3500000,"High Roller"],[4300000,"Power Broker"],[5300000,"Tycoon in Training"],[6600000,"Magnate"],[8100000,"Capitalist"],[10000000,"Corporate Raider"],[12000000,"Industrialist"],[15000000,"Titan of Trade"],[19000000,"Tycoon"],[23000000,"Market Mover"],[28000000,"Kingmaker"],[35000000,"Financier"],[43000000,"Titan"],[53000000,"Baron"],[66000000,"Dynasty Founder"],[81000000,"Powerhouse"],[100000000,"Conglomerate"],[120000000,"Eight-Figure Legend"],[150000000,"Old Money"],[190000000,"Empire Builder"],[230000000,"Global Player"],[280000000,"Heir Apparent"],[350000000,"Dynasty"],[430000000,"Sovereign"],[530000000,"Landmark Name"],[660000000,"Billion Chaser"],[810000000,"Near Billionaire"],[1000000000,"Billionaire"],[1200000000,"Billionaire Club"],[1500000000,"Double Billionaire"],[1900000000,"Ten-Figure Titan"],[2300000000,"Forbes Regular"],[2800000000,"Top 500"],[3500000000,"Top 250"],[4300000000,"Top 100"],[5300000000,"Top 50"],[6600000000,"Top 25"],[8100000000,"Top 10"],[10000000000,"Yacht Fleet"],[12000000000,"Island Owner"],[15000000000,"Jet Fleet"],[19000000000,"Sports Team Owner"],[23000000000,"Media Baron"],[28000000000,"Rocket Owner"],[35000000000,"Space Cadet"],[43000000000,"Mega-Billionaire"],[53000000000,"Oligarch"],[66000000000,"Czar"],[81000000000,"Hundred Billion Club"],[100000000000,"Wealth Wonder"],[120000000000,"Market Maker"],[150000000000,"Economy Mover"],[190000000000,"Top 5"],[230000000000,"Top 3"],[280000000000,"Runner-Up"],[350000000000,"Richest on Earth"],[430000000000,"Richest Ever"],[530000000000,"Half a Trillion"],[660000000000,"Almost a Trillion"],[810000000000,"Trillion Chaser"],[1000000000000,"Trillionaire"]];
+let msOpen = null;
+function msGroups(){ const cur = rankIdx(), curG = MS.reduce((g,m,i) => RANKS[cur][0] >= m[0] ? i : g, 0), open = msOpen===null ? curG : msOpen;
+  return MS.map((m,g) => { const rs = RANKS.map((r,i)=>[r,i]).filter(([r]) => r[0] >= m[0] && (g===MS.length-1 || r[0] < MS[g+1][0])), got = rs.filter(([r]) => S.peak>=r[0]).length, o = open===g;
+    return `<button class="msg${o?" open":""}${got===rs.length?" full":""}" data-act="msgrp" data-arg="${g}"><b>${m[1]}</b><span>${got}/${rs.length} · ${o?"▲":"▼"}</span></button>`+(o?rs.map(([r,i])=>`<div class="${S.peak>=r[0]?"got":""}"><b>${r[1]}</b><span class="num">${money(r[0],{whole:true})}</span></div>`).join(""):""); }).join(""); }
 const rankIdx = () => { let l = 0; RANKS.forEach((m,i) => { if ((S.peak||0) >= m[0]) l = i; }); return l; };
 // cost = first location; rev/exp per hour per location
 const BIZ = [
@@ -1444,7 +1449,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795366939";
+const BUILD = "1795386910";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1645,7 +1650,7 @@ function viewProfile(){
     <div class="stat"><span class="lbl">Auctions won</span><b class="num">${S.aucWins}</b></div>
     <div class="stat"><span class="lbl">Shifts worked</span><b class="num">${S.shifts}</b></div>
   </div>
-  <section class="sec"><div class="sechead"><h2>Milestones</h2></div><div class="ms">${RANKS.map((m,i)=>`<div class="${S.peak>=m[0]?"got":""}"><b>${m[1]}</b><span class="num">${money(m[0],{whole:true})}</span></div>`).join("")}</div></section>
+  <section class="sec"><div class="sechead"><h2>Milestones</h2></div><div class="ms">${msGroups()}</div></section>
   <section class="sec"><div class="sechead"><h2>Achievements</h2><small>${got} of ${ACH.length}</small></div><div class="ach">${ACH.map(a=>`<div class="${S.ach[a[0]]?"got":""}"><b>${a[1]}</b><span>${a[2]}</span></div>`).join("")}</div></section>
   <section class="sec"><div class="sechead"><h2>Collections</h2><small>+5% business income each</small></div><div class="list">${Object.entries(SETS).map(([k,st])=>{const have=st.ids.filter(id=>S.items.some(i=>i.id===id)).length;return rowHtml({e:ITEMM[st.ids[0]].e,gold:true,title:st.n,sub:st.ids.map(id=>ITEMM[id].n).join(", "),right:`<b class="${have===st.ids.length?"goldt":""}">${have}/${st.ids.length}</b>`});}).join("")}</div></section>
   <section class="sec"><div class="sechead"><h2>Transaction history</h2><small>${S.tx.length} recent</small></div>${S.tx.length?`<div class="list">${S.tx.slice(0,30).map(txRow).join("")}</div>`:`<div class="empty">Nothing yet.</div>`}</section>
@@ -1770,13 +1775,17 @@ function sheetRoom(){ return () => {
   return `${top}
   <div class="bidbox${lead?" lead":R.top?" behind":""}"><span class="lbl">${R.top?"Current bid":"Opening bid"}</span><b class="num">${money(R.cur)}</b><span class="pill ${lead?"":R.top?"r":"m"}">${lead?"You lead":R.top?RIVALS[R.top].n+" leads":"No bids yet"}</span></div>
   <div class="call s${R.stage}"><i></i><i></i><i></i><span>${call}</span></div>${R.light?`<p class="note" style="text-align:center;margin:-6px 0 0">The room feels quiet tonight...</p>`:""}
-  <div class="rivals">${R.rivals.map(r=>`<span class="rv${r.out?" out":""}${R.top===r.k?" top":""}">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>
+  <div class="rivals">${R.rivals.map(r=>`<span class="rv${r.out?" out":""}${R.top===r.k?" top":""}${rivalOpen===r.k?" sel":""}" data-act="rival" data-arg="${r.k}">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>${rivalOpen&&R.rivals.some(r=>r.k===rivalOpen)?rivalCard(R):`<p class="note" style="text-align:center;margin:4px 0 0">Tap a bidder to see how they bid</p>`}
   ${lead?`<button class="btn" disabled>You have the top bid</button>`:!R.top?`<button class="btn" data-act="rbid" data-arg="0" ${R.cur>S.cash?"disabled":""}>Open at ${money(R.cur)}</button>`:`<div class="btns three">${b(0,"Nudge",inc)}${b(1,"Raise",3*inc)}${b(2,"Jump",8*inc)}</div>`}
   <p class="note" style="text-align:center">A nudge gets a fast answer. A jump costs more, but it can scare rivals out of the room. Cash: <b class="num em" data-live="cash">${money(S.cash)}</b></p>
   <div class="rlog">${R.log.map(x=>`<div>${esc(x)}</div>`).join("")}</div>
   <button class="btn ghost" data-act="roomLeave" ${lead?"disabled":""}>${lead?"You can't leave while you lead":"Leave the room"}</button>`;
 };}
-let roomFn = null;
+let roomFn = null, rivalOpen = "";
+function rivalCard(R){ const v = RIVALS[rivalOpen]; if (!v) return ""; const p = x => Math.round(x*100)+"%";
+  const loves = v.love ? v.love.source.replace(/\|/g,", ") : "", onLot = v.love && v.love.test(R.cat);
+  const row = (a,b) => `<div><span>${a}</span><b>${b}</b></div>`;
+  return `<div class="lines" style="margin:8px 0">${row(v.e+" "+v.n,`<i style="font-weight:500;color:var(--muted)">"${esc(v.q)}"</i>`)}${row("Usually pays",p(v.lo)+" to "+p(v.hi)+" of its value")}${v.love?row("Loves",esc(loves)+" · pays "+p(v.llo)+" to "+p(v.lhi)):""}${onLot?row("This lot","Loves it, will bid high"):""}${row("Bidding speed",v.spd<.8?"Fast":v.spd<=1.1?"Normal":"Slow")}${row("Big jumps",(v.jump||0)>=.35?"Often":(v.jump||0)>0?"Sometimes":"Never")}${row("Scared off by a jump",v.fold>=.6?"Easily":v.fold>=.25?"Somewhat":"Hard to scare")}${v.rare?row("Shows up","Rarely"):""}</div>`; }
 function openRoom(){ roomFn = sheetRoom(); openSheet(roomFn, true); }
 setInterval(() => { if (S && S.room && sheetFn===roomFn && !cfm){ if (roomStep(Date.now())){ progress(); save(); drawSheet(); if (S.room.done) render(); } } }, 250);
 function sheetHustle(){ return () => {
@@ -2117,10 +2126,12 @@ document.addEventListener("click", e => {
     case "stkBuyAmt": { const [s,a]=arg.split("|"); run(()=>A.stkBuy(s, Math.min(1, +a/S.cash))); stkAmt=""; drawSheet(); break; }
     case "stkSellAmt": { const [s,a]=arg.split("|"); const h=S.hold[s]; if (h) run(()=>A.stkSell(s, Math.min(1, +a/(h.sh*S.stk[s].p)))); stkSellAmt=""; drawSheet(); break; }
     case "lotAppr": run(()=>appraise(arg)); break;
-    case "lotEnter": sfxInit(); enterRoom(arg); save(); render(); if (S.room) openRoom(); break;
+    case "lotEnter": rivalOpen = ""; sfxInit(); enterRoom(arg); save(); render(); if (S.room) openRoom(); break;
     case "roomBack": sfxInit(); if (S.room) openRoom(); break;
     case "rbid": roomBid(+arg); progress(); save(); drawSheet(); break;
-    case "roomLeave": leaveRoom(); progress(); save(); render(); break;
+    case "msgrp": msOpen = msOpen===+arg ? -1 : +arg; render(); break;
+    case "rival": rivalOpen = rivalOpen===arg ? "" : arg; drawSheet(); break;
+    case "roomLeave": rivalOpen = ""; leaveRoom(); progress(); save(); render(); break;
     case "evc": if (evChoose) evChoose(+arg); break;
     case "evBank": evResume = evReopen; loanAmt=""; loanPayV=""; openSheet(sheetBank()); break;
     case "help": openHelp(); break;
