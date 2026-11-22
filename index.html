@@ -1449,7 +1449,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795386910";
+const BUILD = "1795386971";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1622,7 +1622,7 @@ function lotCard(L){
   return `<div class="card lot${L.head?" head":""}">${L.head?`<span class="pill g" style="align-self:flex-start">Headline lot</span>`:""}
     <div class="shead"><div class="tile gold">${lotIcon(L)}</div><div style="flex:1;min-width:0"><h3 style="font-size:15px">${esc(lotName(L))}</h3><p>${L.mystery?"Sealed. Contents unknown":condName(L.cm)+" condition"}</p></div><div class="rside"><span>Leaves in</span><b class="timer num" data-live="lot:${L.id}"></b></div></div>
     ${kv([[L.appr?"Appraised at":"Estimate",estTxt(L)],["Bidding opens at",money(L.open)]])}
-    <div class="rivals" style="justify-content:flex-start">${L.rivals.map(r=>`<span class="rv">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>
+    <div class="rivals" style="justify-content:flex-start">${L.rivals.map(r=>`<span class="rv${lotRival===L.id+"|"+r.k?" sel":""}" data-act="lotrival" data-arg="${L.id}|${r.k}">${RIVALS[r.k].e} ${RIVALS[r.k].n}</span>`).join("")}</div>${lotRival.startsWith(L.id+"|")?rivalCard(L,lotRival.split("|")[1]):""}
     <div class="btns"><button class="btn ghost" data-act="lotAppr" data-arg="${L.id}" ${L.appr||L.mystery||L.fee>S.cash?"disabled":""}>${L.mystery?"Can't appraise":L.appr?"Appraised":"Appraise "+money(L.fee)}</button><button class="btn" data-act="lotEnter" data-arg="${L.id}" ${L.open>S.cash?"disabled":""}>${L.open>S.cash?"Need "+money(L.open):"Enter the room"}</button></div></div>`;
 }
 function viewAuctions(){
@@ -1781,8 +1781,8 @@ function sheetRoom(){ return () => {
   <div class="rlog">${R.log.map(x=>`<div>${esc(x)}</div>`).join("")}</div>
   <button class="btn ghost" data-act="roomLeave" ${lead?"disabled":""}>${lead?"You can't leave while you lead":"Leave the room"}</button>`;
 };}
-let roomFn = null, rivalOpen = "";
-function rivalCard(R){ const v = RIVALS[rivalOpen]; if (!v) return ""; const p = x => Math.round(x*100)+"%";
+let roomFn = null, rivalOpen = "", lotRival = "";
+function rivalCard(R, k){ const v = RIVALS[k===undefined?rivalOpen:k]; if (!v) return ""; const p = x => Math.round(x*100)+"%";
   const loves = v.love ? v.love.source.replace(/\|/g,", ") : "", onLot = v.love && v.love.test(R.cat);
   const row = (a,b) => `<div><span>${a}</span><b>${b}</b></div>`;
   return `<div class="lines" style="margin:8px 0">${row(v.e+" "+v.n,`<i style="font-weight:500;color:var(--muted)">"${esc(v.q)}"</i>`)}${row("Usually pays",p(v.lo)+" to "+p(v.hi)+" of its value")}${v.love?row("Loves",esc(loves)+" · pays "+p(v.llo)+" to "+p(v.lhi)):""}${onLot?row("This lot","Loves it, will bid high"):""}${row("Bidding speed",v.spd<.8?"Fast":v.spd<=1.1?"Normal":"Slow")}${row("Big jumps",(v.jump||0)>=.35?"Often":(v.jump||0)>0?"Sometimes":"Never")}${row("Scared off by a jump",v.fold>=.6?"Easily":v.fold>=.25?"Somewhat":"Hard to scare")}${v.rare?row("Shows up","Rarely"):""}</div>`; }
@@ -2130,6 +2130,7 @@ document.addEventListener("click", e => {
     case "roomBack": sfxInit(); if (S.room) openRoom(); break;
     case "rbid": roomBid(+arg); progress(); save(); drawSheet(); break;
     case "msgrp": msOpen = msOpen===+arg ? -1 : +arg; render(); break;
+    case "lotrival": lotRival = lotRival===arg ? "" : arg; render(); break;
     case "rival": rivalOpen = rivalOpen===arg ? "" : arg; drawSheet(); break;
     case "roomLeave": rivalOpen = ""; leaveRoom(); progress(); save(); render(); break;
     case "evc": if (evChoose) evChoose(+arg); break;
