@@ -601,11 +601,11 @@ function celCheck(){ const c=S.cel||(S.cel={m:0,b:0,t:0}), pk=S.peak||0; let k=0
   if (k && S.cel._init) celebrate(k); S.cel._init=1; }
 /* hourly voice: plays on the hour while the app is open */
 const VOICE = { a:null, last:(()=>{ try{ return +localStorage.getItem("mm-vlast")||-1; }catch(e){ return -1; } })(), ok:false };
-const voiceOn = () => { try{ return localStorage.getItem("mm-voice2") === "on"; }catch(e){ return false; } };
+const voiceOn = () => false; const voiceOnOld = () => { try{ return localStorage.getItem("mm-voice2") === "on"; }catch(e){ return false; } };
 function voiceAudio(){ if (!VOICE.a){ VOICE.a = new Audio("voice.m4a"); VOICE.a.preload = "auto"; } return VOICE.a; }
-function voiceUnlock(){ if (VOICE.ok) return; try{ const a=voiceAudio(); a.muted=true; const r=a.play(); const done=()=>{ a.pause(); a.currentTime=0; a.muted=false; VOICE.ok=true; }; if (r && r.then) r.then(done).catch(()=>{ a.muted=false; }); else done(); }catch(e){} }
-function voiceNow(){ try{ const a=voiceAudio(); a.muted=false; a.currentTime=0; const r=a.play(); if (r && r.catch) r.catch(()=>{}); }catch(e){} }
-function voiceCheck(){ const d=new Date(); if (document.hidden || !voiceOn()) return; const key=d.getFullYear()*1e6+d.getMonth()*1e4+d.getDate()*100+d.getHours(); if (d.getMinutes()===0 && VOICE.last!==key && VOICE.ok){ VOICE.last=key; try{ localStorage.setItem("mm-vlast", String(key)); }catch(e){} voiceNow(); } }
+function voiceUnlock(){ return; if (VOICE.ok) return; try{ const a=voiceAudio(); a.muted=true; const r=a.play(); const done=()=>{ a.pause(); a.currentTime=0; a.muted=false; VOICE.ok=true; }; if (r && r.then) r.then(done).catch(()=>{ a.muted=false; }); else done(); }catch(e){} }
+function voiceNow(){ return; try{ const a=voiceAudio(); a.muted=false; a.currentTime=0; const r=a.play(); if (r && r.catch) r.catch(()=>{}); }catch(e){} }
+function voiceCheck(){ return; const d=new Date(); if (document.hidden || !voiceOn()) return; const key=d.getFullYear()*1e6+d.getMonth()*1e4+d.getDate()*100+d.getHours(); if (d.getMinutes()===0 && VOICE.last!==key && VOICE.ok){ VOICE.last=key; try{ localStorage.setItem("mm-vlast", String(key)); }catch(e){} voiceNow(); } }
 document.addEventListener("pointerdown", voiceUnlock, {passive:true});
 setInterval(voiceCheck, 5000);
 function ownCash(){ S.lb = Math.max(0, Math.min(S.lb||0, Math.max(S.cash,0), S.prin||0)); return S.cash - S.lb; }
@@ -1253,7 +1253,7 @@ function leaveRoom(){
   S.room = null; closeSheet();
 }
 let AC = null;
-function sfxInit(){ try { AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if (AC.state==="suspended") AC.resume(); } catch(e){} }
+function sfxInit(){ return; try { AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if (AC.state==="suspended") AC.resume(); } catch(e){} }
 function sfx(k){ return; if (!AC || !k) return; try { const t0 = AC.currentTime;
   const tone = (f,d,at,type,g) => { const o=AC.createOscillator(), v=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f,t0+at); v.gain.setValueAtTime(g,t0+at); v.gain.exponentialRampToValueAtTime(.001,t0+at+d); o.connect(v); v.connect(AC.destination); o.start(t0+at); o.stop(t0+at+d+.02); };
   if (k==="bid") tone(620,.08,0,"triangle",.08); else if (k==="you") tone(880,.1,0,"triangle",.1); else if (k==="call") tone(330,.14,0,"sine",.09);
@@ -1449,7 +1449,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795386971";
+const BUILD = "1795390477";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1658,7 +1658,7 @@ function viewProfile(){
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--muted);font-size:13px;margin:0">Copy a backup code and paste it somewhere safe, like Notes. If you delete and re-add the app, paste the code here and tap Restore to get everything back.</p>
   <textarea id="bkt" rows="3" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Paste a backup code here to restore" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;resize:vertical"></textarea>
   <div class="btns three"><button class="btn gold" data-act="bkcopy">Copy backup</button><button class="btn ghost" data-act="bkpaste">Paste</button><button class="btn ghost" data-act="bkrest" id="bkrest">Restore</button></div></div></section>
-  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn ghost" data-act="voice" style="margin-bottom:10px">${voiceOn()?"Hourly voice: On (tap to mute)":"Hourly voice: Off (tap to turn on)"}</button><button class="btn ghost" data-act="theme" style="margin-bottom:10px">${document.documentElement.classList.contains("light")?"Switch to dark background":"Switch to light background"}</button><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>
+  <section class="sec"><div class="sechead"><h2>Settings</h2></div><button class="btn ghost" data-act="theme" style="margin-bottom:10px">${document.documentElement.classList.contains("light")?"Switch to dark background":"Switch to light background"}</button><button class="btn danger" data-act="reset" id="resetbtn">Reset game</button><p class="note">Resetting erases all progress on this device and starts you over at $100.</p></section>
   <section class="sec"><button class="btn gold" data-act="devopen" style="width:100%">About the developer</button></section>`;
 }
 
