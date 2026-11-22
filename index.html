@@ -1038,7 +1038,7 @@ const A = {
   acctDep(a){ if ((S.debt||0) > .005){ toast("Pay off your loans before saving"); return; } a=Math.min(+a,S.cash,savCap()); if (!(a>=.01)) return; acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = Date.now(); } c.b += a; S.cash -= a; tx("spend","Savings account deposit",-a); },
   acctWd(a){ acctSettle(); const c=acctOf(); a=Math.min(+a,c.b); if (!(a>=.01)) return; const i=acctTierAt(Date.now()), j=acctTierAfterWd(a); c.b -= a; S.cash += a; if (c.b < .005){ c.b = 0; c.st = Date.now(); } else if (j < i) c.st = Date.now() - ACCT_TIERS[j].d*24*H; tx("spend","Savings account withdrawal",a); },
   savBreak(i){ S.sav=S.sav||[]; const v=S.sav[+i]; if (!v) return; S.sav.splice(+i,1); const g=v.p*.95; S.cash+=g; tx("spend","Savings broken early (5% fee)",g); },
-  loanSpeed(arg){ loanMigrate(); const [at,f]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if (!l || ![1,1.5,2,3].includes(+f)) return; l.sp = +f===1 ? 0 : +f; loanSync(); },
+  loanSpeed(arg){ loanMigrate(); const [at,f]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if (!l || ![1,1.5,2,3,5,10].includes(+f)) return; l.sp = +f===1 ? 0 : +f; loanSync(); },
   loanPayOne(arg){ loanMigrate(); const [at,a0]=String(arg).split("|"), l=S.loans.find(x=>String(x.at)===at); if(!l) return; let a=Math.min(+a0,l.d,S.cash); if (l.d-a<.0099 && S.cash>=l.d) a=l.d; if(!(a>=.01)) return; S.cash-=a; const toP=Math.min(l.p,a*l.p/Math.max(.01,l.d)); l.d-=a; l.p-=toP; l.pp=(l.pp||0)+toP;
     S.loans=S.loans.filter(x=>x.p>.005&&x.d>=.01); loanSync(); if(!S.loans.length) loanClear(); tx("loan",S.debt?"Paid toward one loan":"Loan paid off",-a); },
   loanPayNext(){ loanMigrate(); let rem = S.cash, paid = 0;
@@ -1444,7 +1444,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795334423";
+const BUILD = "1795366840";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1926,7 +1926,7 @@ function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) 
   <div class="lbl">Pay toward this loan</div>
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk bank" data-act="loanPayOne" data-arg="${l.at}|${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="lbl">Pay it off faster${l.sp?" · now "+l.sp+"x":""}</div>
-  <div class="btns three">${[1.5,2,3].map(f=>`<button class="btn stk bank${(l.sp||1)===f?" gold":""}" data-act="loanSpeed" data-arg="${l.at}|${f}" ${(l.sp||1)===f?"disabled":""}><span>${f}x</span><small>${money(Math.min(l.d, l.i*f*(l.d/Math.max(.01,l.p))))}/pay</small></button>`).join("")}</div>
+  <div class="btns three">${[1.5,2,3,5,10].map(f=>`<button class="btn stk bank${(l.sp||1)===f?" gold":""}" data-act="loanSpeed" data-arg="${l.at}|${f}" ${(l.sp||1)===f?"disabled":""}><span>${f}x</span><small>${money(Math.min(l.d, l.i*f*(l.d/Math.max(.01,l.p))))}/pay</small></button>`).join("")}</div>
   ${l.sp?`<button class="btn ghost" data-act="loanSpeed" data-arg="${l.at}|1" style="width:100%;margin:6px 0 0">Back to normal payments</button>`:""}
   <p class="note">Bigger payments come out of your cash every 6 hours, and you owe less when the rates step up.</p>
   <div class="amtrow"><span class="dollar">$</span><input id="loanone" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanOneV)}" autocomplete="off"><button class="btn bank" data-act="loanPayOneC">Pay</button></div>
