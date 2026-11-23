@@ -1493,7 +1493,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795420103";
+const BUILD = "1795420381";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1864,7 +1864,7 @@ function sheetAssets(){ const f = () => {
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
   return `<div class="shead"><div class="tile gold">🏷️</div><div><h3>Your assets</h3><p>Everything you own except cash</p></div></div>
   <div class="big num">${money(tot)}</div>
-  ${assetCats().length?`<div class="lines" style="margin-bottom:10px">${assetCats().map(([n,x,v,c])=>`<div><span>${n}</span><b class="num" style="white-space:nowrap">${money(x)}${c>.005?` <small class="${v>=c?"up":"down"}" style="font-weight:600">${v>=c?"▲":"▼"}${Math.abs((v/c-1)*100).toFixed(1)}%</small>`:""}</b></div>`).join("")}</div>`:""}
+  ${assetCats().length?`<div class="lines" style="margin-bottom:10px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"><span style="flex:1.1">Category</span><span style="flex:1;text-align:right">Spent</span><span style="flex:1.3;text-align:right">Worth · ROI</span></div>${assetCats().map(([n,x,v,c])=>`<div style="gap:6px"><span style="flex:1.1">${n}</span><span class="num" style="flex:1;text-align:right;color:var(--muted)">${c>.005?money(c):"-"}</span><b class="num" style="flex:1.3;text-align:right;white-space:nowrap">${money(x)}${c>.005?` <small class="${v>=c?"up":"down"}" style="font-weight:600">${v>=c?"▲":"▼"}${Math.abs((v/c-1)*100).toFixed(1)}%</small>`:""}</b></div>`).join("")}</div>`:""}
   ${tot>.005?grp("Businesses",biz)+grp("Properties",props)+grp("Vehicles",its("veh"))+grp("Collectibles",its("col"))+grp("Investments",stk):`<p class="note">You don't own any assets yet. Businesses, properties, vehicles, collectibles and investments will show up here.</p>`}`; }; f.live = true; return f; }
 function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
