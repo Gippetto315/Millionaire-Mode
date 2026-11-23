@@ -1449,7 +1449,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795390477";
+const BUILD = "1795396282";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1591,7 +1591,7 @@ function viewInvest(){
   <div class="seg"><button class="${invTab==="stocks"?"on":""}" data-act="invTab" data-arg="stocks">Stocks${mine.length?` <span class="n">${mine.length}</span>`:""}</button><button class="${invTab==="projects"?"on":""}" data-act="invTab" data-arg="projects">Projects${(S.proj||[]).length?` <span class="n">${S.proj.length} running</span>`:""}</button></div>
   ${invTab==="projects"?`<section class="sec"><div class="sechead"><h2>Projects</h2><small>New pitches every few hours</small></div>${(S.imp&&S.imp.n)?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>💛 Your impact</b><p class="note" style="margin:6px 0 0">${S.imp.jobs.toLocaleString()} job${S.imp.jobs>1?"s":""} supported across ${S.imp.n} project${S.imp.n>1?"s":""}. Money is nice. Helping people build things is better.</p></div>`:`<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>💛 Back people, not just profits</b><p class="note" style="margin:6px 0 0">Every project you fund pays Stephen real money from your real bank account without you really knowing it. It'll be fine.</p></div>`}
     ${(()=>{const row=L=>{const d=PROJ[L.kind];return rowHtml({e:d.e,gold:true,title:L.name,sub:`${d.n} · ${d.lock}h lock · ${d.odds}`,right:`<span>pays up to</span><b class="num">${({startup:"3x",movie:"2x",oil:"1.8x",partner:"1.2x",art:"1.6x"})[L.kind]||d.max+"x"}</b>`,act:"openProj",arg:L.id});}; const all=projListings(), safe=all.filter(L=>!PROJ[L.kind].wild), wild=all.filter(L=>PROJ[L.kind].wild); if (!all.length) return `<div class="empty">You've backed every pitch for now. New ones show up soon.</div>`; return `${safe.length?`<div class="lbl">Safe bets</div><div class="list">${safe.map(row).join("")}</div>`:""}${wild.length?`<div class="lbl" style="margin-top:14px">🎰 Long shots, go big or go broke</div><div class="list">${wild.map(row).join("")}</div>`:""}`;})()}
-    ${(S.proj||[]).length?`<div class="list" style="margin-top:8px">${S.proj.map(p=>rowHtml({e:PROJ[p.kind].e,title:p.name,sub:`<span class="pill g">Locked</span> <span data-live="proj:${p.id}"></span>`,right:`<b class="num">${money(p.amt)}</b><span>in</span>`})).join("")}</div>`:""}
+    ${(S.proj||[]).length?`<div class="list" style="margin-top:8px">${S.proj.map(p=>rowHtml({e:PROJ[p.kind].e,title:p.name,sub:`<span class="pill g">Locked</span> <span data-live="proj:${p.id}"></span>`,right:`<b class="num">${money(p.amt)}</b><span>in</span>`,act:"openMyProj",arg:p.id})).join("")}</div>`:""}
     ${(S.proj||[]).length?`<div class="sechead" style="margin-top:14px"><h2>Texts</h2><small>From the people with your money</small></div>${(()=>{const tx=allProjTexts(Date.now()).slice(0,8); return tx.length?`<div class="chat">${tx.map(m=>`<div class="bub"><div class="bwho">${PROJ[m.p.kind].e} ${esc(m.p.name)} <span>${ago(m.t)}</span></div><div class="btxt">${m.e} ${esc(m.text)}</div></div>`).join("")}</div>`:`<div class="empty">No texts yet. They'll check in as things happen.</div>`;})()}`:""}
     ${(S.plog||[]).length?`<div class="list" style="margin-top:8px">${S.plog.slice(0,4).map(n=>`<div class="row" style="min-height:0"><div class="rmain"><strong style="font-size:14px;white-space:normal">${n.e} ${esc(n.text)}</strong><span>${ago(n.t)}</span></div><div class="rside"><span class="pill ${n.up?"":"r"}">${n.up?"Win":"Loss"}</span></div></div>`).join("")}</div>`:""}</section>`:`
   <section class="sec"><div class="sechead"><h2>What you own</h2><small>${mine.length} of ${STK.length}</small></div>
@@ -1605,7 +1605,14 @@ function viewInvest(){
   <p class="note">Simulated markets. Past moves don't predict future prices.</p></section>`}`;
 }
 
-let curProj = "";
+let curProj = "", curMyProj = "";
+function sheetMyProj(){ return () => { const p = (S.proj||[]).find(x=>x.id===curMyProj), d = p && PROJ[p.kind]; if (!p) return `<p class="note">That project already paid out. Check your texts and transactions for the result.</p><button class="btn ghost" data-act="close" style="width:100%">Close</button>`;
+  const tx = projTexts(p, Date.now()).slice(0,6);
+  return `<div class="shead"><div class="tile gold">${d.e}</div><div><h3>${esc(p.name)}</h3><p>${d.n}</p></div></div>
+  <div class="lines"><div><span>You put in</span><b class="num">${money(p.amt)}</b></div><div><span>Started</span><b>${ago(p.at)}</b></div><div><span>Result in</span><b class="num" data-live="proj:${p.id}">${dur(p.end-Date.now())}</b></div><div><span>Lock</span><b>${d.lock}h</b></div><div><span>Odds</span><b>${d.odds}</b></div><div><span>Range</span><b style="text-align:right">${d.range}</b></div></div>
+  <p class="note" style="color:var(--gold)">💛 ${(PROJ_IMPACT[p.kind]||{}).help||""}</p>
+  ${tx.length?`<div class="chat">${tx.map(m=>`<div class="bub"><div class="bwho">${m.e} <span>${ago(m.t)}</span></div><div class="btxt">${esc(m.text)}</div></div>`).join("")}</div>`:`<p class="note">No texts yet. Updates show up as the timer runs.</p>`}
+  <p class="note">Your money is locked until the timer ends. You learn the result then, even if you're away.</p>`; }; }
 function sheetProj(){ return () => { const L = projListings().find(x=>x.id===curProj), d = L && PROJ[L.kind]; if (!L) return `<p class="note">That pitch is gone. New ones show up every few hours.</p><button class="btn ghost" data-act="close" style="width:100%">Close</button>`;
   const full=(S.proj||[]).length>=PROJ_MAX;
   return `<div class="shead"><div class="tile gold">${d.e}</div><div><h3>${esc(L.name)}</h3><p>${d.n}</p></div></div>
@@ -2159,6 +2166,7 @@ document.addEventListener("click", e => {
     case "loanPayNext": run(()=>A.loanPayNext()); break;
     case "loanPay": loanPayV=""; run(()=>A.loanPay(arg)); break;
     case "invTab": invTab=arg; render(); break;
+    case "openMyProj": curMyProj=arg; openSheet(sheetMyProj()); break;
     case "openProj": curProj=arg; projAmtV=""; openSheet(sheetProj()); break;
     case "projPut": run(()=>A.projPut(arg)); closeSheet(); break;
     case "projPutC": { const a=Math.min(parseAmt(projAmtV),S.cash); if (!(a>=1)){ toast(parseAmt(projAmtV)>=1?"Not enough cash":"Type an amount first"); break; } run(()=>A.projPut(curProj+"|"+a)); projAmtV=""; closeSheet(); break; }
