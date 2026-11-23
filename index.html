@@ -755,8 +755,7 @@ const loanPct = x => +(x*100).toFixed(2) + "%";
 const loanLadder = () => LOAN_TIERS.map((tr,k) => loanPct(tr[1]) + (k===0 ? " first "+(LOAN_TIERS[1][0]<1?Math.round(LOAN_TIERS[1][0]*60)+" min":LOAN_TIERS[1][0]+"h") : k<LOAN_TIERS.length-1 ? " next "+(LOAN_TIERS[k+1][0]-tr[0])+"h" : " after that")).join(" · ");
 const loanRateAge = h => LOAN_TIERS.reduce((r,tr) => h >= tr[0] ? tr[1] : r, LOAN_TIERS[0][1]);
 const LOAN_SCHED = (() => { let t = 0, rem = 1; for (let k = 1; k <= LOAN_PAYS && rem > 1e-9; k++){ const p = Math.min(LOAN_PART, rem); t += p*loanRateAge(k*LOAN_EVERY_H); rem -= p; } return t; })();
-const SAV_PTS = [[1,.025],[3,.09],[7,.25],[14,.7],[30,2.5]];
-const savRate = d => { d = Math.max(1, Math.min(30, d)); for (let i=1;i<SAV_PTS.length;i++){ const [d0,r0]=SAV_PTS[i-1],[d1,r1]=SAV_PTS[i]; if (d<=d1) return Math.round((r0+(r1-r0)*(d-d0)/(d1-d0))*1000)/1000; } return 1; };
+const savRate = d => { d = Math.max(1, Math.min(30, d)); const b = Math.log(1.10), k = (Math.log(1.13) - b)/29; return Math.round((Math.exp(d*(b + k*(d-1))) - 1)*1000)/1000; }; /* daily rate climbs from 10% to 13% with lock length, so one long lock always beats chaining short ones, and 1 day still beats the best savings tier */
 const savVal0 = (t) => { t=t||Date.now(); return (S.sav||[]).reduce((a,v)=>a+v.p*(1+v.r*Math.min(1,Math.max(0,(t-v.at)/(v.end-v.at)))),0); };
 const ACCT_TIERS = [{n:"Basic",d:0,r:.06,p:0},{n:"Silver",d:2,r:.072,p:.015},{n:"Gold",d:5,r:.084,p:.03},{n:"Platinum",d:10,r:.096,p:.05}], ACCT_MINPCT = .05;
 const acctOf = () => (S.acct = S.acct || {b:0,at:Date.now(),st:Date.now(),earn:0});
@@ -813,6 +812,18 @@ const PROJ_IMPACT = {
 const impJobs = (kind,a) => Math.max(1, Math.round(a/(PROJ_IMPACT[kind]||{per:50000}).per));
 const PROJ_SLOT = 4*3600000, PROJ_MAX = 6;
 const PTX_N = 4;
+const ptxN = p => Math.max(PTX_N, Math.min(12, Math.round((p.end-p.at)/(3*H))));
+const PTX_USE = {
+  startup:["Your money hired two engineers and paid the server bill.","Your cash is covering the office lease and one very loud espresso machine.","Most of your money went to ads. Allegedly effective."],
+  movie:["Your money paid the crew and a truck of catering.","Your cash went to reshoots. Don't ask.","Your money is funding the soundtrack. Mostly one song."],
+  oil:["Your money rented the drill rig this week.","Your cash bought pipe and an alarming amount of diesel.","Your money paid for the crew's boots and hard hats."],
+  partner:["Your money restocked the shelves.","Your cash went to a bigger sign out front.","Your money covered payroll and a new fridge."],
+  art:["Your money paid the framer and the insurance.","Your cash went to the appraiser and a climate-controlled room.","Your money funded a whole gallery wall."],
+  space:["Your money bought rocket fuel and one very serious bolt.","Your cash paid the welders.","Your money went to the launch pad permit."],
+  lotto:["Your money bought tickets. Many tickets.","Your cash went to a lucky pen.","Your money paid a fortune teller's invoice."],
+  meme:["Your money bought ad space for the frog.","Your cash paid a meme artist in exposure, and also cash.","Your money funded a frog-themed airdrop."],
+  treasure:["Your money paid for shovels and a metal detector.","Your cash hired a map expert and a very patient guide.","Your money bought lanterns and bad sandwiches."]
+};
 const PTX_MOOD = {
   good:[["😎","Honestly? We're crushing it."],["🔥","Can't talk long, phones won't stop ringing."],["🥹","I think this is actually working."],["💪","Feeling really good about this one."],["🚀","Buckle up."]],
   bad:[["😬","Gonna be straight with you. It's rough."],["😓","Not my best week."],["🫠","We're fine. Totally fine."],["😰","Please don't check the numbers yet."],["🙃","Still hopeful. Mostly."]],
@@ -829,13 +840,13 @@ const PTX_STAT = {
   meme:f=>`${Math.round(200+f*9000).toLocaleString()} holders, ${Math.round(f*900)} frog memes posted`,
   treasure:f=>`${Math.round(1+f*9)} shovels broken, ${Math.round(f*60)}% of the map decoded`
 };
-function projTexts(p,t){ const out=[], d=PROJ[p.kind], hit=p.mult>=1, span=p.end-p.at;
-  for (let k=1;k<=PTX_N;k++){ const at=p.at+span*k/(PTX_N+1); if (at>t) break;
-    const fr=k/(PTX_N+1), honest=r01(p.id,"ptx",k)<.7, mood=p.kind==="partner"?"meh":((hit===honest)?"good":"bad");
+function projTexts(p,t){ const out=[], d=PROJ[p.kind], hit=p.mult>=1, span=p.end-p.at, N=ptxN(p);
+  for (let k=1;k<=N;k++){ const at=p.at+span*k/(N+1); if (at>t) break;
+    const fr=k/(N+1), honest=r01(p.id,"ptx",k)<.7, mood=p.kind==="partner"?"meh":((hit===honest)?"good":"bad");
     const pool=PTX_MOOD[mood], m=pool[Math.floor(r01(p.id,"pm",k)*pool.length)];
     const sf=mood==="good"?.5+.5*fr:mood==="bad"?.15*fr:.5;
     const tm=mood==="good"?(PROJ[p.kind].wild?4:p.kind==="oil"||p.kind==="movie"?1.6:2.2):mood==="bad"?.35:p.mult, est=p.amt*(1+(tm-1)*fr)*(1+(r01(p.id,"pv",k)-.5)*.2);
-    out.push({t:at,p,e:m[0],text:`${m[1]} We're at ${PTX_STAT[p.kind](sf)}. Your stake looks like about ${money(est)} right now.`}); }
+    out.push({t:at,p,e:m[0],text:`${m[1]} ${(PTX_USE[p.kind]||[""])[Math.floor(r01(p.id,"pu",k)*(PTX_USE[p.kind]||[""]).length)]} We're at ${PTX_STAT[p.kind](sf)}. Your stake looks like about ${money(est)} right now.`}); }
   return out; }
 const allProjTexts = t => (S.proj||[]).flatMap(p=>projTexts(p,t)).sort((a,b)=>b.t-a.t);
 function ptxCheck(){ const t=Date.now(), all=allProjTexts(t); if (S.ptxN==null){ S.ptxN=all.length; return; } if (all.length>S.ptxN && all[0]){ toast(`📱 ${all[0].p.name}: ${all[0].e} new text`, true); } S.ptxN=all.length; }
@@ -900,7 +911,7 @@ function incomeBetween(t0,t1){
   Object.keys(S.biz).forEach(id => {
     const rev=bizRev(id); let r=rev*hrs;
     S.mods.forEach(m => { if (m.b==="*"||m.b===id){ const o=Math.max(0,Math.min(t1,m.until)-Math.max(t0,m.from)); r += rev*(m.m-1)*o/H; } });
-    bx += bizExp(id)*hrs; tot += r; lines.push([BIZM[id].n, r]);
+    bx += bizExp(id)*hrs; tot += r; lines.push([BIZM[id].n, r]); S.biz[id].net = (S.biz[id].net||0) + r - bizExp(id)*hrs;
   });
   if (bx > 0){ EXP_SPLIT.forEach(([n,f]) => lines.push([n, -bx*f])); tot -= bx; }
   let rent=0, pc=0;
@@ -951,6 +962,8 @@ function sample(t){ const lastS = S.hist[S.hist.length-1]; if (!lastS || t - las
 /* advance the whole world to now; returns income summary for the gap */
 function advance(t){
   const from = S.nocap ? S.last : Math.max(S.last, t - CAP);
+  const lost = from - S.last; /* time past the away cap: the world stood still, so locked timers wait too */
+  if (lost > 0){ (S.sav||[]).forEach(v => { v.at += lost; v.end += lost; }); (S.proj||[]).forEach(p => { p.at += lost; p.end += lost; }); }
   const inc = incomeBetween(from, t);
   S.props.forEach(p => { if (p.rentTot == null){ p.rentTot = 0; p.upTot = 0; } const hrs = Math.max(0,t-from)/H; p.upTot += propCost(p,t)*hrs; if (p.rented){ const a0 = Math.max(from, p.renoUntil||0); if (t > a0) p.rentTot += propRentFull(p,t)*occHours(p,a0,t); } });
   loanMigrate();
@@ -1417,7 +1430,7 @@ let tab = "home", mcat = "biz", needRender = true;
 try { tab = localStorage.getItem("mm-tab") || "home"; mcat = localStorage.getItem("mm-mcat") || "biz"; } catch(e){}
 function toast(msg, em){
   const r=$("toastroot"); const el=document.createElement("div"); el.className="toast"+(em?" em":""); el.textContent=msg;
-  r.appendChild(el); setTimeout(()=>el.remove(), 3200);
+  r.appendChild(el); setTimeout(()=>el.remove(), Math.min(10000, Math.max(6000, String(msg).length*110))); el.style.pointerEvents="auto"; el.addEventListener("click", () => el.remove());
   [...r.children].slice(0,-1).forEach(c=>c.remove());
 }
 const sheetOpen = () => !!$("sheetroot").firstChild;
@@ -1479,7 +1492,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795400910";
+const BUILD = "1795412877";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1487,6 +1500,10 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) chec
 setTimeout(checkUpdate, 400);
 
 /* live text bound to the clock */
+function assetCats(){ const t=Date.now(), I=c=>S.items.filter(i=>ITEMM[i.id].c===c), iv=L=>L.reduce((a,i)=>a+itemVal(i,t),0), ip=L=>L.reduce((a,i)=>a+i.paid,0), V=I("veh"), C=I("col"), B=Object.values(S.biz), P=S.props;
+  const bx=bizVal(), px=P.reduce((a,p)=>a+propVal(p,t),0), sx=stockVal();
+  return [["Businesses",bx,bx+B.reduce((a,o)=>a+(o.net||0),0),B.reduce((a,o)=>a+o.spent,0)],["Properties",px,px+P.reduce((a,p)=>a+(p.rentTot||0)-(p.upTot||0),0),P.reduce((a,p)=>a+p.paid+p.reno,0)],["Vehicles",iv(V),iv(V),ip(V)],["Collectibles",iv(C),iv(C),ip(C)],["Investments",sx,sx,Object.values(S.hold).reduce((a,h)=>a+h.cost,0)]].filter(r=>r[1]>.005); }
+const roiTag = (v,c) => c > .005 ? " · ROI "+(v>=c?"▲":"▼")+Math.abs((v/c-1)*100).toFixed(1)+"%" : "";
 const LIVE = {
   evgu: () => { const e=evSummary(); return e.up>.005 ? "▲ +"+money(e.up)+"/h · "+dur(e.ue-Date.now()) : ""; },
   evgd: () => { const e=evSummary(); return e.dn<-.005 ? "▼ −"+money(-e.dn)+"/h · "+dur(e.de-Date.now()) : ""; },
@@ -1637,7 +1654,7 @@ function viewInvest(){
 
 let curProj = "", curMyProj = "";
 function sheetMyProj(){ return () => { const p = (S.proj||[]).find(x=>x.id===curMyProj), d = p && PROJ[p.kind]; if (!p) return `<p class="note">That project already paid out. Check your texts and transactions for the result.</p><button class="btn ghost" data-act="close" style="width:100%">Close</button>`;
-  const tx = projTexts(p, Date.now()).slice(0,6);
+  const tx = projTexts(p, Date.now()).slice(0,8);
   return `<div class="shead"><div class="tile gold">${d.e}</div><div><h3>${esc(p.name)}</h3><p>${d.n}</p></div></div>
   <div class="lines"><div><span>You put in</span><b class="num">${money(p.amt)}</b></div><div><span>Started</span><b>${ago(p.at)}</b></div><div><span>Result in</span><b class="num" data-live="proj:${p.id}">${dur(p.end-Date.now())}</b></div><div><span>Lock</span><b>${d.lock}h</b></div><div><span>Odds</span><b>${d.odds}</b></div><div><span>Range</span><b style="text-align:right">${d.range}</b></div></div>
   <p class="note" style="color:var(--gold)">💛 ${(PROJ_IMPACT[p.kind]||{}).help||""}</p>
@@ -1846,6 +1863,7 @@ function sheetAssets(){ const f = () => {
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
   return `<div class="shead"><div class="tile gold">🏷️</div><div><h3>Your assets</h3><p>Everything you own except cash</p></div></div>
   <div class="big num">${money(tot)}</div>
+  ${assetCats().length?`<div class="lines" style="margin-bottom:10px">${assetCats().map(([n,x,v,c])=>`<div><span>${n}</span><b class="num" style="white-space:nowrap">${money(x)}${c>.005?` <small class="${v>=c?"up":"down"}" style="font-weight:600">${v>=c?"▲":"▼"}${Math.abs((v/c-1)*100).toFixed(1)}%</small>`:""}</b></div>`).join("")}</div>`:""}
   ${tot>.005?grp("Businesses",biz)+grp("Properties",props)+grp("Vehicles",its("veh"))+grp("Collectibles",its("col"))+grp("Investments",stk):`<p class="note">You don't own any assets yet. Businesses, properties, vehicles, collectibles and investments will show up here.</p>`}`; }; f.live = true; return f; }
 function sheetNW(){ return () => {
   const t=Date.now(), v=c=>S.items.filter(i=>ITEMM[i.id].c===c).reduce((a,i)=>a+itemVal(i,t),0);
@@ -2017,7 +2035,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="btns three" style="margin-top:8px">${[1,3,7,14,30].map(x=>`<button class="btn stk ${x===savDays?"":"ghost"}" data-act="savDays" data-arg="${x}"><span>${x}d</span><small>${(savRate(x)*100).toFixed(1).replace(/\.0$/,"")}%</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="savamt" type="text" inputmode="decimal" placeholder="Amount to lock away" value="${esc(savAmt)}" autocomplete="off"><button class="btn" data-act="savPutC">Save</button></div>
   <div class="amtrow"><span class="dollar" style="font-size:12px">days</span><input id="savdays" type="text" inputmode="numeric" placeholder="1 to 30" value="${savDays}" autocomplete="off"></div>
-  <p class="note">A vault locks cash away for a fixed payout when the time is up, even while you're away. It always pays more than the savings account, and longer pays more per day: 1 day 2.5%, 3 days 9%, 7 days 25%, 14 days 70%, 30 days 250%. Locked money still counts toward net worth, but you can't spend it. Taking it out early costs a 5% fee and you lose the interest. Savings accounts and vaults together are capped at 40% of your net worth.</p>
+  <p class="note">A vault locks cash away for a fixed payout when the time is up, even while you're away. It always pays more than the savings account, and longer pays more per day: ${[1,3,7,14,30].map(d=>d+(d>1?" days ":" day ")+Math.round(savRate(d)*100).toLocaleString("en-US")+"%").join(", ")}. Locked money still counts toward net worth, but you can't spend it. Taking it out early costs a 5% fee and you lose the interest. Savings accounts and vaults together are capped at 40% of your net worth.</p>
   `:""}
   ${bankTab==="mort"?`${(S.mort||[]).length?`<div class="lbl">Your mortgages · tap one</div>${S.mort.map(m=>({m,p:S.props.find(x=>x.uid===m.uid)})).filter(x=>x.p).map(({m,p})=>`<button class="lrow" data-act="openProp" data-arg="${p.uid}"><div class="lines"><div><span>${esc(p.name)} · ${money(mortBal(m))} left</span><b class="num down">${money(mortRate(m))}/h</b></div></div></button>`).join("")}${kv([["Mortgages owed",money(mortDebt())],["Mortgage payments per hour",money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0))],["Per day",money((S.mort||[]).reduce((a,m)=>a+mortRate(m),0)*24)],["Paid so far",`<span class="up">${money((S.mort||[]).reduce((a,m)=>a+(m.pp||0)+mortPaid(m,m.at,Date.now()),0))}</span>`]])}`:""}${(S.mort||[]).length?"":`<p class="note">No mortgages. Open a home in the Market and pick a mortgage to finance it.</p>`}`:""}
 `; }; }
