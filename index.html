@@ -922,7 +922,7 @@ function incomeBetween(t0,t1){
   Object.keys(S.biz).forEach(id => {
     const rev=bizRev(id); let r=rev*hrs;
     S.mods.forEach(m => { if (m.b==="*"||m.b===id){ const o=Math.max(0,Math.min(t1,m.until)-Math.max(t0,m.from)); r += rev*(m.m-1)*o/H; } });
-    bx += bizExp(id)*hrs; tot += r; lines.push([BIZM[id].n, r]); S.biz[id].net = (S.biz[id].net||0) + r - bizExp(id)*hrs;
+    bx += bizExp(id)*hrs; tot += r; lines.push([BIZM[id].n, r]); S.biz[id].net = (S.biz[id].net||0) + r - bizExp(id)*hrs; S.biz[id].rev = (S.biz[id].rev||0) + r;
   });
   if (bx > 0){ EXP_SPLIT.forEach(([n,f]) => lines.push([n, -bx*f])); tot -= bx; }
   let rent=0, pc=0;
@@ -1505,7 +1505,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795421278";
+const BUILD = "1795452178";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1515,7 +1515,7 @@ setTimeout(checkUpdate, 400);
 /* live text bound to the clock */
 function assetCats(){ const t=Date.now(), I=c=>S.items.filter(i=>ITEMM[i.id].c===c), iv=L=>L.reduce((a,i)=>a+itemVal(i,t),0), ip=L=>L.reduce((a,i)=>a+i.paid,0), V=I("veh"), C=I("col"), B=Object.values(S.biz), P=S.props;
   const bx=bizVal(), px=P.reduce((a,p)=>a+propVal(p,t),0), sx=stockVal();
-  return [["Businesses",bx,bx+B.reduce((a,o)=>a+(o.net||0),0),B.reduce((a,o)=>a+o.spent,0)],["Properties",px,px+P.reduce((a,p)=>a+(p.rentTot||0)-(p.upTot||0),0),P.reduce((a,p)=>a+p.paid+p.reno,0)],["Vehicles",iv(V),iv(V),ip(V)],["Collectibles",iv(C),iv(C),ip(C)],["Investments",sx,sx,Object.values(S.hold).reduce((a,h)=>a+h.cost,0)]].filter(r=>r[1]>.005); }
+  return [["Businesses",bx,bx+B.reduce((a,o)=>a+(o.net||0),0),B.reduce((a,o)=>a+o.spent,0),B.reduce((a,o)=>a+(o.rev||0),0)],["Properties",px,px+P.reduce((a,p)=>a+(p.rentTot||0)-(p.upTot||0),0),P.reduce((a,p)=>a+p.paid+p.reno,0),P.reduce((a,p)=>a+(p.rentTot||0),0)],["Vehicles",iv(V),iv(V),ip(V)],["Collectibles",iv(C),iv(C),ip(C)],["Investments",sx,sx,Object.values(S.hold).reduce((a,h)=>a+h.cost,0)]].filter(r=>r[1]>.005); }
 const roiTag = (v,c) => c > .005 ? " · ROI "+(v>=c?"▲":"▼")+Math.abs((v/c-1)*100).toFixed(1)+"%" : "";
 const LIVE = {
   evgu: () => { const e=evSummary(); return e.up>.005 ? "▲ +"+money(e.up)+"/h · "+dur(e.ue-Date.now()) : ""; },
@@ -1879,7 +1879,7 @@ function sheetAssets(){ const f = () => {
   const biz=Object.keys(S.biz).map(id=>({e:BIZM[id].e,n:BIZM[id].n,v:bizEquity(id)})), tot=assetsVal(t)+bizVal();
   return `<div class="shead"><div class="tile gold">🏷️</div><div><h3>Your assets</h3><p>Everything you own except cash</p></div></div>
   <div class="big num">${money(tot)}</div>
-  ${assetCats().length?`<div class="lines" style="margin-bottom:10px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"><span style="flex:1.1">Category</span><span style="flex:1;text-align:right">Spent</span><span style="flex:1.3;text-align:right">Worth · ROI</span></div>${assetCats().map(([n,x,v,c])=>`<div style="gap:6px"><span style="flex:1.1">${n}</span><span class="num" style="flex:1;text-align:right;color:var(--muted)">${c>.005?money(c):"-"}</span><b class="num" style="flex:1.3;text-align:right;white-space:nowrap">${money(x)}${c>.005?` <small class="${v>=c?"up":"down"}" style="font-weight:600">${v>=c?"▲":"▼"}${Math.abs((v/c-1)*100).toFixed(1)}%</small>`:""}</b></div>`).join("")}</div>`:""}
+  ${assetCats().length?`<div class="lines" style="margin-bottom:10px;font-size:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;gap:4px"><span style="flex:1.2">Category</span><span style="flex:1;text-align:right">Spent</span><span style="flex:1;text-align:right">Income</span><span style="flex:1;text-align:right">Worth</span><span style="flex:.8;text-align:right">ROI</span></div>${assetCats().map(([n,x,v,c,inc])=>`<div style="gap:4px"><span style="flex:1.2">${n}</span><span class="num" style="flex:1;text-align:right;color:var(--muted)">${c>.005?(c>=1e6?money(c):wholeMoney(c)):"-"}</span><span class="num" style="flex:1;text-align:right;color:var(--muted)">${inc>.005?(inc>=1e6?money(inc):wholeMoney(inc)):"-"}</span><b class="num" style="flex:1;text-align:right">${x>=1e6?money(x):wholeMoney(x)}</b><b class="num ${v>=c?"up":"down"}" style="flex:.8;text-align:right;white-space:nowrap">${c>.005?`${v>=c?"▲":"▼"}${Math.abs((v/c-1)*100).toFixed(1)}%`:"-"}</b></div>`).join("")}</div>`:""}
   ${tot>.005?`<div style="margin-bottom:8px"><button class="btn ghost" data-act="assetTab" data-arg="${assetTab==="market"?"list":"market"}" style="padding:5px 14px;font-size:12px;width:auto;flex:none;height:auto;min-height:0">${assetTab==="market"?"‹ Back to assets":"Market moves ›"}</button></div>`:""}
   ${tot<=.005?`<p class="note">You don't own any assets yet. Businesses, properties, vehicles, collectibles and investments will show up here.</p>`:assetTab==="market"?(()=>{ const mk=(title,list)=>list.length?`<div class="lbl">${title}</div><div class="lines" style="margin-bottom:6px">${list.map(x=>`<div><span>${x.e} ${esc(x.n)}${x.g==null?"":`<br><small class="${x.g>=0?"up":"down"}">${x.g>=0?"▲":"▼"} ${Math.abs(x.g*100).toFixed(1)}% since you got it</small>`}${x.m==null?"":`<br><small>${mktTag(x.m)}</small>`}</span><b class="num">${x.d==null||Math.abs(x.d)<.00005?"-":`<small class="${x.d>=0?"up":"down"}">${x.d>=0?"▲":"▼"} ${Math.abs(x.d*100).toFixed(2)}%</small>`}</b></div>`).join("")}</div>`:""; const all=[...props,...its("veh"),...its("col"),...stk]; return all.length?`<p class="note" style="margin-top:0">How the market is moving what you own. Change is over the last hour.</p>`+mk("Properties",props)+mk("Vehicles",its("veh"))+mk("Collectibles",its("col"))+mk("Investments",stk):`<p class="note">Nothing here moves with the market yet.</p>`; })():grp("Businesses",biz)+grp("Properties",props)+grp("Vehicles",its("veh"))+grp("Collectibles",its("col"))+grp("Investments",stk)}`; }; f.live = true; return f; }
 function sheetNW(){ return () => {
