@@ -873,6 +873,7 @@ const loanPays = (l,f) => Math.max(1, Math.ceil(l.p/Math.max(.01, l.i*f) - 1e-9)
 const loanDueNow = () => loansOf().reduce((a,l) => a + loanInstOf(l)*loanMulOf(l), 0);
 const loanFullPay = () => loansOf().reduce((a,l) => a + Math.min(l.i*loanMulOf(l), l.d), 0);
 const loanRate = (l,t) => loanRateAge(((t||Date.now()) - l.at)/H);
+const graceLoans = () => loansOf().filter(l => Date.now() - l.at < LOAN_GRACE && l.d > .005);
 const loanNextStep = (l,t) => { t = t||Date.now(); const age = (t - l.at)/H, n = LOAN_TIERS.find(tr => tr[0] > age); return n ? {rate:n[1], in:l.at + n[0]*H - t} : null; };
 const loanAccrualH = () => (S.prin||0)*(overdrawn() ? LATE_RATE : 0);
 function loanSync(){ const L = loansOf(); S.debt = L.reduce((a,l)=>a+l.d,0); S.prin = L.reduce((a,l)=>a+l.p,0); S.inst = L.reduce((a,l)=>a+l.i,0); S.pp = L.reduce((a,l)=>a+(l.pp||0),0); S.orig = L.reduce((a,l)=>a+l.o,0); }
@@ -1492,7 +1493,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795412877";
+const BUILD = "1795420103";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2016,6 +2017,7 @@ function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Mat
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk bank" data-act="loanTake" data-arg="${Math.floor(room*f*100)/100}" ${room*f<1?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(room*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanamt" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanAmt)}" autocomplete="off"><button class="btn bank" data-act="loanTakeC">Borrow</button></div>
   <div class="lbl">Pay back</div>
+  ${(()=>{ const g=graceLoans(); if (!g.length) return ""; const tot=g.reduce((a,l)=>a+l.d,0), left=Math.min(...g.map(l=>l.at+LOAN_GRACE-Date.now())); return `<button class="btn bank" data-act="loanPayGrace" ${S.cash<tot-.005?"disabled":""} style="width:100%;margin-bottom:8px">⏱ Pay off now, keep it at ${loanPct(LOAN_FEE)} · ${money(tot)}<br><small>${dur(left)} left${S.cash<tot-.005?" · not enough cash":""}</small></button>`; })()}
   ${d>.005?`<button class="btn bank" data-act="loanPayNext" ${S.cash<.01||loanDueNow()<.01?"disabled":""} style="width:100%;margin-bottom:8px">Pay next payment · ${money(Math.min(loanDueNow(),S.cash))}</button>`:""}
   <div class="btns three">${[.25,.5,1].map(f=>`<button class="btn stk bank" data-act="loanPay" data-arg="${Math.floor(pay*f*100)/100}" ${pay*f<.01?"disabled":""}><span>${f===1?"Max":Math.round(f*100)+"%"}</span><small>${money(Math.floor(pay*f*100)/100)}</small></button>`).join("")}</div>
   <div class="amtrow"><span class="dollar">$</span><input id="loanpay" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanPayV)}" autocomplete="off"><button class="btn bank" data-act="loanPayC">Pay</button></div>
@@ -2048,7 +2050,10 @@ document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.t
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",acctamt:"acctDepC",mortx:"propMortXC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
-  const after = x => `Cash after: <b class="num">${money(S.cash + x)}</b>`;
+  const after = x => { const c = S.cash + x, due = (S.debt||0) > .005 && x < 0 && !/^loan/.test(act) ? loanDueNow() : 0, base = `Cash after: <b class="num">${money(c)}</b>`;
+    if (c < -.005) return base + `<br><b class="down">⚠️ This puts you in the negative.</b>`;
+    if (due > .005 && c < due - .005) return base + `<br><b class="down">⚠️ Your next loan payment is ${money(due)} in ${dur((S.dueAt||0)-Date.now())}. This leaves you short, so you'd go negative and the bank adds late interest.</b>`;
+    return base; };
   if (act==="advHire"){ const f=advFee(); return {e:"🧑‍💼",t:"Hire a business advisor?",l:[["Covers",ADV_L[advSel-1]],["Fee",money(f)],["Lasts","1 hour"]],n:"Your advisor shows which business pays itself back fastest, updated live as prices rise.",yes:`Pay ${money(f)}`}; }
   if (act==="bizBuyLoan"){ const b=BIZM[arg], o=S.biz[arg], c=unitCost(arg), u=upCost(arg,0), tot=c+u, pay1=tot*LOAN_PART*(1+LOAN_TIERS[1][1]); return {e:b.e,t:`Borrow to open ${b.n}?`,l:[["Business",money(c)],["+1 upgrade",money(u)],["Loan",money(tot)],["Repaid within "+LOAN_GRACE_H,money(tot*(1+LOAN_FEE))],["Every "+LOAN_EVERY_H+" hours","about "+money(pay1)+" and up"]],n:"A regular bank loan covers the business and its first upgrade, so it opens at level 1. Pay it back fast and you pay far less. Miss a payment and the 15% fee applies.",yes:`Borrow ${money(tot)}`}; }
   if (act==="bizBuy"){ const b=BIZM[arg], c=unitCost(arg), o=S.biz[arg]; return {alt:(o?o.n:0)<25&&c+upCost(arg,0)<=loanRoom()+1e-6?{label:`Borrow it: business + 1 upgrade for ${money(c+upCost(arg,0))}`,act:"bizBuyLoan",arg,cls:"bank"}:null,e:b.e,t:o?`Open location #${o.n+1}?`:`Open ${b.n}?`,l:[["You pay",money(c)],["Adds about",signed(b.rev-b.exp)+"/h"]],n:after(-c),yes:`Buy for ${money(c)}`}; }
@@ -2221,6 +2226,7 @@ document.addEventListener("click", e => {
     case "projPutC": { const a=Math.min(parseAmt(projAmtV),S.cash); if (!(a>=1)){ toast(parseAmt(projAmtV)>=1?"Not enough cash":"Type an amount first"); break; } run(()=>A.projPut(curProj+"|"+a)); projAmtV=""; closeSheet(); break; }
     case "openLoan": curLoan=arg; loanOneV=""; openSheet(sheetLoan()); break;
     case "loanSpeed": run(()=>A.loanSpeed(arg)); break;
+    case "loanPayGrace": run(()=>{ graceLoans().forEach(l => A.loanPayOne(l.at+"|"+l.d)); }); break;
     case "loanPayOne": loanOneV=""; run(()=>A.loanPayOne(arg)); break;
     case "bankTab": bankTab=arg; drawSheet(); break;
     case "acctDep": if ((S.debt||0) > .005){ acctBlocked(); break; } run(()=>A.acctDep(arg)); break;
