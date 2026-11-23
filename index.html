@@ -1491,12 +1491,14 @@ function wealthChart(hv){ const ts = S.hist.map(h=>h[0]).concat([Date.now()]), t
   <div class="wsl"><div class="wread" id="wread">Touch the line to see your net worth at any moment</div></div>`; }
 let chartData = null, chartCur = null, sliding = false;
 function chartValAt(t){ const {ts, hv} = chartData; if (t < ts[0]) return null; let j = 1; while (j < ts.length-1 && ts[j] < t) j++; const ta = ts[j-1], tb = ts[j], f = tb > ta ? Math.min(1, Math.max(0, (t-ta)/(tb-ta))) : 0; return hv[j-1] + (hv[j]-hv[j-1])*f; }
+/* how old the character was at that moment: an hour is a month of life */
+function ageTag(t){ const a = lifeAge() - (Date.now()-t)/H/12; if (!(a >= 0)) return ""; return `<span style="color:var(--muted)">Age ${Math.floor(Math.floor(a*12+.01)/12)}y ${Math.floor(a*12+.01)%12}m</span> · `; }
 function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), dot = document.getElementById("ccurd"), rd = document.getElementById("wread"); if (!cur || !chartData) return;
   if (chartCur == null){ cur.style.display = dot.style.display = "none"; return; }
   const {t0, span, pad, vmn, vmx} = chartData, t = t0 + chartCur*span, v = chartValAt(t), x = (pad + chartCur*(1-2*pad))*100, when = new Date(t).toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit"});
   cur.style.display = "block"; cur.style.left = x.toFixed(2) + "%";
   if (v == null){ dot.style.display = "none"; rd.innerHTML = `${when} · <span style="color:var(--muted)">no data yet</span>`; }
-  else { const rg = (vmx-vmn)||Math.max(1,vmx*.02); dot.style.display = "block"; dot.style.left = x.toFixed(2) + "%"; dot.style.top = (120 - 6 - (v-vmn)/rg*108).toFixed(1) + "px"; rd.innerHTML = `${when} · <b class="num">${money(v)}</b>`; }
+  else { const rg = (vmx-vmn)||Math.max(1,vmx*.02); dot.style.display = "block"; dot.style.left = x.toFixed(2) + "%"; dot.style.top = (120 - 6 - (v-vmn)/rg*108).toFixed(1) + "px"; rd.innerHTML = `${when} · ${ageTag(t)}<b class="num">${money(v)}</b>`; }
   if (scroll){ const sc = document.getElementById("cscroll"); if (sc){ const wide = sc.firstElementChild.offsetWidth; sc.scrollLeft = Math.max(0, Math.min(wide - sc.clientWidth, wide*x/100 - sc.clientWidth/2)); } } }
 (function(){ const at = e => { const w = document.querySelector("#cscroll .cwide"); if (!w || !chartData) return; const r = w.getBoundingClientRect(), pad = chartData.pad; chartCur = Math.max(0, Math.min(1, ((e.clientX - r.left)/r.width - pad)/(1-2*pad))); chartCursorApply(false); };
   document.addEventListener("pointerdown", e => { if (e.target.closest && e.target.closest("#cscroll")){ sliding = true; try { e.target.setPointerCapture(e.pointerId); } catch(_){} at(e); } }, true);
@@ -1505,7 +1507,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795452178";
+const BUILD = "1795470891";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2065,6 +2067,10 @@ function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">�
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
 document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+e.target.value; render(); } });
+/* what is on screen is what counts: read the boxes right before acting, in case the browser filled one without an input event */
+function syncAmts(){ const g = id => { const el = document.getElementById(id); return el && typeof el.value === "string" ? el.value : null; }, set = (id, f) => { const v = g(id); if (v !== null) f(v); };
+  set("chtc", v => chtVal = v); set("loanamt", v => loanAmt = v); set("acctamt", v => acctAmtV = v); set("mortx", v => mortXV = v); set("upn", v => upNV = v); set("loanpay", v => loanPayV = v); set("loanone", v => loanOneV = v);
+  set("projamt", v => projAmtV = v); set("mortamt", v => mortAmtV = v); set("savamt", v => savAmt = v); set("savdays", v => { const n = parseInt(v); if (n>=1 && n<=30) savDays = n; }); set("stkamt", v => stkAmt = v); set("stksell", v => stkSellAmt = v); }
 document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",acctamt:"acctDepC",mortx:"propMortXC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
@@ -2121,6 +2127,7 @@ document.addEventListener("click", e => {
   if (tb){ tab = tb.dataset.tab; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); window.scrollTo(0,0); return; }
   const el = e.target.closest("[data-act]"); if (!el) return;
   let act = el.dataset.act, arg = el.dataset.arg;
+  syncAmts();
   if (act==="cfmno"){ cfm=null; drawSheet(); return; }
   if (act==="cfmalt"){ if (!cfm || !cfm.info.alt) return; const a=cfm.info.alt; cfm={act:a.act,arg:a.arg,info:cfmInfo(a.act,a.arg)}; drawSheet(); return; }
   if (act==="cfmyes"){ if (!cfm) return; act=cfm.act; arg=cfm.arg; cfm=null; }
