@@ -368,6 +368,10 @@ const MS = [
   [5e5,"Mogul"],[1e6,"Millionaire"],[1e7,"Tycoon"],[1e8,"Empire Builder"],[1e9,"Billionaire"]
 ];
 const RANKS = [[100,"The Beginning"],[130,"Loose Change"],[170,"Pocket Change"],[230,"Paper Route"],[310,"Hustler"],[400,"Side Gig"],[530,"Gig Worker"],[710,"Small Fry"],[930,"Saver"],[1200,"Money Maker"],[1600,"Budget Boss"],[2200,"Entrepreneur"],[2800,"Corner Booth"],[3800,"Shopkeeper"],[5000,"Rising Star"],[6600,"Go-Getter"],[8700,"Deal Spotter"],[11000,"Business Owner"],[15000,"Main Street"],[20000,"Local Name"],[27000,"Regular Landlord"],[35000,"Investor"],[46000,"Smart Money"],[61000,"Portfolio Pro"],[81000,"Wheeler Dealer"],[110000,"Dealmaker"],[140000,"Big Fish"],[190000,"Heavy Hitter"],[250000,"Rainmaker"],[330000,"Mogul in Training"],[430000,"Mogul"],[570000,"Almost There"],[760000,"Seven Figures Soon"],[1000000,"Millionaire"],[1200000,"Comfortable"],[1500000,"Wealthy"],[1900000,"Multi-Millionaire"],[2300000,"Estate Owner"],[2800000,"Skyline Owner"],[3500000,"High Roller"],[4300000,"Power Broker"],[5300000,"Tycoon in Training"],[6600000,"Magnate"],[8100000,"Capitalist"],[10000000,"Corporate Raider"],[12000000,"Industrialist"],[15000000,"Titan of Trade"],[19000000,"Tycoon"],[23000000,"Market Mover"],[28000000,"Kingmaker"],[35000000,"Financier"],[43000000,"Titan"],[53000000,"Baron"],[66000000,"Dynasty Founder"],[81000000,"Powerhouse"],[100000000,"Conglomerate"],[120000000,"Eight-Figure Legend"],[150000000,"Old Money"],[190000000,"Empire Builder"],[230000000,"Global Player"],[280000000,"Heir Apparent"],[350000000,"Dynasty"],[430000000,"Sovereign"],[530000000,"Landmark Name"],[660000000,"Billion Chaser"],[810000000,"Near Billionaire"],[1000000000,"Billionaire"],[1200000000,"Billionaire Club"],[1500000000,"Double Billionaire"],[1900000000,"Ten-Figure Titan"],[2300000000,"Forbes Regular"],[2800000000,"Top 500"],[3500000000,"Top 250"],[4300000000,"Top 100"],[5300000000,"Top 50"],[6600000000,"Top 25"],[8100000000,"Top 10"],[10000000000,"Yacht Fleet"],[12000000000,"Island Owner"],[15000000000,"Jet Fleet"],[19000000000,"Sports Team Owner"],[23000000000,"Media Baron"],[28000000000,"Rocket Owner"],[35000000000,"Space Cadet"],[43000000000,"Mega-Billionaire"],[53000000000,"Oligarch"],[66000000000,"Czar"],[81000000000,"Hundred Billion Club"],[100000000000,"Wealth Wonder"],[120000000000,"Market Maker"],[150000000000,"Economy Mover"],[190000000000,"Top 5"],[230000000000,"Top 3"],[280000000000,"Runner-Up"],[350000000000,"Richest on Earth"],[430000000000,"Richest Ever"],[530000000000,"Half a Trillion"],[660000000000,"Almost a Trillion"],[810000000000,"Trillion Chaser"],[1000000000000,"Trillionaire"]];
+let pcOpen = {"Homes":true};
+function pCatList(L){ if (!L.length) return `<div class="empty">No listings right now.</div>`;
+  return PCATS.map(c => { const ls = L.filter(l=>PROPM[l.type].c===c); if (!ls.length) return ""; const o = !!pcOpen[c], low = Math.min(...ls.map(l=>l.ask));
+    return `<button class="msg${o?" open":""}" data-act="pcat" data-arg="${esc(c)}"><b>${c}</b><span>${ls.length} · from ${wholeMoney(low)} ${o?"▲":"▼"}</span></button>`+(o?`<div class="list" style="margin-bottom:6px">${ls.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${pm(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${wholeMoney(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")}</div>`:""); }).join(""); }
 let msOpen = null;
 function msGroups(){ const cur = rankIdx(), curG = MS.reduce((g,m,i) => RANKS[cur][0] >= m[0] ? i : g, 0), open = msOpen===null ? curG : msOpen;
   return MS.map((m,g) => { const rs = RANKS.map((r,i)=>[r,i]).filter(([r]) => r[0] >= m[0] && (g===MS.length-1 || r[0] < MS[g+1][0])), got = rs.filter(([r]) => S.peak>=r[0]).length, o = open===g;
@@ -422,43 +426,66 @@ const BIZ = [
 ];
 const BIZM = Object.fromEntries(BIZ.map(b => [b.id, b]));
 const PROP = [
-  {id:"studio",n:"Studio Apartment",e:"🚪",t:2,base:110000,g:0},
-  {id:"mobile",n:"Mobile Home",e:"🛖",t:2,base:70000,g:0},
-  {id:"cabin",n:"Hunting Cabin",e:"🪵",t:2,base:95000,g:0},
-  {id:"starter",n:"Starter Home",e:"🏠",t:3,base:200000,g:1},
-  {id:"cottage",n:"Country Cottage",e:"🌻",t:3,base:170000,g:1},
-  {id:"condo",n:"City Condo",e:"🏢",t:3,base:230000,g:1},
-  {id:"townhouse",n:"Townhouse",e:"🏙️",t:3,base:260000,g:2},
-  {id:"farmland",n:"Farmland (40 acres)",e:"🌾",t:3,base:180000,g:2},
-  {id:"lakehouse",n:"Lake House",e:"🛶",t:3,base:340000,g:3},
-  {id:"family",n:"Single-Family Home",e:"🏡",t:4,base:320000,g:3},
-  {id:"ranchhouse",n:"Ranch House",e:"🤠",t:4,base:300000,g:2},
-  {id:"suburb",n:"Suburban Colonial",e:"🏘️",t:4,base:380000,g:3},
-  {id:"duplex",n:"Duplex",e:"🏘️",t:4,base:420000,g:4},
-  {id:"stable",n:"Horse Stable",e:"🐴",t:4,base:480000,g:4},
-  {id:"farm",n:"Working Farm",e:"🚜",t:4,base:650000,g:5},
-  {id:"beach",n:"Beach House",e:"🏖️",t:4,base:700000,g:5},
-  {id:"fourplex",n:"Fourplex",e:"🏢",t:5,base:700000,g:5},
-  {id:"condobld",n:"Condo Building (8 units)",e:"🏙️",t:5,base:1500000,g:6},
-  {id:"cattle",n:"Cattle Ranch",e:"🐄",t:5,base:1400000,g:6},
-  {id:"vineyard",n:"Vineyard",e:"🍇",t:5,base:1800000,g:6},
-  {id:"chalet",n:"Ski Chalet",e:"🎿",t:5,base:1100000,g:6},
-  {id:"estate",n:"Country Estate",e:"🏞️",t:6,base:2000000,g:7},
-  {id:"horseranch",n:"Horse Ranch",e:"🐎",t:6,base:2500000,g:7},
-  {id:"resort",n:"Camp Resort",e:"🏕️",t:6,base:1900000,g:7},
-  {id:"aptbld",n:"Apartment Building",e:"🏬",t:6,base:3000000,g:8},
-  {id:"storage",n:"Storage Facility",e:"📦",t:6,base:2400000,g:8},
-  {id:"inn",n:"Boutique Inn",e:"🏨",t:6,base:3500000,g:8},
-  {id:"plaza",n:"Commercial Plaza",e:"🏦",t:6,base:7000000,g:9},
-  {id:"cropland",n:"Farmland (2,000 acres)",e:"🌽",t:6,base:8000000,g:9},
-  {id:"marina",n:"Marina",e:"⚓",t:7,base:8000000,g:9},
-  {id:"mansion",n:"Luxury Mansion",e:"🏰",t:7,base:15000000,g:10},
-  {id:"villa",n:"Beachfront Villa",e:"🏝️",t:7,base:13000000,g:10},
-  {id:"empire",n:"Ranch Empire",e:"🤠",t:7,base:18000000,g:10},
-  {id:"tower",n:"Skyscraper",e:"🌆",t:8,base:250e6,g:11}
+  {id:"studio",n:"Studio Apartment",e:"🚪",t:2,base:110000,g:0,c:"Homes"},
+  {id:"mobile",n:"Mobile Home",e:"🛖",t:2,base:70000,g:0,c:"Homes"},
+  {id:"cabin",n:"Hunting Cabin",e:"🪵",t:2,base:95000,g:0,c:"Homes"},
+  {id:"starter",n:"Starter Home",e:"🏠",t:3,base:200000,g:1,c:"Homes"},
+  {id:"cottage",n:"Country Cottage",e:"🌻",t:3,base:170000,g:1,c:"Homes"},
+  {id:"condo",n:"City Condo",e:"🏢",t:3,base:230000,g:1,c:"Homes"},
+  {id:"townhouse",n:"Townhouse",e:"🏙️",t:3,base:260000,g:2,c:"Homes"},
+  {id:"farmland",n:"Farmland (40 acres)",e:"🌾",t:3,base:180000,g:2,c:"Land & farms"},
+  {id:"lakehouse",n:"Lake House",e:"🛶",t:3,base:340000,g:3,c:"Vacation"},
+  {id:"family",n:"Single-Family Home",e:"🏡",t:4,base:320000,g:3,c:"Homes"},
+  {id:"ranchhouse",n:"Ranch House",e:"🤠",t:4,base:300000,g:2,c:"Homes"},
+  {id:"suburb",n:"Suburban Colonial",e:"🏘️",t:4,base:380000,g:3,c:"Homes"},
+  {id:"duplex",n:"Duplex",e:"🏘️",t:4,base:420000,g:4,c:"Multi-family"},
+  {id:"stable",n:"Horse Stable",e:"🐴",t:4,base:480000,g:4,c:"Land & farms"},
+  {id:"farm",n:"Working Farm",e:"🚜",t:4,base:650000,g:5,c:"Land & farms"},
+  {id:"beach",n:"Beach House",e:"🏖️",t:4,base:700000,g:5,c:"Vacation"},
+  {id:"fourplex",n:"Fourplex",e:"🏢",t:5,base:700000,g:5,c:"Multi-family"},
+  {id:"condobld",n:"Condo Building (8 units)",e:"🏙️",t:5,base:1500000,g:6,c:"Multi-family"},
+  {id:"cattle",n:"Cattle Ranch",e:"🐄",t:5,base:1400000,g:6,c:"Land & farms"},
+  {id:"vineyard",n:"Vineyard",e:"🍇",t:5,base:1800000,g:6,c:"Land & farms"},
+  {id:"chalet",n:"Ski Chalet",e:"🎿",t:5,base:1100000,g:6,c:"Vacation"},
+  {id:"estate",n:"Country Estate",e:"🏞️",t:6,base:2000000,g:7,c:"Luxury"},
+  {id:"horseranch",n:"Horse Ranch",e:"🐎",t:6,base:2500000,g:7,c:"Land & farms"},
+  {id:"resort",n:"Camp Resort",e:"🏕️",t:6,base:1900000,g:7,c:"Vacation"},
+  {id:"aptbld",n:"Apartment Building",e:"🏬",t:6,base:3000000,g:8,c:"Multi-family"},
+  {id:"storage",n:"Storage Facility",e:"📦",t:6,base:2400000,g:8,c:"Commercial"},
+  {id:"inn",n:"Boutique Inn",e:"🏨",t:6,base:3500000,g:8,c:"Commercial"},
+  {id:"plaza",n:"Commercial Plaza",e:"🏦",t:6,base:7000000,g:9,c:"Commercial"},
+  {id:"cropland",n:"Farmland (2,000 acres)",e:"🌽",t:6,base:8000000,g:9,c:"Land & farms"},
+  {id:"marina",n:"Marina",e:"⚓",t:7,base:8000000,g:9,c:"Commercial"},
+  {id:"mansion",n:"Luxury Mansion",e:"🏰",t:7,base:15000000,g:10,c:"Luxury"},
+  {id:"villa",n:"Beachfront Villa",e:"🏝️",t:7,base:13000000,g:10,c:"Vacation"},
+  {id:"empire",n:"Ranch Empire",e:"🤠",t:7,base:18000000,g:10,c:"Luxury"},
+  {id:"tower",n:"Skyscraper",e:"🌆",t:8,base:250e6,g:11,c:"Commercial"},
+  {id:"tiny",n:"Tiny House",e:"🪵",t:2,base:60000,g:0,c:"Homes"},
+  {id:"bungalow",n:"Bungalow",e:"🏠",t:3,base:190000,g:1,c:"Homes"},
+  {id:"loft",n:"Downtown Loft",e:"🌇",t:4,base:360000,g:3,c:"Homes"},
+  {id:"splitlevel",n:"Split-Level Home",e:"🏘️",t:4,base:340000,g:3,c:"Homes"},
+  {id:"craftsman",n:"Craftsman Home",e:"🏡",t:4,base:400000,g:3,c:"Homes"},
+  {id:"penthouse",n:"Penthouse Condo",e:"🏙️",t:5,base:900000,g:5,c:"Homes"},
+  {id:"triplex",n:"Triplex",e:"🏘️",t:4,base:540000,g:4,c:"Multi-family"},
+  {id:"rowblock",n:"Row House Block (6 units)",e:"🏘️",t:5,base:1100000,g:6,c:"Multi-family"},
+  {id:"hunting",n:"Hunting Land (80 acres)",e:"🦌",t:3,base:120000,g:1,c:"Land & farms"},
+  {id:"hobby",n:"Hobby Farm",e:"🐓",t:3,base:260000,g:2,c:"Land & farms"},
+  {id:"timber",n:"Timberland",e:"🌲",t:4,base:450000,g:4,c:"Land & farms"},
+  {id:"orchard",n:"Orchard",e:"🍎",t:5,base:1300000,g:6,c:"Land & farms"},
+  {id:"bchbungalow",n:"Beach Bungalow",e:"🌴",t:4,base:410000,g:3,c:"Vacation"},
+  {id:"lodge",n:"Mountain Lodge",e:"🏔️",t:5,base:1600000,g:6,c:"Vacation"},
+  {id:"island",n:"Private Island",e:"🏝️",t:7,base:45000000,g:10,c:"Vacation"},
+  {id:"laundromat",n:"Laundromat",e:"🧺",t:3,base:260000,g:2,c:"Commercial"},
+  {id:"carwash",n:"Car Wash",e:"🚗",t:4,base:520000,g:4,c:"Commercial"},
+  {id:"gas",n:"Gas Station",e:"⛽",t:4,base:900000,g:5,c:"Commercial"},
+  {id:"stripmall",n:"Strip Mall",e:"🛍️",t:5,base:1900000,g:6,c:"Commercial"},
+  {id:"parking",n:"Parking Garage",e:"🅿️",t:6,base:4500000,g:8,c:"Commercial"},
+  {id:"hotel",n:"Hotel",e:"🛎️",t:7,base:12000000,g:9,c:"Commercial"},
+  {id:"office",n:"Office Tower",e:"🏢",t:7,base:40000000,g:10,c:"Commercial"},
+  {id:"castle",n:"Castle",e:"🏯",t:8,base:90000000,g:11,c:"Luxury"}
 ];
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
-const NOHOME = new Set(["farmland","cropland","stable","storage","plaza","marina","tower","inn","resort"]);
+const NOHOME = new Set(["farmland","cropland","stable","storage","plaza","marina","tower","inn","resort","hunting","timber","laundromat","carwash","gas","stripmall","parking","hotel","office"]);
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
   {id:"bike",c:"veh",g:0,hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-0.00038,carry:.00012},
@@ -633,7 +660,8 @@ const RENT_RATE = .0209, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
-const UNITS = {duplex:2, fourplex:4, condobld:8, aptbld:12};
+const UNITS = {duplex:2, triplex:3, fourplex:4, rowblock:6, condobld:8, aptbld:12};
+const PCATS = ["Homes","Multi-family","Land & farms","Vacation","Commercial","Luxury"];
 const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
 const homePct = p => 1 + Math.floor((PROPM[p.type].g||0)/3);
 function homeBonus(){ const h = homeProp(); return h ? 1 + homePct(h)/100 : 1; }
@@ -1015,10 +1043,12 @@ function propListings(){
   const w = win(), t = Date.now();
   const lad = []; PROP.forEach(d => { (lad[d.g]||(lad[d.g]=[])).push(d); }); const tb = i => Math.min(...lad[i].map(d=>d.base));
   if (!S.plAnc || S.plAnc.w !== w){ let a = 0; lad.forEach((g,i) => { if (tb(i)*.95 <= Math.max(0,mortCap()-mortDebt())+2000) a = i; }); let m = a; lad.forEach((g,i) => { if (tb(i) <= 3*Math.max(150000,Math.max(0,mortCap()-mortDebt())+2000)) m = Math.max(m,i); }); S.plAnc = {w, a, m}; }
-  const A = S.plAnc.a, M = S.plAnc.m, tiers = [0, Math.min(1,M), Math.floor(A/2), Math.max(0,A-1), A, A, Math.min(M,A+1), Math.min(M,A+2)];
-  const out = [];
-  for (let k=0; k<tiers.length; k++){
-    const grp = lad[Math.max(0,Math.min(M,tiers[k]))], d = grp[Math.floor(r01("p",w,k,"i")*grp.length)];
+  const A = S.plAnc.a, M = S.plAnc.m, out = [], cnt = {"Homes":5,"Multi-family":3,"Land & farms":3,"Vacation":3,"Commercial":3,"Luxury":2};
+  let k = 0;
+  PCATS.forEach(c => { for (let j=0; j<cnt[c]; j++, k++){
+    const ceil = Math.min(M, [A+2, A+1, A, Math.max(0,A-1), Math.max(0,A-2)][j%5]), cand = PROP.filter(d => d.c===c && d.g<=ceil).sort((a,b)=>a.g-b.g||a.base-b.base);
+    if (!cand.length) continue;
+    const d = cand[Math.min(cand.length-1, Math.floor(Math.sqrt(r01("p",w,k,"i"))*cand.length))];
     const cu = r01("p",w,k,"c"), cond = Math.round(cu<.15 ? 20+cu/.15*24 : cu<.4 ? 45+(cu-.15)/.25*24 : cu<.85 ? 70+(cu-.4)/.45*24 : 95+(cu-.85)/.15*5);
     const base = d.base*(.88+r01("p",w,k,"b")*.24);
     const p = {type:d.id,base,cond};
@@ -1026,7 +1056,7 @@ function propListings(){
     const ask = Math.round(val*(.84+r01("p",w,k,"a")*.24)/500)*500;
     const lid = `p-${w}-${k}`;
     if (!S.sold.includes(lid)) out.push({lid,...p,val,ask});
-  }
+  } });
   return out;
 }
 
@@ -1449,7 +1479,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795396282";
+const BUILD = "1795400910";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1565,7 +1595,7 @@ function viewMarket(){
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
       return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=PROPM[l.type];return rowHtml({e:d.e,title:d.n,sub:`${propCond(l.cond)} · worth ${pm(l.val)}`,right:`<b class="num ${l.ask>S.cash?"down":""}">${wholeMoney(l.ask)}</b>${l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openPListing",arg:l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    <div style="display:flex;flex-direction:column;gap:6px">${pCatList(L)}</div>`;
   } else {
     const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
@@ -2136,6 +2166,7 @@ document.addEventListener("click", e => {
     case "lotEnter": rivalOpen = ""; sfxInit(); enterRoom(arg); save(); render(); if (S.room) openRoom(); break;
     case "roomBack": sfxInit(); if (S.room) openRoom(); break;
     case "rbid": roomBid(+arg); progress(); save(); drawSheet(); break;
+    case "pcat": pcOpen[arg] = !pcOpen[arg]; render(); break;
     case "msgrp": msOpen = msOpen===+arg ? -1 : +arg; render(); break;
     case "lotrival": lotRival = lotRival===arg ? "" : arg; render(); break;
     case "rival": rivalOpen = rivalOpen===arg ? "" : arg; drawSheet(); break;
