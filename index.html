@@ -1507,7 +1507,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795470891";
+const BUILD = "1795481065";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1525,6 +1525,7 @@ const LIVE = {
   evu: id => evText(id,true),
   evd: id => evText(id,false),
   cash: () => money(S.cash),
+  cashx: () => { const x = S.cash, a = Math.abs(x); return a < 1e8 ? (x<0?"-$":"$") + a.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) : money(x); },
   nw: () => nwMoney(netWorth()),
   ph: () => signed(perHour()*24),
   pm: () => money(perHour()/60),
@@ -1586,7 +1587,7 @@ function viewHome(){
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
   <div class="stats">
-    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cash"></b><span class="unit"><b class="num" data-live="gph" style="color:var(--em)"></b> total per hour</span><span class="unit"><b class="num" data-live="nph"></b> net per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
+    <button class="stat" data-act="cashinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Cash <span class="info">i</span></span><b class="em num" data-live="cashx"></b><span class="unit"><b class="num" data-live="gph" style="color:var(--em)"></b> total per hour</span><span class="unit"><b class="num" data-live="nph"></b> net per hour</span><span class="pill" data-live="evgu" style="margin-top:6px;text-transform:none;letter-spacing:0"></span><span class="pill r" data-live="evgd" style="margin-top:6px;text-transform:none;letter-spacing:0"></span></button>
     <div class="stat"><span class="lbl">Passive income</span><b class="gold num" data-live="ph"></b><span class="unit">per day</span><span class="unit"><b class="num" data-live="pm"></b> per minute</span></div>
     <button class="stat" data-act="assetinfo" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Assets <span class="info">i</span></span><b class="num" data-live="assets"></b></button>
     <button class="stat" data-act="bank" style="text-align:left;color:inherit;font:inherit"><span class="lbl">Debt <span class="info">i</span></span><b class="num ${(S.debt||0)>0?"down":""}" data-live="debt"></b><span class="unit" data-live="debtsub"></span><span class="unit" data-live="debtmort" style="color:var(--red)"></span></button>
