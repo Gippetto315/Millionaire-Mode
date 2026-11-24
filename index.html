@@ -1410,7 +1410,7 @@ const EVENTS = [
     ]};
   }},
   {id:"offer", w:2, ok:()=>ownedBiz().some(id=>S.biz[id].n>=1&&bizEquity(id)>=100), make(){
-    const el=ownedBiz().filter(i=>bizEquity(i)>=100), id=el[Math.floor(Math.random()*el.length)], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*SELL, r=Math.random(), big=r<.1, low=r>=.8, offer=o.spent/o.n*(big?5+Math.random()*5:low?.4+Math.random()*.35:.85+Math.random()*.45);
+    const el=ownedBiz().filter(i=>bizEquity(i)>=100), id=el[Math.floor(Math.random()*el.length)], o=S.biz[id], b=BIZM[id], each=o.spent/o.n*SELL, r=Math.random(), big=r<.1, low=false, offer=o.spent/o.n*(big?5+Math.random()*5:low?.4+Math.random()*.35:.85+Math.random()*.45);
     return {icon:big?"💰":low?"🥶":"🤝",title:big?"Offer too good to pass up?":low?"Lowball offer":"Acquisition offer",text:big?`A big chain wants one of your ${b.n} locations and is paying well over the odds. Its book value is ${money(each)}. They're offering ${money(offer)}.`:low?`A buyer is sniffing around one of your ${b.n} locations and hoping you're desperate. Its book value is ${money(each)}. They're offering ${money(offer)}.`:`A competitor wants one of your ${b.n} locations. Its book value is ${money(each)}. They're offering ${money(offer)}.`,choices:[
       {label:`Accept ${money(offer)}`,run(){ o.spent-=o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; if (o.n<=0) delete S.biz[id]; gain(offer,"sell",`Sold ${b.n} location to competitor`); return `Done. You banked ${money(offer)}.`; }},
       {label:"Decline",run(){ return "You kept the location."; }}
@@ -1507,7 +1507,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795482834";
+const BUILD = "1795563820";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
