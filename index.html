@@ -3,6 +3,7 @@
 <head>
 <script>try{if(localStorage.getItem("mm-theme")==="light")document.documentElement.classList.add("light")}catch(e){}</script>
 <meta charset="utf-8">
+<style>html,body{background:#090c0b}html.light,html.light body{background:#f3f6f4}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <style>html,body,*{touch-action:manipulation}</style>
 <script>document.addEventListener("gesturestart",function(e){e.preventDefault()},{passive:false})</script>
@@ -14,6 +15,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>Millionaire Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@500;600;700;800&display=swap">
 <style>
 /* Layout: one phone-width column, sticky cash bar on top, five-tab dock fixed to the bottom, bottom sheets for details */
@@ -1569,7 +1571,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795575792";
+const BUILD = "1795575921";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1595,7 +1597,7 @@ const LIVE = {
   gph: () => signed(grossHour()),
   nph: () => signed(netHour()),
   lcash: () => { ownCash(); return money(S.lb||0); },
-  savOut: () => { const ai=document.getElementById("savamt"), di=document.getElementById("savdays"), amt=parseAmt(ai?ai.value:savAmt), dd=parseInt(di?di.value:savDays), d=dd>=1&&dd<=30?dd:savDays; return amt>=.01 ? money(amt*(1+savRate(d)))+" · +"+money(amt*savRate(d)) : "Type an amount"; },
+  savOut: () => { const ai=document.getElementById("savamt"), di=document.getElementById("savdays"), amt=parseAmt(ai?ai.value:savAmt), dd=parseInt(di?di.value:savDays), d=dd>=1&&dd<=30?dd:savDays; return amt>=.01 ? money(amt*(1+savRate(d)))+" · +"+money(amt*savRate(d)) : "Type an amount above"; },
   dripT: () => { const g=graceLoans(); return g.length ? dur(Math.max(0,Math.min(...g.map(l=>dripEnd(l)-Date.now())))) : ""; },
   dripD: () => { const d=dripLoans(); return d.length ? dur(Math.max(0,Math.min(...d.map(l=>dripEnd(l)-Date.now())))) : ""; },
   dripL: () => money(dripLoans().reduce((a,l)=>a+l.d,0)),
@@ -2145,7 +2147,7 @@ document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+
 function syncAmts(){ const g = id => { const el = document.getElementById(id); return el && typeof el.value === "string" ? el.value : null; }, set = (id, f) => { const v = g(id); if (v !== null) f(v); };
   set("chtc", v => chtVal = v); set("loanamt", v => loanAmt = v); set("acctamt", v => acctAmtV = v); set("mortx", v => mortXV = v); set("upn", v => upNV = v); set("loanpay", v => loanPayV = v); set("loanone", v => loanOneV = v);
   set("projamt", v => projAmtV = v); set("mortamt", v => mortAmtV = v); set("savamt", v => savAmt = v); set("savdays", v => { const n = parseInt(v); if (n>=1 && n<=30) savDays = n; }); set("stkamt", v => stkAmt = v); set("stksell", v => stkSellAmt = v); }
-document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="savamt"||e.target.id==="savdays") liveTick(); if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",acctamt:"acctDepC",mortx:"propMortXC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
