@@ -672,19 +672,39 @@ const homePct = p => 1 + Math.floor((PROPM[p.type].g||0)/3);
 function homeBonus(){ const h = homeProp(); return h ? 1 + homePct(h)/100 : 1; }
 
 /* ===== lifespan: 1 hour of play = 1 game month ===== */
-const LIFE_END = 80, HEIRS = {child:{n:"Your child",e:"🧑",age:55,share:.75},grand:{n:"Your grandchild",e:"🧒",age:30,share:.6},great:{n:"Your great-grandchild",e:"👶",age:5,share:.3}};
+const LIFE_END = 80, HEIRS = {child:{n:"Your child",e:"🧑",age:55,start:1e6,allow:.15},grand:{n:"Your grandchild",e:"🧒",age:30,start:5e5,allow:.3},great:{n:"Your great-grandchild",e:"👶",age:5,start:2.5e5,allow:.6}};
 function ensureLife(){ if (!S.life) S.life = {gen:1,age0:18,ms:Math.max(0,S.last-S.created)}; if (!S.life.end) S.life.end = 80+Math.random()*10; if (!S.lives) S.lives = []; }
 const lifeAge = () => { ensureLife(); return S.life.age0 + S.life.ms/H/12; };
 const powAt = a => Math.max(.25, Math.min(1, .25 + .75*(a-18)/22));
-function lifePow(){ ensureLife(); return S.life.gen > 1 ? powAt(lifeAge()) : 1; }
+const TRUST_SHARE = .8;
+const minor = () => { ensureLife(); return !!S.life.trustee && lifeAge() < 18; };
+function lifePow(){ ensureLife(); return (S.life.gen > 1 ? powAt(lifeAge()) : 1) * (minor() ? .85 : 1); }
+/* Dynasty: heir traits, the Family Name bonus (prestige that stacks every generation), the will and the trust */
+const TRAITS = {land:{n:"Landlord",e:"🏠",d:"+20% property income"},deal:{n:"Dealmaker",e:"🤝",d:"+15% business income"},pinch:{n:"Penny Pincher",e:"🐷",d:"+25% vault interest"},hust:{n:"Hustler",e:"💼",d:"+50% side hustle pay"}};
+const TRAIT_KEYS = Object.keys(TRAITS);
+const kidTrait = c => c.trait || (c.trait = TRAIT_KEYS[Math.floor(Math.random()*TRAIT_KEYS.length)]);
+const myTrait = () => (S.life && S.life.trait) || "";
+const tm = (k,x) => myTrait() === k ? x : 1;
+const famBonus = () => S.fam || 0, famMult = () => 1 + famBonus();
+const famGain = peak => Math.max(0, peak)/1e7*.01;
+function popCard(em, t, txt, b){ if (document.getElementById("popwrap")) return false; const d = document.createElement("div"); d.id = "popwrap"; d.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:24px";
+  d.innerHTML = `<div class="card" style="max-width:340px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;gap:12px"><div style="font-size:44px">${em}</div><h3 style="margin:0">${t}</h3><p style="margin:0;line-height:1.45">${txt}</p><button class="btn gold" data-act="popOk" style="width:100%;margin-top:6px">${b}</button></div>`; document.body.appendChild(d); if (tab==="home") needRender = true; return true; }
+function trusteeBlock(){ if (!minor()) return false; toast("Your trustee won't sign that until you're 18"); return true; }
 function ageStep(ms){ ensureLife(); const L = S.life; if (L.dead) return; L.ms += ms; const mx = (L.end-L.age0)*12*H; if (L.ms >= mx){ L.ms = mx; L.dead = true; } }
 let heirFn = null, lastAge = -1;
 /* who you are: name, sex, marriage and the kids who can inherit. An hour of play is a month of life */
 const rndAge = (a,b) => a + Math.random()*(b-a);
-/* the family's share of an estate goes into the Family Vault, which pays the heir back slowly, about 10 real days */
-const FV_DAYS = 10;
-function vaultPay(from, t){ const v = S.fv; if (!v || v.bal <= .005) return; const a = Math.min(v.bal, v.rate*Math.max(0, t-from)/H); if (a > 0){ v.bal -= a; S.cash += a; if (v.bal <= .005){ v.bal = 0; v.rate = 0; } } }
-const vaultLeft = () => { const v = S.fv; return v && v.bal > .005 && v.rate > 0 ? v.bal/v.rate*H : 0; };
+/* Family Vault: locked, never withdrawn, grows 3% a game-day (an hour is a month, so a real day is 24 months). An allowance trickles out of its interest */
+const FV_RATE = .03, FV_DAY = 24*H;
+const fvBal = t => { const v = S.fv; return v ? v.bal : 0; };
+function vaultPay(from, t){ const v = S.fv; if (v && v.bal > .005 && t > from) v.bal *= Math.pow(1+FV_RATE,(t-from)/FV_DAY);
+  const L = S.life; if (L && L.trustee && L.trust > .005 && t > from){ const d = (t-from)/FV_DAY, h = (from+t)/2/H; L.trust *= L.tstyle === "agg" ? Math.exp(d*(Math.log(1.04) + .12*Math.sin(2*Math.PI*h/30 + 1.3))) : Math.pow(1.02, d); } }
+const FT_GOALS = [[1e6,.05],[1e7,.10],[1e8,.15],[1e9,.20]];
+const trustOwn = () => { const v = S.fv || {}; return netWorth() - (v.paid||0) - (v.base||0); };
+function trustGoals(){ const v = S.fv; if (!v || v.bal <= .005 || S.life.dead || sheetFn) return; const i = v.gi||0; if (i >= FT_GOALS.length || trustOwn() < FT_GOALS[i][0]) return;
+  if (document.getElementById("popwrap") || document.getElementById("trwrap") || document.getElementById("splash") || document.getElementById("party")) return;
+  const amt = v.bal*FT_GOALS[i][1]; v.bal -= amt; v.paid = (v.paid||0) + amt; v.gi = i+1; S.cash += amt; tx("income","Family Trust release",amt); save();
+  popCard("🏛️", "The trust pays out", `You made ${nwMoney(FT_GOALS[i][0])} on your own, so the Family Trust released ${Math.round(FT_GOALS[i][1]*100)}%: ${wholeMoney(amt)} lands in your cash.${FT_GOALS[i+1]?` Next release at ${nwMoney(FT_GOALS[i+1][0])}.`:""}`, "Nice"); }
 /* first time only: a big plain-English explanation. After that, Stephen's short no */
 function hsWarnOnce(){ if (S.hsWarned) return false; S.hsWarned = true; save(); if (document.getElementById("hswarn")) return true;
   const d = document.createElement("div"); d.id = "hswarn"; d.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:24px";
@@ -698,7 +718,14 @@ function planLife(){ const w = ensureWho(), a = lifeAge(); if (!w.first) return;
   if (w.married && !k && w.childAt == null) w.childAt = Math.max((w.marryAge||a) + rndAge(1,4), a + .2);
   if (k && !g && w.grandAt == null) w.grandAt = Math.max(rndAge(55,60), a + .3); }
 let nm = {f:"",l:"",sex:"",kid:"",step:""};
+const heirlooms = () => [...ownedBiz().map(id => ({k:"biz",id,n:`${BIZM[id].e||"🏪"} ${BIZM[id].n}${S.biz[id].n>1?" ×"+S.biz[id].n:""}`,v:bizEquity(id)})), ...S.props.map(p => ({k:"prop",id:p.uid,n:`🏠 ${p.name}`,v:propVal(p,Date.now())}))];
+const willItem = () => { const w = S.will; if (!w) return null; return heirlooms().find(x => x.k===w.k && x.id===w.id) || null; };
+function sheetWill(){ const f = () => { const hs = heirlooms().sort((a,b)=>b.v-a.v).slice(0,12), cur = S.will;
+  return `<div class="shead"><div class="tile gold">📜</div><div><h3>Write your will</h3><p>Age ${Math.floor(lifeAge())}. Death comes between 80 and 90</p></div></div><p class="note" style="margin:0 0 10px">Pick one heirloom. Your heir keeps it intact. Everything else is sold when you die, your debts are paid, and the rest goes into the Family Trust.</p>
+  <div class="list">${hs.map(x=>`<button class="btn ${cur&&cur.k===x.k&&cur.id===x.id?"gold":"ghost"}" data-act="willPick" data-arg="${x.k}|${x.id}" style="text-align:left;display:flex;justify-content:space-between"><span>${esc(x.n)}</span><small>${nwMoney(x.v)}</small></button>`).join("")||`<p class="note">You don't own anything to pass down yet.</p>`}</div>
+  ${hs.length?"":`<button class="btn gold" data-act="willPick" data-arg="none|" style="width:100%">OK</button>`}`; }; f.life = true; return f; }
 function lifeEvents(){ const w = ensureWho(); if (S.life.dead || sheetFn || document.getElementById("splash") || document.getElementById("party")) return;
+  if (lifeAge() >= 75 && !S.life.willed){ openSheet(sheetWill(), true); return; }
   if (!w.first){ nm = {f:"",l:w.last||"",sex:"",step:"me"}; openSheet(sheetName(), true); return; }
   planLife(); const a = lifeAge();
   if (!w.married && a >= w.marryAt){ w.married = true; w.marryAge = Math.floor(a); w.childAt = null; planLife(); save(); nm = {l:w.last,step:"wed"}; openSheet(sheetWed(), true); return; }
@@ -731,25 +758,59 @@ function nmAct(act, arg){ const w = ensureWho(); nmRead();
   if (act === "wedOk"){ closeSheet(); render(); return; }
   if (act === "nmLast"){ const l = cleanNm(nm.l); if (!l){ toast("Type a last name"); return; } w.last = l; save(); closeSheet(); render(); toast(`✍️ You're now ${w.first} ${l}`, true); return; }
   if (act === "kidSave"){ const f = cleanNm(nm.f); if (!nm.sex){ toast("Pick son or daughter"); return; } if (!f){ toast("Type their name"); return; }
-    const g = nm.kid === "grand"; w.kids.push({first:f, sex:nm.sex, born:Math.floor(lifeAge()), grand:g}); planLife(); save(); closeSheet(); render();
-    toast(`👶 Welcome, ${f} ${w.last}`, true); return; } }
-function lifeCheck(){ ensureLife(); advCheck(); const a = Math.floor(lifeAge()); if (lastAge >= 0 && a > lastAge && !S.life.dead){ toast("🎂 Happy birthday. You're "+a, true); if (tab==="home") needRender = true; } lastAge = a;
+    const g = nm.kid === "grand"; w.kids.push({first:f, sex:nm.sex, born:Math.floor(lifeAge()), grand:g, trait:TRAIT_KEYS[Math.floor(Math.random()*TRAIT_KEYS.length)]}); planLife(); save(); closeSheet(); render();
+    { const tr = TRAITS[w.kids[w.kids.length-1].trait]; toast(`👶 Welcome, ${f} ${w.last}. Born a ${tr.n}`, true); } return; } }
+function trusteeCheck(){ const L = S.life; if (!L.trustee || lifeAge() < 18 || document.getElementById("trwrap") || document.getElementById("splash") || document.getElementById("party")) return;
+  const rel = L.trust||0, v = S.fv, ft = v && v.bal > .005 ? v.bal*.1 : 0; S.cash += rel + ft; if (ft){ v.bal -= ft; v.paid = (v.paid||0) + ft; } L.trust = 0; L.trustee = false; save(); const d = document.createElement("div"); d.id = "trwrap"; d.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:24px";
+  d.innerHTML = `<div class="card" style="max-width:340px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;gap:12px"><div style="font-size:44px">🎓</div><h3 style="margin:0">You're 18</h3><p style="margin:0;line-height:1.45">Your trustee steps aside and your trust fund opens: ${wholeMoney(rel)}${ft?`, plus a ${wholeMoney(ft)} coming-of-age gift from the Family Trust`:""}. No more 15% fee, and loans, mortgages and projects are open to you.</p><button class="btn gold" data-act="trOk" style="width:100%;margin-top:6px">Take the wheel</button></div>`; document.body.appendChild(d); if (tab==="home") needRender = true; }
+function lifeCheck(){ ensureLife(); advCheck(); trusteeCheck(); trustGoals(); const a = Math.floor(lifeAge()); if (lastAge >= 0 && a > lastAge && !S.life.dead){ toast("🎂 Happy birthday. You're "+a, true); if (tab==="home") needRender = true; } lastAge = a;
   if (S.life.dead && (!heirFn || sheetFn !== heirFn)){ heirFn = sheetHeir(); heirFn.life = true; openSheet(heirFn, true); return; }
   lifeEvents(); }
-function sheetHeir(){ return () => { const nw = netWorth(), L = S.life, rk = rankIdx();
-  const cards = Object.keys(HEIRS).map(k => { const h = HEIRS[k], yrs = 85-h.age, pw = h.gen===0?1:powAt(h.age);
-    const kd = heirKid(k), nmH = kd ? `${kd.sex==="f"?(k==="child"?"Your daughter":"Your granddaughter"):(k==="child"?"Your son":"Your grandson")}, ${esc(kd.first)}` : h.n;
-    return `<button class="btn ${k==="child"?"gold":"stk"}" data-act="heir" data-arg="${k}" style="text-align:left;margin-bottom:8px;display:block;width:100%"><b>${kd?(kd.sex==="f"?"👩":"👨"):h.e} ${nmH} · age ${h.age}</b><br><small>Keeps the businesses and everything else. Family gets ${100-Math.round(h.share*100)}% (${nwMoney(nw*(1-h.share))}). It goes into the Family Vault and pays you back over about 10 real days. It comes out of your cash first, so your account can go negative until it does<br>about ${yrs} years to play (~${Math.round(yrs*.5)} real days)<br>${k==="great"?"A trustee runs it until they grow up. ":""}Starts at ${Math.round(pw*100)}% power${pw<1?", rising to full by 40":""}</small></button>`; }).join("");
-  return `<div class="shead"><div class="tile gold">🕊️</div><div><h3>Generation ${L.gen} has ended</h3><p>You lived to ${Math.floor(L.end)}. Level ${rk+1}, ${RANKS[rk][1]}. You leave ${nwMoney(nw)}.</p></div></div><p class="note" style="margin-bottom:10px">Who takes over the empire? Death comes without warning, any day between 80 and 90. Your family's share goes into the Family Vault. The closer the heir, the more they keep, but the fewer years they have left. Younger heirs start with little power.</p>${cards}`; }; }
+function sheetHeir(){ return () => { const nw = netWorth(), L = S.life, rk = rankIdx(), wi = willItem(), hv = wi ? wi.v : 0, gain = famGain(S.peak||nw);
+  const cards = Object.keys(HEIRS).map(k => { const h = HEIRS[k], yrs = 85-h.age, pw = powAt(h.age);
+    const kd = heirKid(k), nmH = kd ? `${kd.sex==="f"?(k==="child"?"Your daughter":"Your granddaughter"):(k==="child"?"Your son":"Your grandson")}, ${esc(kd.first)}` : h.n, tr = TRAITS[kd ? kidTrait(kd) : (L.gt || (L.gt = TRAIT_KEYS[Math.floor(Math.random()*TRAIT_KEYS.length)]))];
+    const st = Math.max(0, Math.min(h.start, nw-hv)), toV = Math.max(0, nw-hv-h.start), sh = Math.max(0, hv-nw);
+    return `<button class="btn ${k==="child"?"gold":"stk"}" data-act="heir" data-arg="${k}" style="text-align:left;margin-bottom:8px;display:block;width:100%"><b>${kd?(kd.sex==="f"?"👩":"👨"):h.e} ${nmH} · age ${h.age}</b><br><small>${tr?`${tr.e} ${tr.n}: ${tr.d}<br>`:""}Starts with ${wholeMoney(st)}${k==="great"?" (80% held in a trust until 18)":""}${sh>.005?". Inherits "+nwMoney(sh)+" of debt":""}<br>About ${yrs} years to play (~${Math.round(yrs*.5)} real days) · ${Math.round(pw*100)}% power${pw<1?", full by 40":""}</small></button>`; }).join("");
+  return `<div class="shead"><div class="tile gold">🕊️</div><div><h3>${esc(whoName()||"Generation "+L.gen)} has died</h3><p>Age ${Math.floor(L.end)}. Level ${rk+1}, ${RANKS[rk][1]}. Leaves ${nwMoney(nw)}</p></div></div>
+  <div class="lines" style="margin-bottom:10px">${wi?`<div><span>📜 Heirloom kept</span><b>${esc(wi.n)}</b></div>`:""}<div><span>🏛️ To the Family Trust</span><b class="num">${nwMoney(Math.max(0,nw-hv)+(S.fv?S.fv.bal:0))}</b></div><div><span>⭐ Family Name</span><b class="num up">+${Math.round((famBonus()+gain)*1000)/10}% income</b></div></div>
+  <p class="note" style="margin-bottom:10px">Everything else is sold and your debts are paid. Your heir starts small but grows faster: the Family Name boosts business income forever, and the trust pays out as they hit goals.</p>${cards}`; }; }
 const heirKid = k => { const w = ensureWho(); return k === "child" ? w.kids.find(x=>!x.grand) : k === "grand" ? w.kids.find(x=>x.grand) : null; };
-function chooseHeir(k){ const h = HEIRS[k]; if (!h) return; const w0 = ensureWho(), kd = heirKid(k), gk = w0.kids.find(x=>x.grand); const L = S.life, rk = rankIdx(), nw0 = netWorth(), owed = Math.max(0, nw0*(1-h.share));
-  const paid = owed; S.cash -= paid; if (paid > .005){ tx("spend","Family share moved to the Family Vault",-paid); const v = S.fv || (S.fv = {bal:0,rate:0}); v.bal += paid; v.rate += paid/(FV_DAYS*24); }
-  S.lives = (S.lives||[]).concat([{gen:L.gen,lv:rk+1,rank:RANKS[rk][1],nw:nw0,heir:kd?kd.first:h.n,family:paid,who:whoName()}]);
-  S.who = {first:kd?kd.first:"",last:w0.last,sex:kd?kd.sex:"",married:h.age>=35,marryAge:h.age>=35?28:undefined,kids:(k==="child"&&gk)?[{first:gk.first,sex:gk.sex,born:h.age-25,grand:false}]:[]};
-  S.life = {gen:L.gen+1,age0:h.age,ms:0,end:80+Math.random()*10}; heirFn = null; lastAge = -1; S.peak = Math.max(100, netWorth()); progress(); S.rk = rankIdx();
-  save(); closeSheet(); tab = "home"; render(); toast(`${kd?kd.first:h.n} takes over. ${nwMoney(paid)} went into the Family Vault and pays out slowly`, true); }
-function sheetLegacy(){ return () => { const L = S.life, a = lifeAge(), p = lifePow(), hall = (S.lives||[]).map(x => `<div><span>Gen ${x.gen}${x.who?" · "+esc(x.who):""} · Lv ${x.lv} ${x.rank}</span><b class="num">${nwMoney(x.nw)}</b></div>`).join("");
-  return `<div class="shead"><div class="tile gold">🎂</div><div><h3>${esc(whoName()||"Generation "+L.gen)}</h3><p>Age ${Math.floor(a)} · Gen ${L.gen}${ensureWho().married?" · Married":""}</p></div></div>${ensureWho().kids.length?`<div class="lines" style="margin-bottom:10px">${ensureWho().kids.map(c=>`<div><span>${c.sex==="f"?"👧":"👦"} ${esc(c.first)}</span><b>${c.grand?(c.sex==="f"?"Granddaughter":"Grandson"):(c.sex==="f"?"Daughter":"Son")}</b></div>`).join("")}</div>`:""}<div class="lines" style="margin-bottom:10px"><div><span>Death comes</span><b>between 80 and 90</b></div><div><span>Business power</span><b class="num">${Math.round(p*100)}%</b></div><div><span>Game clock</span><b>1 hour = 1 month</b></div></div>${S.fv&&S.fv.bal>.005?`<div class="lines" style="margin-bottom:10px"><div><span>🏛️ Family Vault</span><b class="num">${money(S.fv.bal)}</b></div><div><span>Pays you</span><b class="num up">+${money(S.fv.rate)}/h</b></div><div><span>Empty in</span><b>${dur(vaultLeft())}</b></div></div>`:""}${p<1?`<p class="note">Still learning the ropes. Power rises with age and is full by 40.</p>`:""}${hall?`<div class="sechead"><h2>Past lives</h2></div><div class="lines">${hall}</div>`:""}`; }; }
+function chooseHeir(k){ const h = HEIRS[k]; if (!h) return; const w0 = ensureWho(), kd = heirKid(k), gk = w0.kids.find(x=>x.grand); const L = S.life, rk = rankIdx(), t = Date.now();
+  const wi = willItem(), hv = wi ? wi.v : 0, keepB = wi && wi.k==="biz" ? S.biz[wi.id] : null, keepP = wi && wi.k==="prop" ? S.props.find(p=>p.uid===wi.id) : null;
+  const nw0 = netWorth(), est = nw0 - hv, cash0 = Math.max(0, Math.min(h.start, est)), toV = Math.max(0, est-h.start), short = Math.max(0, -est), peak = Math.max(S.peak||0, nw0);
+  S.fam = famBonus() + famGain(peak);
+  S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
+  if (keepB) S.biz[wi.id] = keepB; if (keepP){ delete keepP.mid; S.props.push(keepP); }
+  const trust = k==="great" ? Math.round(cash0*TRUST_SHARE) : 0; S.cash -= trust;
+  if (short > .005){ S.loans = [{p:short, d:short, i:LOAN_PART*short, pp:0, at:t, o:short}]; S.dueAt = t + LOAN_EVERY; loanSync(); }
+  const v = S.fv || (S.fv = {bal:0}); v.bal += toV; v.gi = 0; v.paid = 0; delete v.allow;
+  S.tx = []; tx("income","Inheritance",cash0);
+  S.lives = (S.lives||[]).concat([{gen:L.gen,lv:rk+1,rank:RANKS[rk][1],nw:nw0,peak,heir:kd?kd.first:h.n,vault:toV,who:whoName(),sex:w0.sex,trait:L.trait||""}]);
+  S.who = {first:kd?kd.first:"",last:w0.last,sex:kd?kd.sex:"",married:h.age>=35,marryAge:h.age>=35?28:undefined,kids:(k==="child"&&gk)?[{first:gk.first,sex:gk.sex,born:h.age-25,grand:false,trait:kidTrait(gk)}]:[]};
+  S.life = {gen:L.gen+1,age0:h.age,ms:0,end:80+Math.random()*10,trustee:k==="great",trust:trust,trait:kd?kidTrait(kd):(L.gt||TRAIT_KEYS[Math.floor(Math.random()*TRAIT_KEYS.length)])}; heirFn = null; lastAge = -1;
+  S.peak = Math.max(100, netWorth()); S.lvl = 0; MS.forEach((m,i) => { if (S.peak >= m[0]) S.lvl = i; }); S.rk = rankIdx(); v.base = netWorth();
+  S.hist = [[t,Math.max(100,netWorth())]];
+  save(); closeSheet(); tab = "home"; render();
+  if (k === "great"){ openSheet(sheetTrustee(), true); return; }
+  toast(`${kd?kd.first:h.n} takes over with ${wholeMoney(cash0)}${wi?" and the "+wi.n.replace(/^\S+ /,""):""}`, true); }
+function sheetTrustee(){ const f = () => `<div class="shead"><div class="tile gold">🧑‍⚖️</div><div><h3>Pick a trustee</h3><p>${esc(whoName()||"Your heir")} is 5. Someone runs things until 18</p></div></div>
+  <p class="note" style="margin:0 0 10px">${wholeMoney(S.life.trust||0)} sits in a trust fund until you turn 18. The trustee takes 15% of income and blocks loans, mortgages and projects. How should they invest the fund?</p>
+  <div class="list"><button class="btn gold" data-act="tStyle" data-arg="safe" style="text-align:left"><b>🛡️ Safe</b><br><small>Grows a steady 2% a day. Never drops</small></button>
+  <button class="btn stk" data-act="tStyle" data-arg="agg" style="text-align:left"><b>🚀 Aggressive</b><br><small>Averages 4% a day but swings. Some weeks it loses</small></button></div>`; f.life = true; return f; }
+function sheetLegacy(){ return () => { const L = S.life, a = lifeAge(), p = lifePow(), w = ensureWho(), tr = TRAITS[myTrait()], v = S.fv, lives = S.lives||[], nw = netWorth();
+  const rec = lives.reduce((m,x) => (x.peak||x.nw) > (m?(m.peak||m.nw):-1) ? x : m, null), recV = rec ? (rec.peak||rec.nw) : 0, mine = Math.max(S.peak||0, nw), dyn = nw + (v?v.bal:0) + (L.trust||0);
+  const goal = [1e9,1e12,1e15].find(g => g > dyn) || 1e15, rel = r => { const back = L.gen - r.gen; return back===1?"Dad's record":back===2?"Grandpa's record":back===3?"Great-grandpa's record":"The family record"; };
+  const tree = lives.concat([{gen:L.gen,who:whoName(),sex:w.sex,trait:myTrait(),peak:mine,now:true}]).map(x => `<div><span>${x.sex==="f"?"👩":"👨"} Gen ${x.gen} · ${esc(x.who||"Unnamed")}${x.trait&&TRAITS[x.trait]?" "+TRAITS[x.trait].e:""}${x.now?" <small style='color:var(--gold)'>· you</small>":""}</span><b class="num">${nwMoney(x.peak||x.nw)}</b></div>`).join("");
+  const wi = willItem();
+  return `<div class="shead"><div class="tile gold">🌳</div><div><h3>${esc(whoName()||"Generation "+L.gen)}</h3><p>Age ${Math.floor(a)} · Gen ${L.gen}${w.married?" · Married":""}${tr?` · ${tr.e} ${tr.n}`:""}</p></div></div>
+  <div class="lines" style="margin-bottom:10px"><div><span>🏰 Dynasty worth</span><b class="num">${nwMoney(dyn)}</b></div><div><span>Next goal</span><b class="num">${goal>=1e15?"$1 Quadrillion":goal>=1e12?"$1 Trillion":"$1 Billion"}</b></div>${famBonus()>0?`<div><span>⭐ Family Name</span><b class="num up">+${Math.round(famBonus()*1000)/10}% business income</b></div>`:""}${tr?`<div><span>${tr.e} ${tr.n}</span><b>${tr.d}</b></div>`:""}</div>
+  ${rec?`<div class="lines" style="margin-bottom:10px"><div><span>🏆 ${rel(rec)} (${esc(rec.who||"Gen "+rec.gen)})</span><b class="num">${nwMoney(recV)}</b></div><div><span>Your best</span><b class="num ${mine>=recV?"up":""}">${nwMoney(mine)}${mine>=recV?" · beaten":` · ${Math.floor(mine/recV*100)}%`}</b></div></div>`:""}
+  ${v&&v.bal>.005?`<div class="lines" style="margin-bottom:10px"><div><span>🏛️ Family Trust</span><b class="num">${nwMoney(v.bal)}</b></div><div><span>Grows</span><b>3% a day, locked</b></div>${(v.gi||0)<FT_GOALS.length?`<div><span>Next release</span><b>${Math.round(FT_GOALS[v.gi||0][1]*100)}% when you make ${nwMoney(FT_GOALS[v.gi||0][0])}</b></div><div><span>Made on your own</span><b class="num">${nwMoney(Math.max(0,trustOwn()))}</b></div>`:`<div><span>Releases</span><b>All unlocked</b></div>`}</div>`:""}
+  ${minor()?`<div class="lines" style="margin-bottom:10px"><div><span>🔒 Trust fund (opens at 18)</span><b class="num">${nwMoney(L.trust||0)}</b></div><div><span>Trustee</span><b>${L.tstyle==="agg"?"🚀 Aggressive":"🛡️ Safe"}</b></div></div><p class="note">Your trustee takes 15% of income and blocks loans, mortgages and projects until you're 18. You can still buy and upgrade.</p>`:""}
+  ${w.kids.length?`<div class="lines" style="margin-bottom:10px">${w.kids.map(c=>`<div><span>${c.sex==="f"?"👧":"👦"} ${esc(c.first)} · ${TRAITS[kidTrait(c)].e} ${TRAITS[kidTrait(c)].n}</span><b>${c.grand?(c.sex==="f"?"Granddaughter":"Grandson"):(c.sex==="f"?"Daughter":"Son")}</b></div>`).join("")}</div>`:""}
+  <div class="lines" style="margin-bottom:10px"><div><span>📜 Will</span><b>${a>=75?(wi?esc(wi.n):"No heirloom"):"Written at 75"}</b></div><div><span>Business power</span><b class="num">${Math.round(p*100)}%</b></div><div><span>Death comes</span><b>between 80 and 90</b></div></div>
+  ${a>=75?`<button class="btn ghost" data-act="willOpen" style="width:100%;margin-bottom:10px">Change your will</button>`:""}
+  <div class="sechead"><h2>Family tree</h2></div><div class="lines">${tree}</div>`; }; }
 
 function homeCompare(u){ const p=S.props.find(x=>x.uid===u); if (!p) return null; const t=Date.now(), keep=S.home, tot=()=>Object.keys(S.biz).reduce((a,id)=>a+bizNetAt(id,t),0);
   S.home=u; const w=tot(); S.home=null; const wo=tot(); S.home=keep; const live=w-wo, rent=propRent(p,t); return {live,rent,diff:live-rent}; }
@@ -760,7 +821,7 @@ const rentedH = (i,t) => (i.rh||0) + (i.rent ? Math.max(0,(t-i.rentAt))/H : 0);
 const payH = (cost, net) => net > .0001 ? Math.round(cost/net).toLocaleString() + "h to earn it back" : "never earns it back";
 const carRent = (i,t) => i.rent ? itemVal(i,t)*RENT_RATE : 0;
 const rentAll = t => S.items.reduce((a,i)=>a+carRent(i,t),0);
-function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus()*homeBonus()*lifePow() : 0; }
+function bizRev(id){ const o=S.biz[id]; return o ? BIZM[id].rev*sumM(o)*setBonus()*vehBonus()*homeBonus()*lifePow()*famMult()*tm("deal",1.15) : 0; }
 function bizExp(id){ const o=S.biz[id]; return o ? BIZM[id].exp*sumE(o) : 0; }
 function modAt(id,t){ return S.mods.reduce((m,x) => (x.b==="*"||x.b===id) && t>=x.from && t<x.until ? m*x.m : m, 1); }
 function evInfo(id,t){ t=t||Date.now(); const a=S.mods.filter(x=>(x.b==="*"||x.b===id)&&t>=x.from&&t<x.until); if (!a.length) return null; return {m:a.reduce((p,x)=>p*x.m,1), end:Math.min(...a.map(x=>x.until)), all:a.some(x=>x.b==="*")}; }
@@ -798,7 +859,7 @@ const mortCap = () => 4*Math.max(0,netWorth());
 const OCC_BLK = 8*H;
 function occAt(p,t){ return Math.max(.05, Math.min(1, (p.cond==null?100:p.cond)/100)); }
 function occHours(p,a,b){ let h=0, t=a; while (t<b){ const e=Math.min(b,(Math.floor(t/OCC_BLK)+1)*OCC_BLK); h += occAt(p,t)*(e-t)/H; t=e; } return h; }
-function propRentFull(p,t){ return propVal(p,t)*.0125*(S.home && p.uid===S.home && UNITS[p.type] ? 1-1/UNITS[p.type] : 1); }
+function propRentFull(p,t){ return propVal(p,t)*.0125*tm("land",1.2)*(S.home && p.uid===S.home && UNITS[p.type] ? 1-1/UNITS[p.type] : 1); }
 function propRentAvg(p,t){ return propRentFull(p,t)*occAt(p,t); }
 function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
@@ -818,7 +879,7 @@ const loanPct = x => +(x*100).toFixed(2) + "%";
 const loanLadder = () => LOAN_TIERS.map((tr,k) => loanPct(tr[1]) + (k===0 ? " first "+(LOAN_TIERS[1][0]<1?Math.round(LOAN_TIERS[1][0]*60)+" min":LOAN_TIERS[1][0]+"h") : k<LOAN_TIERS.length-1 ? " next "+(LOAN_TIERS[k+1][0]-tr[0])+"h" : " after that")).join(" · ");
 const loanRateAge = h => LOAN_TIERS.reduce((r,tr) => h >= tr[0] ? tr[1] : r, LOAN_TIERS[0][1]);
 const LOAN_SCHED = (() => { let t = 0, rem = 1; for (let k = 1; k <= LOAN_PAYS && rem > 1e-9; k++){ const p = Math.min(LOAN_PART, rem); t += p*loanRateAge(k*LOAN_EVERY_H); rem -= p; } return t; })();
-const savRate = d => { d = Math.max(1, Math.min(30, d)); const b = Math.log(1.10), k = (Math.log(1.13) - b)/29; return Math.round((Math.exp(d*(b + k*(d-1))) - 1)*1000)/1000; }; /* daily rate climbs from 10% to 13% with lock length, so one long lock always beats chaining short ones, and 1 day still beats the best savings tier */
+const savRate = d => { d = Math.max(1, Math.min(30, d)); const b = Math.log(1.10), k = (Math.log(1.13) - b)/29; return Math.round((Math.exp(d*(b + k*(d-1))) - 1)*tm("pinch",1.25)*1000)/1000; }; /* daily rate climbs from 10% to 13% with lock length, so one long lock always beats chaining short ones, and 1 day still beats the best savings tier */
 const savVal0 = (t) => { t=t||Date.now(); return (S.sav||[]).reduce((a,v)=>a+v.p*(1+v.r*Math.min(1,Math.max(0,(t-v.at)/(v.end-v.at)))),0); };
 const ACCT_TIERS = [{n:"Basic",d:0,r:.06,p:0},{n:"Silver",d:2,r:.072,p:.015},{n:"Gold",d:5,r:.084,p:.03},{n:"Platinum",d:10,r:.096,p:.05}], ACCT_MINPCT = .05;
 const acctOf = () => (S.acct = S.acct || {b:0,at:Date.now(),st:Date.now(),earn:0});
@@ -921,7 +982,7 @@ function projListings(){ const t=Date.now(), slot=Math.floor(t/PROJ_SLOT), done=
 const projTiers = () => { const nw=Math.max(netWorth(),100); return [.02,.05,.10].map(f=>Math.max(20,Math.round(nw*f))); };
 const projSmall = () => [20,100,1000,10000,100000].filter(a=>a<projTiers()[0]).slice(-3);
 const savVal = (t) => savVal0(t) + acctBal(t);
-const grossWorth = () => S.cash + assetsVal() + bizVal() + savVal() + projLocked();
+const grossWorth = () => S.cash + assetsVal() + bizVal() + savVal() + projLocked() + ((S.life&&S.life.trust)||0);
 function netWorth(){ return grossWorth() - (S.debt||0) - mortDebt(); }
 const loanRatioAt = l => Math.min(2.5, .5 + .2*l);
 const loanRatio = () => loanRatioAt(S.lvl);
@@ -1154,8 +1215,8 @@ function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough ca
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
   carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
-  loanTake(a){ a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); const nowT = Date.now(); if (!S.loans.length || !S.dueAt) S.dueAt = nowT + LOAN_EVERY; S.loans.push({p:a, d:a*(1+LOAN_FEE), i:LOAN_PART*a, pp:0, at:nowT, o:a, g:1}); S.cash += a; loanSync(); S.lb = (S.lb||0) + a; tx("loan","Took out a loan",a); },
-  projPut(arg){ const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if (!L) return; S.proj=S.proj||[]; if (S.proj.length>=PROJ_MAX){ toast(`You can run ${PROJ_MAX} projects at once`); return; }
+  loanTake(a){ if (trusteeBlock()) return; a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); const nowT = Date.now(); if (!S.loans.length || !S.dueAt) S.dueAt = nowT + LOAN_EVERY; S.loans.push({p:a, d:a*(1+LOAN_FEE), i:LOAN_PART*a, pp:0, at:nowT, o:a, g:1}); S.cash += a; loanSync(); S.lb = (S.lb||0) + a; tx("loan","Took out a loan",a); },
+  projPut(arg){ if (trusteeBlock()) return; const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if (!L) return; S.proj=S.proj||[]; if (S.proj.length>=PROJ_MAX){ toast(`You can run ${PROJ_MAX} projects at once`); return; }
     const a=Math.min(+a0,S.cash); if (!(a>=1)) return; const d=PROJ[L.kind]; S.cash-=a; S.projDone=(S.projDone||[]).concat(id).slice(-40);
     S.proj.push({id,kind:L.kind,name:L.name,amt:a,at:Date.now(),end:Date.now()+d.lock*3600000,mult:d.roll()}); S.imp=S.imp||{jobs:0,n:0}; S.imp.jobs+=impJobs(L.kind,a); S.imp.n+=1; tx("spend",`Invested in ${L.name}`,-a); toast(`💛 ${impJobs(L.kind,a)} job${impJobs(L.kind,a)>1?"s":""} supported at ${L.name}`); },
   savPut(arg){ const [a0,d0]=String(arg).split("|"), d=Math.max(1,Math.min(30,Math.round(+d0))), a=Math.min(+a0,ownCash(),savCap()); if (!(a>=.01)) return; const t=Date.now(); S.sav=S.sav||[]; S.sav.push({p:a,r:savRate(d),at:t,end:t+d*24*H,d}); S.cash-=a; tx("spend","Savings deposit",-a); },
@@ -1190,7 +1251,7 @@ const A = {
   propRenoLoan(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (c>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } A.loanTake(c); S.lb=Math.max(0,(S.lb||0)-c); if (!spend(c,"buy",`Renovation (loan): ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (S.home===u){ toast(UNITS[p.type] ? "You live here, so the other units have to stay rented" : "You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
-  propMort(arg){ const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L||!(+am>=1)) return; const d=PROPM[L.type], loan=Math.round(Math.min(+am,L.ask)*100)/100, down=Math.round((L.ask-loan)*100)/100;
+  propMort(arg){ if (trusteeBlock()) return; const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L||!(+am>=1)) return; const d=PROPM[L.type], loan=Math.round(Math.min(+am,L.ask)*100)/100, down=Math.round((L.ask-loan)*100)/100;
     if (loan > L.ask*.8+.5){ toast("The bank wants at least 20% down"); return; } if (houseShort(down)) return; if (mortDebt()+loan > mortCap()){ toast("The bank won't lend that much against your net worth. Put more down."); return; }
     S.cash -= down; const u=uid(); S.sold.push(lid); S.props.push({uid:u,type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,down,at:Date.now()});
     const ap=mortAPR(loan,L.ask), ii=aprI(ap); (S.mort=S.mort||[]).push({uid:u,p0:loan,at:Date.now(),pay:loan*payF(ii),i:ii,apr:ap}); tx("buy",`Bought ${d.n} (mortgage)`,-down); },
@@ -1208,7 +1269,7 @@ const A = {
 const HUSTLE = [3, 10, 30, 80, 200, 550, 1500, 5000, 18000, 75000];
 const hustleBase = l => HUSTLE[Math.min(l, HUSTLE.length-1)];
 const hustleSure = () => Math.round(hustleBase(S.lvl)*rideX()*100)/100;
-const hustlePay = () => { const b = hustleSure(); if (!S.hsNext || S.hsBase !== b){ S.hsBase = b; const sp = b*.01; S.hsNext = Math.max(.01, Math.round((b + (Math.random()*2-1)*sp)*100)/100); } return S.hsNext; };
+const hustlePay = () => { const b = hustleSure(); if (!S.hsNext || S.hsBase !== b){ S.hsBase = b; const sp = b*.01; S.hsNext = Math.max(.01, Math.round((b + (Math.random()*2-1)*sp)*100)/100); } return Math.round(S.hsNext*tm("hust",1.5)*100)/100; };
 
 /* ================= auctions: live room ================= */
 const RIVALS = {
@@ -1571,7 +1632,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795575921";
+const BUILD = "1795575932";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1647,7 +1708,7 @@ function viewHome(){
   <section class="hero">
     <button class="nwbtn" data-act="nwinfo" aria-label="What makes up your net worth"><span class="lbl">Net worth <span class="info">i</span></span>
     <span class="nw num" data-live="nw">${nwMoney(netWorth())}</span></button>
-    <button data-act="legacy" style="background:none;border:0;color:var(--muted);font:inherit;font-size:13px;padding:2px 0 8px;display:block">${whoName()?esc(whoName())+" · ":""}🎂 Age ${Math.floor(lifeAge())} · Gen ${S.life.gen}${lifePow()<1?" · "+Math.round(lifePow()*100)+"% power":""}</button>
+    <button data-act="legacy" style="background:none;border:0;color:var(--muted);font:inherit;font-size:13px;padding:2px 0 8px;display:block">${whoName()?esc(whoName())+" · ":""}🎂 Age ${Math.floor(lifeAge())} · Gen ${S.life.gen}${lifePow()<1?" · "+Math.round(lifePow()*100)+"% power":""}${myTrait()?" · "+TRAITS[myTrait()].e:""}${S.fv&&S.fv.bal>.005?" · 🏛️ "+nwMoney(S.fv.bal):""}</button>
     <div class="lvrow"><span class="rank">Lv ${rI+1} · ${RANKS[rI][1]}</span>
       <div class="prog"><div class="bar"><i style="width:${(prog*100).toFixed(1)}%"></i></div><small data-live="nextms"></small></div></div>
   </section>
@@ -2343,6 +2404,11 @@ document.addEventListener("click", e => {
     case "legacy": openSheet(sheetLegacy()); break;
     case "nmSex": case "nmSave": case "wedOk": case "nmLast": case "kidSave": nmAct(act, arg); break;
     case "advOk": { delete S.advBase; save(); const o = document.getElementById("advwrap"); if (o) o.remove(); } break;
+    case "popOk": { const o = document.getElementById("popwrap"); if (o) o.remove(); } break;
+    case "willPick": { const [kk,id] = String(arg).split("|"); S.will = kk==="none" ? null : {k:kk,id}; S.life.willed = true; save(); closeSheet(); render(); const wi = willItem(); toast(wi?`📜 ${wi.n.replace(/^\S+ /,"")} goes to your heir`:"📜 Will written", true); } break;
+    case "willOpen": openSheet(sheetWill()); break;
+    case "tStyle": S.life.tstyle = arg; save(); closeSheet(); render(); toast(arg==="agg"?"🚀 Aggressive trustee hired":"🛡️ Safe trustee hired", true); break;
+    case "trOk": { const o = document.getElementById("trwrap"); if (o) o.remove(); } break;
     case "hsWarnOk": { const o = document.getElementById("hswarn"); if (o) o.remove(); } break;
     case "heir": chooseHeir(arg); break;
     case "cheatopen": chtVal = ""; openSheet(sheetCheat()); break;
