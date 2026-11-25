@@ -484,10 +484,30 @@ const PROP = [
   {id:"parking",n:"Parking Garage",e:"🅿️",t:6,base:4500000,g:8,c:"Commercial"},
   {id:"hotel",n:"Hotel",e:"🛎️",t:7,base:12000000,g:9,c:"Commercial"},
   {id:"office",n:"Office Tower",e:"🏢",t:7,base:40000000,g:10,c:"Commercial"},
-  {id:"castle",n:"Castle",e:"🏯",t:8,base:90000000,g:11,c:"Luxury"}
+  {id:"castle",n:"Castle",e:"🏯",t:8,base:90000000,g:11,c:"Luxury"},
+  {id:"cabin",n:"Rustic Cabin",e:"🛖",t:2,base:130000,g:1,c:"Vacation"},
+  {id:"acreage",n:"Rural Acreage (20 acres)",e:"🌳",t:2,base:70000,g:1,c:"Land & farms"},
+  {id:"cornerbld",n:"Corner Store Building",e:"🏪",t:3,base:230000,g:2,c:"Commercial"},
+  {id:"townhouse",n:"Townhouse",e:"🏘️",t:3,base:240000,g:2,c:"Homes"},
+  {id:"farmhouse",n:"Farmhouse",e:"🏡",t:3,base:280000,g:2,c:"Homes"},
+  {id:"cottage",n:"Lakefront Cottage",e:"🏖️",t:3,base:260000,g:2,c:"Vacation"},
+  {id:"threedecker",n:"Triple-Decker",e:"🏘️",t:4,base:380000,g:3,c:"Multi-family"},
+  {id:"pasture",n:"Cattle Pasture",e:"🐮",t:4,base:330000,g:3,c:"Land & farms"},
+  {id:"cape",n:"Cape Cod Home",e:"🏡",t:4,base:450000,g:4,c:"Homes"},
+  {id:"berry",n:"Berry Farm",e:"🫐",t:4,base:520000,g:4,c:"Land & farms"},
+  {id:"bchcondo",n:"Beach Condo",e:"🌊",t:4,base:520000,g:4,c:"Vacation"},
+  {id:"gated",n:"Gated-Community Home",e:"🏡",t:5,base:620000,g:5,c:"Homes"},
+  {id:"meddoc",n:"Medical Office Building",e:"🩺",t:5,base:780000,g:5,c:"Commercial"},
+  {id:"modern",n:"Modern Glass House",e:"🏠",t:5,base:780000,g:5,c:"Homes"},
+  {id:"manor",n:"Gated Manor",e:"🏰",t:5,base:1200000,g:6,c:"Luxury"},
+  {id:"walkup",n:"Walk-Up Apartments (10 units)",e:"🏬",t:5,base:1100000,g:6,c:"Multi-family"},
+  {id:"brownstone",n:"Brownstone",e:"🏛️",t:5,base:1200000,g:6,c:"Homes"},
+  {id:"warehouse",n:"Warehouse",e:"🏭",t:5,base:1400000,g:6,c:"Commercial"},
+  {id:"hillvilla",n:"Hillside Estate",e:"🏡",t:6,base:4500000,g:8,c:"Luxury"},
+  {id:"chateau",n:"French Chateau",e:"🏰",t:7,base:28000000,g:10,c:"Luxury"}
 ];
 const PROPM = Object.fromEntries(PROP.map(p => [p.id, p]));
-const NOHOME = new Set(["farmland","cropland","stable","storage","plaza","marina","tower","inn","resort","hunting","timber","laundromat","carwash","gas","stripmall","parking","hotel","office"]);
+const NOHOME = new Set(["acreage","pasture","berry","cornerbld","meddoc","warehouse","farmland","cropland","stable","storage","plaza","marina","tower","inn","resort","hunting","timber","laundromat","carwash","gas","stripmall","parking","hotel","office"]);
 // a = value drift per hour held, carry = insurance+maintenance per hour as share of value
 const ITEMS = [
   {id:"bike",c:"veh",g:0,hx:1.25,n:"Used Commuter Bike",e:"🚲",t:0,base:175,a:-0.00038,carry:.00012},
@@ -523,6 +543,25 @@ const ITEMS = [
   {id:"jet",c:"veh",g:9,vb:10,n:"Private Jet",e:"✈️",t:7,base:9e6,a:-0.00005,carry:.00025},
   {id:"superyacht",c:"veh",g:9,vb:10,n:"Superyacht",e:"🚢",t:7,base:16e6,a:-0.00005,carry:.00025},
   {id:"proto",c:"veh",g:10,vb:10,n:"One-Off Prototype",e:"🚀",t:8,base:12e6,a:.0005,carry:.0002,set:"cars"},
+  {id:"atv",c:"veh",g:2,hx:1.5,n:"ATV",e:"🏍️",t:2,base:9000,a:-0.0003,carry:.00012},
+  {id:"snowmobile",c:"veh",g:2,hx:1.5,n:"Snowmobile",e:"🛷",t:2,base:12000,a:-0.0003,carry:.00012},
+  {id:"jetski",c:"veh",g:3,hx:1.75,n:"Jet Ski",e:"🌊",t:2,base:14000,a:-0.0003,carry:.00014},
+  {id:"wagon",c:"veh",g:3,vb:3,n:"Vintage Station Wagon",e:"🚙",t:2,base:15000,a:.0003,carry:.0001},
+  {id:"sportbike",c:"veh",g:3,hx:1.75,n:"Sport Motorcycle",e:"🏍️",t:3,base:22000,a:-0.0002,carry:.00013},
+  {id:"crossover",c:"veh",g:3,vb:3,n:"Midsize Crossover",e:"🚙",t:3,base:38000,a:-0.0002,carry:.00012},
+  {id:"pontoon",c:"veh",g:3,vb:3,n:"Pontoon Boat",e:"⛵",t:3,base:36000,a:-0.0002,carry:.00018},
+  {id:"evsedan",c:"veh",g:4,vb:3,n:"Electric Sedan",e:"🚘",t:3,base:45000,a:-0.00025,carry:.0001},
+  {id:"convert",c:"veh",g:4,vb:6,n:"Convertible",e:"🚗",t:3,base:52000,a:-0.0002,carry:.00013},
+  {id:"campervan",c:"veh",g:4,vb:3,n:"Camper Van",e:"🚐",t:3,base:70000,a:-0.0002,carry:.00015},
+  {id:"offroad",c:"veh",g:4,vb:6,n:"Off-Road Truck",e:"🛻",t:4,base:78000,a:-0.0002,carry:.00014},
+  {id:"perfsedan",c:"veh",g:4,vb:6,n:"Performance Sedan",e:"🚘",t:4,base:85000,a:-0.0002,carry:.00014},
+  {id:"evlux",c:"veh",g:5,vb:6,n:"Electric Luxury Sedan",e:"🚘",t:4,base:98000,a:-0.00025,carry:.00012},
+  {id:"limo",c:"veh",g:5,vb:6,n:"Stretch Limo",e:"🚘",t:4,base:120000,a:-0.0002,carry:.00016},
+  {id:"rearsport",c:"veh",g:5,vb:6,n:"Rear-Engine Sports Car",e:"🏎️",t:4,base:125000,a:.0002,carry:.00014},
+  {id:"gt",c:"veh",g:5,vb:6,n:"Grand Tourer",e:"🏎️",t:4,base:140000,a:-0.0001,carry:.00015},
+  {id:"dually",c:"veh",g:5,vb:6,n:"Heavy-Duty Dually",e:"🛻",t:4,base:95000,a:-0.0002,carry:.00014},
+  {id:"classicbrit",c:"veh",g:6,vb:6,n:"'67 British Roadster",e:"🚕",t:5,base:240000,a:.0006,carry:.00012},
+  {id:"offshore",c:"veh",g:6,vb:6,n:"Offshore Powerboat",e:"🚤",t:5,base:320000,a:-0.00012,carry:.0002},
   {id:"ball",c:"col",n:"Signed Baseball",e:"⚾",t:0,base:400,a:.0002,carry:0,hidden:true},
   {id:"comic",c:"col",n:"Vintage Comic #1",e:"📕",t:1,base:1200,a:.0004,carry:0,hidden:true},
   {id:"kicks",c:"col",n:"Rare Sneakers",e:"👟",t:1,base:2500,a:.0001,carry:0,hidden:true},
@@ -595,23 +634,25 @@ const condName = m => COND.reduce((a,c) => m >= c[0]-.001 ? c[1] : a, "Fair");
 const propCond = c => c >= 95 ? "Renovated" : c >= 70 ? "Good" : c >= 45 ? "Worn" : "Rundown";
 
 /* ================= economy curves ================= */
-function econ(t){const h=t/H;return 1+.06*Math.sin(2*Math.PI*h/30+1)+.03*Math.sin(2*Math.PI*h/7.3+2)}
+/* every player lives in their own market: a random time shift, picked fresh for each new game and each new life, so nobody sees the same highs and lows as anyone else */
+const MO = () => (S && S.mo) || 0, newMO = () => Math.floor(Math.random()*4e10);
+function econ(t){const h=(t+MO())/H;return 1+.06*Math.sin(2*Math.PI*h/30+1)+.03*Math.sin(2*Math.PI*h/7.3+2)}
 // housing: a slow wobble smaller than the steady climb, so home values only ever rise
 /* each property type has its own market: luxury and commercial swing hard, farmland and apartments barely move, vacation spots run on short seasons */
 const HMK = {"Homes":[.10,40,1,.05,9,2],"Land & farms":[.06,75,3,.025,16,.5],"Commercial":[.15,26,2,.06,7,4],"Luxury":[.20,21,5,.08,6,1],"Vacation":[.16,13,.4,.05,5,3],"Multi-family":[.08,52,4,.04,11,1.5]};
-function hecon(t,c){const h=t/H,m=HMK[c]||HMK.Homes,v=m[0]*Math.sin(2*Math.PI*h/m[1]+m[2])+m[3]*Math.sin(2*Math.PI*h/m[4]+m[5]);return 1+(v<0?v*.1:v)} /* hot markets run well above trend, cold ones only dip a little */
+function hecon(t,c){const h=(t+MO())/H,m=HMK[c]||HMK.Homes,v=m[0]*Math.sin(2*Math.PI*h/m[1]+m[2])+m[3]*Math.sin(2*Math.PI*h/m[4]+m[5]);return 1+(v<0?v*.1:v)} /* hot markets run well above trend, cold ones only dip a little */
 /* big properties are steadier: the market pushes a $100M estate a fraction as hard as a $300K house */
 const hm = (p,t) => 1 + (hecon(t,hcat(p))-1)/(1+propBaseVal(p)/3e7);
 const hcat = x => { const d = PROPM[x && x.type]; return d ? d.c : "Homes"; };
 const mktTag = x => `<span class="${x>=0?"up":"down"}">Market ${x>=0?"high":"low"} ${Math.abs(x*100).toFixed(1)}%</span>`;
-function wob(id,t){const h=t/H,p1=8+r01(id,"p1")*20,p2=2+r01(id,"p2")*5;return 1+.12*Math.sin(2*Math.PI*h/p1+r01(id,"f1")*6.28)+.06*Math.sin(2*Math.PI*h/p2+r01(id,"f2")*6.28)}
+function wob(id,t){const h=(t+MO())/H,p1=8+r01(id,"p1")*20,p2=2+r01(id,"p2")*5;return 1+.12*Math.sin(2*Math.PI*h/p1+r01(id,"f1")*6.28)+.06*Math.sin(2*Math.PI*h/p2+r01(id,"f2")*6.28)}
 
 /* ================= state ================= */
 let S;
 function fresh(){
   const t = Date.now(), stk = {};
   STK.forEach(x => { stk[x.s] = {n: Math.floor(t/MIN) - 120, p: x.p, hist: []}; });
-  return {v:1,cash:100,created:t,last:t,peak:100,lvl:0,earned:0,biz:{},props:[],items:[],hold:{},stk,lots:[],room:null,nextHead:0,lotInit:0,nextLot:0,aucLog:[],mods:[],sold:[],ach:{},tx:[],hist:[[t,100]],nextEv:t+5*MIN,shifts:0,shiftAt:0,news:[],realized:0,flips:0,aucWins:0,evs:0,pending:0,pendingAt:t};
+  return {v:1,mo:newMO(),cash:100,created:t,last:t,peak:100,lvl:0,earned:0,biz:{},props:[],items:[],hold:{},stk,lots:[],room:null,nextHead:0,lotInit:0,nextLot:0,aucLog:[],mods:[],sold:[],ach:{},tx:[],hist:[[t,100]],nextEv:t+5*MIN,shifts:0,shiftAt:0,news:[],realized:0,flips:0,aucWins:0,evs:0,pending:0,pendingAt:t};
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 function load(){ try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v === 1) return j; } catch(e){} return null; }
@@ -667,7 +708,7 @@ const RENT_RATE = .0209, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
-const UNITS = {duplex:2, triplex:3, fourplex:4, rowblock:6, condobld:8, aptbld:12};
+const UNITS = {duplex:2, triplex:3, threedecker:3, fourplex:4, rowblock:6, walkup:10, condobld:8, aptbld:12};
 const PCATS = ["Homes","Multi-family","Land & farms","Vacation","Commercial","Luxury"];
 const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
 const homePct = p => 1 + Math.floor((PROPM[p.type].g||0)/3);
@@ -781,7 +822,7 @@ function chooseHeir(k){ const h = HEIRS[k]; if (!h) return; const w0 = ensureWho
   const wi = willItem(), hv = wi ? wi.v : 0, keepB = wi && wi.k==="biz" ? S.biz[wi.id] : null, keepP = wi && wi.k==="prop" ? S.props.find(p=>p.uid===wi.id) : null;
   const nw0 = netWorth(), est = nw0 - hv, cash0 = Math.max(0, Math.min(h.start, est)), toV = Math.max(0, est-h.start), short = Math.max(0, -est), peak = Math.max(S.peak||0, nw0);
   S.fam = famBonus() + famGain(peak);
-  S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
+  S.mo = newMO(); S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
   if (keepB) S.biz[wi.id] = keepB; if (keepP){ delete keepP.mid; S.props.push(keepP); }
   const trust = k==="great" ? Math.round(cash0*TRUST_SHARE) : 0; S.cash -= trust;
   if (short > .005){ S.loans = [{p:short, d:short, i:LOAN_PART*short, pp:0, at:t, o:short}]; S.dueAt = t + LOAN_EVERY; loanSync(); }
@@ -1068,7 +1109,7 @@ function credit(amt){
   if (amt >= 0){ S.cash += amt; S.earned += amt; }
   else S.cash = Math.max(0, S.cash + amt);
 }
-function stkBackfill(){ STK.forEach(x => { const st = S.stk[x.s]; if (st.bf || st.hist.length >= 1440) return; st.bf = 1; let m = st.n - st.hist.length + 1, p = st.hist.length ? st.hist[0] : st.p; while (st.hist.length < 1440){ const ret = x.mu + (econ(m*MIN)-1)*.002 + x.sd*gauss(x.s, m); p = p/Math.exp(ret); st.hist.unshift(Math.round(p*1e4)/1e4); m--; } }); }
+function stkBackfill(){ STK.forEach(x => { const st = S.stk[x.s]; if (st.bf || st.hist.length >= 1440) return; st.bf = 1; let m = st.n - st.hist.length + 1, p = st.hist.length ? st.hist[0] : st.p; while (st.hist.length < 1440){ const ret = x.mu + (econ(m*MIN)-1)*.002 + x.sd*gauss(x.s, m+Math.floor(MO()/MIN)); p = p/Math.exp(ret); st.hist.unshift(Math.round(p*1e4)/1e4); m--; } }); }
 function stepStocks(t){
   stkBackfill();
   const target = Math.floor(t/MIN); let changed=false;
@@ -1077,7 +1118,7 @@ function stepStocks(t){
     if (target - st.n > 1440){ st.n = target - 1440; }
     while (st.n < target){
       st.n++;
-      const z = gauss(x.s, st.n), cyc = (econ(st.n*MIN)-1)*.002;
+      const z = gauss(x.s, st.n+Math.floor(MO()/MIN)), cyc = (econ(st.n*MIN)-1)*.002;
       const ret = x.mu + cyc + x.sd*z;
       st.p = Math.max(x.p*.02, st.p*Math.exp(ret));
       st.hist.push(Math.round(st.p*1e4)/1e4); if (st.hist.length > 1440) st.hist.shift();
@@ -1103,6 +1144,7 @@ function advance(t){
   if (lost > 0){ (S.sav||[]).forEach(v => { v.at += lost; v.end += lost; }); (S.proj||[]).forEach(p => { p.at += lost; p.end += lost; }); }
   const inc = incomeBetween(from, t);
   S.props.forEach(p => { if (p.rentTot == null){ p.rentTot = 0; p.upTot = 0; } const hrs = Math.max(0,t-from)/H; p.upTot += propCost(p,t)*hrs; if (p.rented){ const a0 = Math.max(from, p.renoUntil||0); if (t > a0) p.rentTot += propRentFull(p,t)*occHours(p,a0,t); } });
+  S.items.forEach(i => { if (i.rent){ const a0 = Math.max(from, i.rentAt); if (i.rtot == null) i.rtot = carRent(i,t)*((i.rh||0) + Math.max(0,from-i.rentAt)/H); if (t > a0) i.rtot += carRent(i,t)*(t-a0)/H; } });
   loanMigrate();
   credit(inc.total);
   vaultPay(from, t);
@@ -1167,8 +1209,23 @@ const msName = t => MS[t] ? MS[t][1] : "";
 /* ================= listings ================= */
 const WIN = 20*MIN;
 const win = t => Math.floor((t||Date.now())/WIN);
+/* price-range filter so a rich player can still shop for a $100K car or a $400K house */
+const RANGES = [["mine","Matched to my wealth",0,Infinity],["u10","Under $10K",0,1e4],["10_50","$10K to $50K",1e4,5e4],["50_250","$50K to $250K",5e4,25e4],["250_1m","$250K to $1M",25e4,1e6],["1_10m","$1M to $10M",1e6,1e7],["10m","$10M and up",1e7,Infinity]];
+let vRange = "mine", pRange = "mine", vcOpen = {"Cars":true};
+const VCATS = ["Cars","Trucks, SUVs & RVs","Bikes & scooters","Motorcycles & ATVs","Boats & aircraft"];
+const VSET = {"Bikes & scooters":"bike scooter carbon vespa mtb ebike","Motorcycles & ATVs":"dirt moto cruiser sportbike atv snowmobile","Boats & aircraft":"fishboat speedboat cruiserboat yacht superyacht pontoon offshore jetski heli jet","Trucks, SUVs & RVs":"beater pickup suv luxsuv minivan crossover rv campervan offroad dually"};
+const vCat = id => VCATS.find(c => VSET[c] && VSET[c].split(" ").includes(id)) || "Cars";
+function vCatList(L, c){ if (!L.length) return `<div class="empty">No listings right now.</div>`;
+  const row = l => { const d = ITEMM[l.id]; return rowHtml({e:d.e,title:d.n,sub:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${l.steal?`<span class="pill g">STEAL</span>`:l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openListing",arg:c+"|"+l.lid}); };
+  return `<div style="display:flex;flex-direction:column;gap:6px">${VCATS.map(g => { const ls = L.filter(l=>vCat(l.id)===g); if (!ls.length) return ""; const o = !!vcOpen[g], low = Math.min(...ls.map(l=>l.ask));
+    return `<button class="msg${o?" open":""}" data-act="vcat" data-arg="${esc(g)}"><b>${g}</b><span>${ls.length} · from ${wholeMoney(low)} ${o?"▲":"▼"}</span></button>`+(o?`<div class="list" style="margin-bottom:6px">${ls.map(row).join("")}</div>`:""); }).join("")}</div>`; }
+const rangeOf = k => RANGES.find(r=>r[0]===k) || RANGES[0];
+const rangeSel = (id, cur, cat) => `<select id="${id}" style="width:100%;padding:11px;margin:0 0 8px;border-radius:12px;background:var(--surface2);color:var(--text);border:1px solid var(--line);font:700 13px var(--body)">${RANGES.filter(r=>r[0]==="mine"||cat.some(d=>d.base>=r[2]&&d.base<r[3])).map(r=>`<option value="${r[0]}"${r[0]===cur?" selected":""}>${r[0]==="mine"?"Price range: ":""}${r[1]}</option>`).join("")}</select>`;
 function itemListings(c){
   const w = win(), t = Date.now();
+  if (c==="veh" && vRange!=="mine"){ const [,,lo,hi] = rangeOf(vRange), cand = ITEMS.filter(i=>i.c==="veh"&&!i.hidden&&i.base>=lo&&i.base<hi).map((d,j)=>({d,o:r01("vr",w,vRange,d.id)})).sort((a,b)=>a.o-b.o).slice(0,8), out2 = [];
+    cand.forEach(({d},k) => { const cm = COND[Math.floor(r01("v",w,k,vRange,"c")*4)][0], base = d.base*cm*(.92+r01("v",w,k,vRange,"b")*.16), val = base*wob(d.id,t), steal = r01("v",w,k,vRange,"steal") < .0145, ask = steal ? val*(.50+r01("v",w,k,vRange,"sa")*.10) : val*(.84+r01("v",w,k,vRange,"a")*.32), lid = `veh-${w}-${k}-${vRange}`; if (!S.sold.includes(lid)) out2.push({lid,id:d.id,cm,base,val,ask,steal}); });
+    return out2; }
   const pool = ITEMS.filter(i => i.c===c && !i.hidden && i.t <= S.lvl+1);
   const out = [];
   const used = new Set();
@@ -1193,6 +1250,9 @@ function itemListings(c){
 }
 function propListings(){
   const w = win(), t = Date.now();
+  if (pRange!=="mine"){ const [,,lo,hi] = rangeOf(pRange), cand = PROP.filter(d=>d.base>=lo&&d.base<hi).map(d=>({d,o:r01("pr",w,pRange,d.id)})).sort((a,b)=>a.o-b.o).slice(0,12), out2 = [];
+    cand.forEach(({d},k) => { const cu = r01("p",w,k,pRange,"c"), cond = Math.round(cu<.15 ? 20+cu/.15*24 : cu<.4 ? 45+(cu-.15)/.25*24 : cu<.85 ? 70+(cu-.4)/.45*24 : 95+(cu-.85)/.15*5), base = d.base*(.88+r01("p",w,k,pRange,"b")*.24), p = {type:d.id,base,cond}, val = propVal(p,t), ask = Math.round(val*(.84+r01("p",w,k,pRange,"a")*.24)/500)*500, lid = `p-${w}-${k}-${pRange}`; if (!S.sold.includes(lid)) out2.push({lid,...p,val,ask}); });
+    return out2; }
   const lad = []; PROP.forEach(d => { (lad[d.g]||(lad[d.g]=[])).push(d); }); const tb = i => Math.min(...lad[i].map(d=>d.base));
   if (!S.plAnc || S.plAnc.w !== w){ let a = 0; lad.forEach((g,i) => { if (tb(i)*.95 <= Math.max(0,mortCap()-mortDebt())+2000) a = i; }); let m = a; lad.forEach((g,i) => { if (tb(i) <= 3*Math.max(150000,Math.max(0,mortCap()-mortDebt())+2000)) m = Math.max(m,i); }); S.plAnc = {w, a, m}; }
   const A = S.plAnc.a, M = S.plAnc.m, out = [], cnt = {"Homes":5,"Multi-family":3,"Land & farms":3,"Vacation":3,"Commercial":3,"Luxury":2};
@@ -1634,7 +1694,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795576286";
+const BUILD = "1795633664";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1642,9 +1702,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) chec
 setTimeout(checkUpdate, 400);
 
 /* live text bound to the clock */
-function assetCats(){ const t=Date.now(), I=c=>S.items.filter(i=>ITEMM[i.id].c===c), iv=L=>L.reduce((a,i)=>a+itemVal(i,t),0), ip=L=>L.reduce((a,i)=>a+i.paid,0), V=I("veh"), C=I("col"), B=Object.values(S.biz), P=S.props;
+function assetCats(){ const t=Date.now(), I=c=>S.items.filter(i=>ITEMM[i.id].c===c), iv=L=>L.reduce((a,i)=>a+itemVal(i,t),0), rt=L=>L.reduce((a,i)=>a+(i.rtot||0),0), ip=L=>L.reduce((a,i)=>a+i.paid,0), V=I("veh"), C=I("col"), B=Object.values(S.biz), P=S.props;
   const bx=bizVal(), px=P.reduce((a,p)=>a+propVal(p,t),0), sx=stockVal();
-  return [["Businesses",bx,bx+B.reduce((a,o)=>a+(o.net||0),0),B.reduce((a,o)=>a+o.spent,0),B.reduce((a,o)=>a+(o.rev||0),0)],["Properties",px,px+P.reduce((a,p)=>a+(p.rentTot||0)-(p.upTot||0),0),P.reduce((a,p)=>a+p.paid+p.reno,0),P.reduce((a,p)=>a+(p.rentTot||0),0)],["Vehicles",iv(V),iv(V),ip(V)],["Collectibles",iv(C),iv(C),ip(C)],["Investments",sx,sx,Object.values(S.hold).reduce((a,h)=>a+h.cost,0)]].filter(r=>r[1]>.005); }
+  return [["Businesses",bx,bx+B.reduce((a,o)=>a+(o.net||0),0),B.reduce((a,o)=>a+o.spent,0),B.reduce((a,o)=>a+(o.rev||0),0)],["Properties",px,px+P.reduce((a,p)=>a+(p.rentTot||0)-(p.upTot||0),0),P.reduce((a,p)=>a+p.paid+p.reno,0),P.reduce((a,p)=>a+(p.rentTot||0),0)],["Vehicles",iv(V),iv(V)+rt(V),ip(V),rt(V)],["Collectibles",iv(C),iv(C)+rt(C),ip(C),rt(C)],["Investments",sx,sx,Object.values(S.hold).reduce((a,h)=>a+h.cost,0)]].filter(r=>r[1]>.005); }
 const roiTag = (v,c) => c > .005 ? " · ROI "+(v>=c?"▲":"▼")+Math.abs((v/c-1)*100).toFixed(1)+"%" : "";
 const LIVE = {
   evgu: () => { const e=evSummary(); return e.up>.005 ? "▲ +"+money(e.up)+"/h · "+dur(e.ue-Date.now()) : ""; },
@@ -1759,13 +1819,13 @@ function viewMarket(){
     ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
       return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div style="display:flex;flex-direction:column;gap:6px">${pCatList(L)}</div>`;
+    ${rangeSel("prsel",pRange,PROP)}<div style="display:flex;flex-direction:column;gap:6px">${pCatList(L)}</div>`;
   } else {
     const c=mcat, mine=S.items.filter(i=>ITEMM[i.id].c===c), L=itemListings(c);
     body = `<div class="sechead"><h2>${c==="veh"?"Your garage":"Your collection"}</h2><small>${mine.length} owned</small></div>
     ${mine.length?`<div class="list">${mine.map(i=>{const d=ITEMM[i.id],v=itemVal(i),ch=v/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,gold:c==="col",sub:`${i.ls?`<span class="pill g">For sale ${money(i.ls.p)}</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>${d.carry?signed(-itemCarry(i))+"/h":"value"}</span>`,act:"openItem",arg:i.uid});}).join("")}</div>`:`<div class="empty">${c==="veh"?"No vehicles yet. Owning one doubles your side hustle pay and boosts all business income.":"Nothing collected yet. Watches complete a set that boosts all business income."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
-    <div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=c!=="veh"&&d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`;
+    ${c==="veh"?rangeSel("vrsel",vRange,ITEMS.filter(i=>i.c==="veh"&&!i.hidden))+vCatList(L,c):`<div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=c!=="veh"&&d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`}`;
   }
   return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
 }
@@ -2205,7 +2265,7 @@ let chtVal = "";
 function sheetCheat(){ return () => `<div class="shead"><div class="tile gold">🔑</div><div><h3>Enter a code</h3><p>Got one? Type it in.</p></div></div><input id="chtc" type="text" value="${chtVal}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Code" style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:16px ui-monospace,monospace;margin-bottom:10px"><button class="btn gold" data-act="cheat">Apply code</button>`; }
 let resetArm = 0, pendingWelcome = null, cfm = null, stkAmt = "", stkSellAmt = "";
 const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : 0; };
-document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+e.target.value; render(); } });
+document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+e.target.value; render(); } if (e.target.id==="vrsel"){ vRange=e.target.value; render(); } if (e.target.id==="prsel"){ pRange=e.target.value; Object.keys(pcOpen).length||(pcOpen.Homes=true); PCATS.forEach(c=>pcOpen[c]=true); render(); } });
 /* what is on screen is what counts: read the boxes right before acting, in case the browser filled one without an input event */
 function syncAmts(){ const g = id => { const el = document.getElementById(id); return el && typeof el.value === "string" ? el.value : null; }, set = (id, f) => { const v = g(id); if (v !== null) f(v); };
   set("chtc", v => chtVal = v); set("loanamt", v => loanAmt = v); set("acctamt", v => acctAmtV = v); set("mortx", v => mortXV = v); set("upn", v => upNV = v); set("loanpay", v => loanPayV = v); set("loanone", v => loanOneV = v);
@@ -2303,6 +2363,7 @@ document.addEventListener("click", e => {
   const run = fn => { ownCash(); const c0 = S.cash, lb0 = S.lb||0; fn(); const d = c0 - S.cash; if (d > .005 && lb0 > 0 && (S.lb||0) === lb0 && !HOME_ACTS.includes(act)) S.lb = Math.max(0, lb0 - d); progress(); save(); render(); drawSheet(); };
   switch(act){
     case "close": closeSheet(); render(); break;
+    case "vcat": vcOpen[arg] = !vcOpen[arg]; render(); break;
     case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
     case "carRent": run(()=>A.carRent(arg)); break;
     case "hustle": run(A.hustle); break;
