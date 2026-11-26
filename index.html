@@ -707,6 +707,7 @@ function setDone(k){ return SETS[k].ids.every(id => S.items.some(i => i.id === i
 const RENT_RATE = .0209, RENT_WEAR = .0001;
 const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ? 2.5 : 2;
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
+const bestCar = () => drivable().reduce((b,i)=> (ITEMM[i.id].vb||0) > (b ? ITEMM[b.id].vb||0 : 0) ? i : b, null);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
 const UNITS = {duplex:2, triplex:3, threedecker:3, fourplex:4, rowblock:6, walkup:10, condobld:8, aptbld:12};
 const PCATS = ["Homes","Multi-family","Land & farms","Vacation","Commercial","Luxury"];
@@ -1175,6 +1176,7 @@ function advance(t){
   const inc = incomeBetween(from, t);
   { const tl = inc.lines.find(l => l[0]==="Income tax"); if (tl) S.taxPaid = (S.taxPaid||0) - tl[1]; }
   S.props.forEach(p => { if (p.rentTot == null){ p.rentTot = 0; p.upTot = 0; } const hrs = Math.max(0,t-from)/H; p.upTot += propCost(p,t)*hrs; if (p.rented){ const a0 = Math.max(from, p.renoUntil||0); if (t > a0) p.rentTot += propRentFull(p,t)*occHours(p,a0,t); } });
+  { const vb = vehBonus(), bc = vb > 1 ? bestCar() : null; if (bc){ const nm = Object.keys(S.biz).map(id=>BIZM[id].n), g = inc.lines.reduce((a,l)=> nm.includes(l[0]) && l[1] > 0 ? a + l[1] : a, 0); bc.bon = (bc.bon||0) + g*(1-1/vb); } }
   S.items.forEach(i => { if (i.rent){ const a0 = Math.max(from, i.rentAt); if (i.rtot == null) i.rtot = carRent(i,t)*((i.rh||0) + Math.max(0,from-i.rentAt)/H); if (t > a0) i.rtot += carRent(i,t)*(t-a0)/H; } });
   loanMigrate();
   credit(inc.total);
@@ -1332,7 +1334,7 @@ const A = {
     S.loans.slice().sort((x,y)=>x.at-y.at).forEach(l => { if (rem <= 0) return; const x = Math.min(rem, l.d), toP = Math.min(l.p, x*l.p/Math.max(.01,l.d)); l.d -= x; l.p -= toP; l.pp = (l.pp||0) + toP; rem -= x; });
     S.loans = S.loans.filter(l => l.p > .005 && l.d >= .01); loanSync(); if (!S.loans.length) loanClear();
     tx("loan",S.debt?"Loan payment":"Loan paid off",-a); },
-  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.hsNext = 0; S.shiftAt=t; S.shifts++; S.earned += pay; S.hsTot=(S.hsTot||0)+pay; if (S.hsOn && (S.debt||0) > .005){ S.hsOn = false; if (!hsWarnOnce()) toast("❌ 😒 NO - Stephen says no. Savings switched off while you have a loan", true); } if (S.hsOn && !((S.debt||0) > .005) && savCap() >= pay){ acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = t; } c.b += pay; tx("income","Side hustle shift (to savings)",pay); } else { S.cash += pay; tx("income","Side hustle shift",pay); } },
+  hustle(){ const t=Date.now(); if (t - S.shiftAt < 60000) return; const pay = hustlePay(); S.hsNext = 0; S.shiftAt=t; S.shifts++; S.earned += pay; S.hsTot=(S.hsTot||0)+pay; { const bc = bestCar(), rx = rideX(); if (bc && rx > 1) bc.bon = (bc.bon||0) + pay*(1-1/rx); } if (S.hsOn && (S.debt||0) > .005){ S.hsOn = false; if (!hsWarnOnce()) toast("❌ 😒 NO - Stephen says no. Savings switched off while you have a loan", true); } if (S.hsOn && !((S.debt||0) > .005) && savCap() >= pay){ acctSettle(); const c=acctOf(); if (c.b < .005){ c.b = 0; c.st = t; } c.b += pay; tx("income","Side hustle shift (to savings)",pay); } else { S.cash += pay; tx("income","Side hustle shift",pay); } },
   hsSave(){ if (!S.hsOn && (S.debt||0) > .005){ if (!hsWarnOnce()) toast("❌ 😒 NO - Stephen says no. Not while you have a loan", true); return; } S.hsOn = !S.hsOn; },
   bizBuy(id){ const c=unitCost(id); const o=S.biz[id]; if ((o?o.n:0) >= 25) return; if (!spend(c,"buy",`Opened ${BIZM[id].n}${o?" location #"+(o.n+1):""}`)) return; const b=S.biz[id]||(S.biz[id]={n:0,l:0,spent:0,ls:[]}); migrateLocs(b); b.n++; b.ls.push(0); b.spent+=c; },
   bizUpN(arg){ const [id,n0]=String(arg).split('|'), n=Math.floor(+n0), o=S.biz[id]; if (!o||!(n>=1)) return; const L=migrateLocs(o); let done=0; for (;done<n;){ let k=-1; L.forEach((l,i)=>{ if (l<5 && (k<0 || l<L[k])) k=i; }); if (k<0) break; const c=upCost(id,L[k]); if (c>S.cash+1e-6) break; if (!spend(c,"buy",`Upgraded ${BIZM[id].n} #${k+1} to level ${L[k]+1}`)) break; L[k]++; o.spent+=c; done++; } if (done<n) toast(done?`Did ${done} of ${n}. Out of cash`:"Not enough cash"); },
@@ -1729,7 +1731,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795679615";
+const BUILD = "1795701781";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2073,7 +2075,7 @@ function sheetListing(c,lid){ return () => {
 function sheetItem(u){ return () => {
   const i=S.items.find(x=>x.uid===u); if (!i) return null; const d=ITEMM[i.id], v=itemVal(i);
   return `<div class="shead"><div class="tile${d.c==="col"?" gold":""}">${d.e}</div><div><h3>${esc(i.name||d.n)}</h3><p>${condName(i.cm)} · held ${ago(i.at).replace(" ago","")}</p></div></div>
-  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span><br><small>${mktTag(wob(i.id,Date.now())-1)}</small>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",(i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented")+`<br><small>${payH(i.paid,itemVal(i)*RENT_RATE-itemCarry(i))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${kv([["Value now",`<span data-live="iv:${u}">${money(v)}</span><br><small>${mktTag(wob(i.id,Date.now())-1)}</small>`],["You paid",money(i.paid)],["Gain",`<span class="${v-i.paid>=0?"up":"down"}">${signed(v-i.paid)}</span>`],["Carrying cost",d.carry?money(itemCarry(i))+"/h":"None"]].concat(d.c==="veh"?[["Rental income",(i.rent?`<span class="up">+${money(carRent(i,Date.now()))}/h</span>`:"Not rented")+`<br><small>${payH(i.paid,itemVal(i)*RENT_RATE-itemCarry(i))}</small><br><small>Collected so far: <span class="up">${money(i.rtot||0)}</span></small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",(i.rent?"Paused while rented":`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`)+`<br><small>Earned so far: <span class="up">${money(i.bon||0)}</span></small>`]]:[]))}
   ${d.c==="veh"?`<button class="btn ${i.rent?"ghost":"gold"}" data-act="carRent" data-arg="${u}" style="margin:10px 0 4px">${i.rent?"Bring it back":`Rent it out (+${money(itemVal(i)*RENT_RATE)}/h)`}</button><p class="note">Rented cars earn every hour, even while you're away, but wear down faster. While rented, they don't count for your side hustle or business bonus.</p>`:""}
   ${(d.vb||d.hx)&&!i.rent?`<p class="note">Only your best vehicle counts toward the bonuses.</p>`:""}
   ${sellPanel(i)}`;
