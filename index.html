@@ -710,9 +710,14 @@ const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
 const UNITS = {duplex:2, triplex:3, threedecker:3, fourplex:4, rowblock:6, walkup:10, condobld:8, aptbld:12};
 const PCATS = ["Homes","Multi-family","Land & farms","Vacation","Commercial","Luxury"];
-const homeProp = () => S.home ? S.props.find(x=>x.uid===S.home) : null;
+/* up to 3 homes; each one you live in adds its bonus, and gives up its rent */
+const MAX_HOMES = 3;
+const homesOf = () => { if (!S.homes){ S.homes = S.home ? [S.home] : []; S.home = null; } S.homes = S.homes.filter(u => S.props.some(x=>x.uid===u)); return S.homes; };
+const isHome = u => homesOf().includes(u);
+const homeList = () => homesOf().map(u => S.props.find(x=>x.uid===u)).filter(Boolean);
+const homeProp = () => homeList()[0] || null;
 const homePct = p => 1 + Math.floor((PROPM[p.type].g||0)/3);
-function homeBonus(){ const h = homeProp(); return h ? 1 + homePct(h)/100 : 1; }
+function homeBonus(){ return 1 + homeList().reduce((a,h)=>a+homePct(h),0)/100; }
 
 /* ===== lifespan: 1 hour of play = 1 game month ===== */
 const LIFE_END = 80, HEIRS = {child:{n:"Your child",e:"🧑",age:55,start:1e6,allow:.15},grand:{n:"Your grandchild",e:"🧒",age:30,start:5e5,allow:.3},great:{n:"Your great-grandchild",e:"👶",age:5,start:2.5e5,allow:.6}};
@@ -729,7 +734,7 @@ const kidTrait = c => c.trait || (c.trait = TRAIT_KEYS[Math.floor(Math.random()*
 const myTrait = () => (S.life && S.life.trait) || "";
 const tm = (k,x) => myTrait() === k ? x : 1;
 const famBonus = () => S.fam || 0, famMult = () => 1 + famBonus();
-const famGain = peak => Math.max(0, peak)/1e7*.01;
+const famGain = peak => .1*Math.max(0, Math.log10(Math.max(1,peak)/1e6)); /* +10% for every 10x of peak wealth: $10M +10%, $1B +30%, $1T +60% */
 function popCard(em, t, txt, b){ if (document.getElementById("popwrap")) return false; const d = document.createElement("div"); d.id = "popwrap"; d.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:24px";
   d.innerHTML = `<div class="card" style="max-width:340px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;gap:12px"><div style="font-size:44px">${em}</div><h3 style="margin:0">${t}</h3><p style="margin:0;line-height:1.45">${txt}</p><button class="btn gold" data-act="popOk" style="width:100%;margin-top:6px">${b}</button></div>`; document.body.appendChild(d); if (tab==="home") needRender = true; return true; }
 function trusteeBlock(){ if (!minor()) return false; toast("Your trustee won't sign that until you're 18"); return true; }
@@ -806,7 +811,14 @@ function nmAct(act, arg){ const w = ensureWho(); nmRead();
 function trusteeCheck(){ const L = S.life; if (!L.trustee || lifeAge() < 18 || document.getElementById("trwrap") || document.getElementById("splash") || document.getElementById("party")) return;
   const rel = L.trust||0, v = S.fv, ft = v && v.bal > .005 ? v.bal*.1 : 0; S.cash += rel + ft; if (ft){ v.bal -= ft; v.paid = (v.paid||0) + ft; } L.trust = 0; L.trustee = false; save(); const d = document.createElement("div"); d.id = "trwrap"; d.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:24px";
   d.innerHTML = `<div class="card" style="max-width:340px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;gap:12px"><div style="font-size:44px">🎓</div><h3 style="margin:0">You're 18</h3><p style="margin:0;line-height:1.45">Your trustee steps aside and your trust fund opens: ${wholeMoney(rel)}${ft?`, plus a ${wholeMoney(ft)} coming-of-age gift from the Family Trust`:""}. No more 15% fee, and loans, mortgages and projects are open to you.</p><button class="btn gold" data-act="trOk" style="width:100%;margin-top:6px">Take the wheel</button></div>`; document.body.appendChild(d); if (tab==="home") needRender = true; }
-function lifeCheck(){ ensureLife(); advCheck(); trusteeCheck(); trustGoals(); const a = Math.floor(lifeAge()); if (lastAge >= 0 && a > lastAge && !S.life.dead){ toast("🎂 Happy birthday. You're "+a, true); if (tab==="home") needRender = true; } lastAge = a;
+/* one-time heads-ups about getting around: 18 parents drive, 19 rideshare fees, 20 penalty */
+const CAR_NOTE = {
+  18:["🚗","Mom and Dad are driving","Your parents still give you rides, so getting around is free for now. Buy a car you can drive before you turn 19, or rideshare fees start."],
+  19:["🚕","Rideshare fees have started","You're 19 and still not driving a car, so you pay rideshare fees on top of your business income. They stop the day you drive a car with a business bonus. A bike doesn't count, and neither does renting a car out."],
+  20:["🚶","You're 20 and carless","Your businesses now earn 5% less because you can't get around freely, and the rideshare fees keep running. Drive a car with a business bonus to end both. Renting a car out doesn't count."]};
+function carCheck(){ const L = S.life; if (L.dead || sheetOpen()) return; L.cn = L.cn||{}; const a = Math.floor(lifeAge());
+  for (const k of [18,19,20]){ if (L.cn[k]) continue; if (a < k) break; L.cn[k] = 1; if (a === k && (k === 18 || noCar())){ const n = CAR_NOTE[k]; openSheet(() => `<div class="shead"><div class="tile gold">${n[0]}</div><div><h3>${n[1]}</h3><p>Getting around</p></div></div><p style="margin:0 0 14px;line-height:1.5">${n[2]}</p>${k>18?`<p class="note" style="margin:0 0 14px">Right now: <b class="down num">${money(uberH())}/h</b> in fees${noRide()?" and 5% off your business income":""}.</p>`:""}<button class="btn gold" data-act="goVeh" style="width:100%;margin-bottom:8px">Show me vehicles</button><button class="btn ghost" data-act="close" style="width:100%">Okay</button>`); save(); break; } } }
+function lifeCheck(){ ensureLife(); carCheck(); advCheck(); trusteeCheck(); trustGoals(); const a = Math.floor(lifeAge()); if (lastAge >= 0 && a > lastAge && !S.life.dead){ toast("🎂 Happy birthday. You're "+a, true); if (tab==="home") needRender = true; } lastAge = a;
   if (S.life.dead && (!heirFn || sheetFn !== heirFn)){ heirFn = sheetHeir(); heirFn.life = true; openSheet(heirFn, true); return; }
   lifeEvents(); }
 function sheetHeir(){ return () => { const nw = netWorth(), L = S.life, rk = rankIdx(), wi = willItem(), hv = wi ? wi.v : 0, gain = famGain(S.peak||nw);
@@ -814,15 +826,15 @@ function sheetHeir(){ return () => { const nw = netWorth(), L = S.life, rk = ran
     const kd = heirKid(k), nmH = kd ? `${kd.sex==="f"?(k==="child"?"Your daughter":"Your granddaughter"):(k==="child"?"Your son":"Your grandson")}, ${esc(kd.first)}` : h.n, tr = TRAITS[kd ? kidTrait(kd) : (L.gt || (L.gt = TRAIT_KEYS[Math.floor(Math.random()*TRAIT_KEYS.length)]))];
     const st = Math.max(0, Math.min(h.start, nw-hv)), toV = Math.max(0, nw-hv-h.start), sh = Math.max(0, hv-nw);
     return `<button class="btn ${k==="child"?"gold":"stk"}" data-act="heir" data-arg="${k}" style="text-align:left;margin-bottom:8px;display:block;width:100%"><b>${kd?(kd.sex==="f"?"👩":"👨"):h.e} ${nmH} · age ${h.age}</b><br><small>${tr?`${tr.e} ${tr.n}: ${tr.d}<br>`:""}Starts with ${wholeMoney(st)}${k==="great"?" (80% held in a trust until 18)":""}${sh>.005?". Inherits "+nwMoney(sh)+" of debt":""}<br>About ${yrs} years to play (~${Math.round(yrs*.5)} real days) · ${Math.round(pw*100)}% power${pw<1?", full by 40":""}</small></button>`; }).join("");
-  return `<div class="shead"><div class="tile gold">🕊️</div><div><h3>${esc(whoName()||"Generation "+L.gen)} has died</h3><p>Age ${Math.floor(L.end)}. Level ${rk+1}, ${RANKS[rk][1]}. Leaves ${nwMoney(nw)}</p></div></div>
-  <div class="lines" style="margin-bottom:10px">${wi?`<div><span>📜 Heirloom kept</span><b>${esc(wi.n)}</b></div>`:""}<div><span>🏛️ To the Family Trust</span><b class="num">${nwMoney(Math.max(0,nw-hv)+(S.fv?S.fv.bal:0))}</b></div><div><span>⭐ Family Name</span><b class="num up">+${Math.round((famBonus()+gain)*1000)/10}% income</b></div></div>
+  return `<div class="shead"><div class="tile gold">🕊️</div><div><h3>${esc(whoName()||"Generation "+L.gen)} has died</h3><p>Age ${Math.floor(L.end)}. Level ${rk+1}, ${RANKS[rk][1]}. Leaves ${money(nw)}</p></div></div>
+  <div class="lines" style="margin-bottom:10px">${wi?`<div><span>📜 Heirloom kept</span><b>${esc(wi.n)}</b></div>`:""}<div><span>🏛️ To the Family Trust</span><b class="num">${money(Math.max(0,nw-hv)+(S.fv?S.fv.bal:0))}</b></div><div><span>⭐ Family Name</span><b class="num up">+${Math.round((famBonus()+gain)*1000)/10}% income</b></div></div>
   <p class="note" style="margin-bottom:10px">Everything else is sold and your debts are paid. Your heir starts small but grows faster: the Family Name boosts business income forever, and the trust pays out as they hit goals.</p>${cards}`; }; }
 const heirKid = k => { const w = ensureWho(); return k === "child" ? w.kids.find(x=>!x.grand) : k === "grand" ? w.kids.find(x=>x.grand) : null; };
 function chooseHeir(k){ const h = HEIRS[k]; if (!h) return; const w0 = ensureWho(), kd = heirKid(k), gk = w0.kids.find(x=>x.grand); const L = S.life, rk = rankIdx(), t = Date.now();
   const wi = willItem(), hv = wi ? wi.v : 0, keepB = wi && wi.k==="biz" ? S.biz[wi.id] : null, keepP = wi && wi.k==="prop" ? S.props.find(p=>p.uid===wi.id) : null;
   const nw0 = netWorth(), est = nw0 - hv, cash0 = Math.max(0, Math.min(h.start, est)), toV = Math.max(0, est-h.start), short = Math.max(0, -est), peak = Math.max(S.peak||0, nw0);
   S.fam = famBonus() + famGain(peak);
-  S.mo = newMO(); S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
+  S.mo = newMO(); S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.homes = []; S.tax = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
   if (keepB) S.biz[wi.id] = keepB; if (keepP){ delete keepP.mid; S.props.push(keepP); }
   const trust = k==="great" ? Math.round(cash0*TRUST_SHARE) : 0; S.cash -= trust;
   if (short > .005){ S.loans = [{p:short, d:short, i:LOAN_PART*short, pp:0, at:t, o:short}]; S.dueAt = t + LOAN_EVERY; loanSync(); }
@@ -842,11 +854,11 @@ function sheetTrustee(){ const f = () => `<div class="shead"><div class="tile go
   <button class="btn stk" data-act="tStyle" data-arg="agg" style="text-align:left"><b>🚀 Aggressive</b><br><small>Averages 4% a day but swings. Some weeks it loses</small></button></div>`; f.life = true; return f; }
 function sheetLegacy(){ return () => { const L = S.life, a = lifeAge(), p = lifePow(), w = ensureWho(), tr = TRAITS[myTrait()], v = S.fv, lives = S.lives||[], nw = netWorth();
   const rec = lives.reduce((m,x) => (x.peak||x.nw) > (m?(m.peak||m.nw):-1) ? x : m, null), recV = rec ? (rec.peak||rec.nw) : 0, mine = Math.max(S.peak||0, nw), dyn = nw + (v?v.bal:0) + (L.trust||0);
-  const goal = [1e9,1e12,1e15].find(g => g > dyn) || 1e15, rel = r => { const back = L.gen - r.gen; return back===1?"Dad's record":back===2?"Grandpa's record":back===3?"Great-grandpa's record":"The family record"; };
+  const goal = [1e9,1e10,1e11,1e12,1e13,1e14,1e15].find(g => g > dyn) || 1e15, rel = r => { const back = L.gen - r.gen; return back===1?"Dad's record":back===2?"Grandpa's record":back===3?"Great-grandpa's record":"The family record"; };
   const tree = lives.concat([{gen:L.gen,who:whoName(),sex:w.sex,trait:myTrait(),peak:mine,now:true}]).map(x => `<div><span>${x.sex==="f"?"👩":"👨"} Gen ${x.gen} · ${esc(x.who||"Unnamed")}${x.trait&&TRAITS[x.trait]?" "+TRAITS[x.trait].e:""}${x.now?" <small style='color:var(--gold)'>· you</small>":""}</span><b class="num">${nwMoney(x.peak||x.nw)}</b></div>`).join("");
   const wi = willItem();
   return `<div class="shead"><div class="tile gold">🌳</div><div><h3>${esc(whoName()||"Generation "+L.gen)}</h3><p>Age ${Math.floor(a)} · Gen ${L.gen}${w.married?" · Married":""}${tr?` · ${tr.e} ${tr.n}`:""}</p></div></div>
-  <div class="lines" style="margin-bottom:10px"><div><span>🏰 Dynasty worth</span><b class="num">${nwMoney(dyn)}</b></div><div><span>Next goal</span><b class="num">${goal>=1e15?"$1 Quadrillion":goal>=1e12?"$1 Trillion":"$1 Billion"}</b></div>${famBonus()>0?`<div><span>⭐ Family Name</span><b class="num up">+${Math.round(famBonus()*1000)/10}% business income</b></div>`:""}${tr?`<div><span>${tr.e} ${tr.n}</span><b>${tr.d}</b></div>`:""}</div>
+  <div class="lines" style="margin-bottom:10px"><div><span>🏰 Dynasty worth</span><b class="num">${nwMoney(dyn)}</b></div><div><span>Next goal</span><b class="num">${goal>=1e15?"$1 Quadrillion":goal>=1e12?"$"+goal/1e12+" Trillion":"$"+goal/1e9+" Billion"}</b></div>${famBonus()>0?`<div><span>⭐ Family Name</span><b class="num up">+${Math.round(famBonus()*1000)/10}% business income</b></div>`:""}${tr?`<div><span>${tr.e} ${tr.n}</span><b>${tr.d}</b></div>`:""}</div>
   ${rec?`<div class="lines" style="margin-bottom:10px"><div><span>🏆 ${rel(rec)} (${esc(rec.who||"Gen "+rec.gen)})</span><b class="num">${nwMoney(recV)}</b></div><div><span>Your best</span><b class="num ${mine>=recV?"up":""}">${nwMoney(mine)}${mine>=recV?" · beaten":` · ${Math.floor(mine/recV*100)}%`}</b></div></div>`:""}
   ${v&&v.bal>.005?`<div class="lines" style="margin-bottom:10px"><div><span>🏛️ Family Trust</span><b class="num">${nwMoney(v.bal)}</b></div><div><span>Grows</span><b>3% a day, locked</b></div>${(v.gi||0)<FT_GOALS.length?`<div><span>Next release</span><b>${Math.round(FT_GOALS[v.gi||0][1]*100)}% when you make ${nwMoney(FT_GOALS[v.gi||0][0])}</b></div><div><span>Made on your own</span><b class="num">${nwMoney(Math.max(0,trustOwn()))}</b></div>`:`<div><span>Releases</span><b>All unlocked</b></div>`}</div>`:""}
   ${minor()?`<div class="lines" style="margin-bottom:10px"><div><span>🔒 Trust fund (opens at 18)</span><b class="num">${nwMoney(L.trust||0)}</b></div><div><span>Trustee</span><b>${L.tstyle==="agg"?"🚀 Aggressive":"🛡️ Safe"}</b></div></div><p class="note">Your trustee takes 15% of income and blocks loans, mortgages and projects until you're 18. You can still buy and upgrade.</p>`:""}
@@ -855,9 +867,14 @@ function sheetLegacy(){ return () => { const L = S.life, a = lifeAge(), p = life
   ${a>=75?`<button class="btn ghost" data-act="willOpen" style="width:100%;margin-bottom:10px">Change your will</button>`:""}
   <div class="sechead"><h2>Family tree</h2></div><div class="lines">${tree}</div>`; }; }
 
-function homeCompare(u){ const p=S.props.find(x=>x.uid===u); if (!p) return null; const t=Date.now(), keep=S.home, tot=()=>Object.keys(S.biz).reduce((a,id)=>a+bizNetAt(id,t),0);
-  S.home=u; const w=tot(); S.home=null; const wo=tot(); S.home=keep; const live=w-wo, rent=propRent(p,t); return {live,rent,diff:live-rent}; }
-function vehBonus(){ return 1 + drivable().reduce((m,i)=>Math.max(m, ITEMM[i.id].vb||0), 0)/100; }
+function homeCompare(u){ const p=S.props.find(x=>x.uid===u); if (!p) return null; const t=Date.now(), keep=homesOf().slice(), tot=()=>Object.keys(S.biz).reduce((a,id)=>a+bizNetAt(id,t),0);
+  S.homes=keep.includes(u)?keep:keep.concat([u]); const w=tot(); S.homes=keep.filter(x=>x!==u); const wo=tot(); S.homes=keep; const live=w-wo, rent=propRent(p,t); return {live,rent,diff:live-rent}; }
+const VEH_PEN = .05;
+/* no car you drive: rides from parents at 18, rideshare fees from 19, plus a 5% business penalty from 20 */
+const noCar = () => !drivable().some(i => (ITEMM[i.id].vb||0) > 0);
+const noRide = () => lifeAge() >= 20 && noCar();
+const uberH = () => (lifeAge() >= 19 && noCar()) ? Object.keys(S.biz).reduce((a,id)=>a+bizRev(id),0)*.015 : 0;
+function vehBonus(){ const m = drivable().reduce((a,i)=>Math.max(a, ITEMM[i.id].vb||0), 0); return m > 0 ? 1 + m/100 : (noRide() ? 1 - VEH_PEN : 1); }
 const rideX = () => drivable().reduce((m,i)=>Math.max(m, hustleX(ITEMM[i.id])), 1);
 const hasRide = () => rideX() > 1;
 const rentedH = (i,t) => (i.rh||0) + (i.rent ? Math.max(0,(t-i.rentAt))/H : 0);
@@ -877,8 +894,10 @@ function bizNetAt(id,t){ return bizRev(id)*modAt(id,t) - bizExp(id); }
 const SELL = .8;
 function bizEquity(id){ const o=S.biz[id]; return o ? o.spent*SELL : 0; }
 const newLocNet = id => BIZM[id].rev*setBonus()*vehBonus()*homeBonus() - BIZM[id].exp;
-function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0); }
-function upCost(id,l){ return BIZM[id].cost*.25*(l+1); }
+/* late game: past $1B everything big gets pricier (x3 at $10B, x10 at $100B, x32 at $1T), so a trillion takes a dynasty, not one life */
+const lateX = () => { const pk = (S && S.peak) || 0; return pk > 1e9 ? Math.sqrt(pk/1e9) : 1; };
+function unitCost(id){ const o=S.biz[id]; return BIZM[id].cost*Math.pow(1.10, o ? o.n : 0)*lateX(); }
+function upCost(id,l){ return BIZM[id].cost*.25*(l+1)*lateX(); }
 function propBaseVal(p){ return p.base*(.5+.5*p.cond/100); }
 const PROP_TREND = .0025; /* properties appreciate about 6% per real day of play (about 3% per game year) */
 function propVal(p,t){ t=t||Date.now(); return propBaseVal(p)*hm(p,t)*Math.exp(PROP_TREND*(t-(p.uid ? (p.at || (p.at=t)) : t))/H); }
@@ -902,7 +921,7 @@ const mortCap = () => 4*Math.max(0,netWorth());
 const OCC_BLK = 8*H;
 function occAt(p,t){ return Math.max(.05, Math.min(1, (p.cond==null?100:p.cond)/100)); }
 function occHours(p,a,b){ let h=0, t=a; while (t<b){ const e=Math.min(b,(Math.floor(t/OCC_BLK)+1)*OCC_BLK); h += occAt(p,t)*(e-t)/H; t=e; } return h; }
-function propRentFull(p,t){ return propVal(p,t)*.0125*tm("land",1.2)*(S.home && p.uid===S.home && UNITS[p.type] ? 1-1/UNITS[p.type] : 1); }
+function propRentFull(p,t){ return propVal(p,t)*.0125*tm("land",1.2)*(isHome(p.uid) && UNITS[p.type] ? 1-1/UNITS[p.type] : 1); }
 function propRentAvg(p,t){ return propRentFull(p,t)*occAt(p,t); }
 function propRent(p,t){ t=t||Date.now(); return propRentFull(p,t)*occAt(p,t); }
 function propCost(p,t){ return p.base*.0012 + p.base*.0006; }
@@ -1067,13 +1086,23 @@ function loanRun(from, t){ loanMigrate(); let cur = from, guard = 0;
   while (S.loans.length && guard++ < 90){ const hit = S.dueAt && S.dueAt <= t, ev = hit ? Math.max(S.dueAt, cur) : t, late = overdrawn() ? LATE_RATE : 0;
     S.loans.forEach(l => { l.d += l.p * late * Math.max(0, ev - cur) / H; LOAN_TIERS.forEach((tr,k) => { if (!k || (k===1 && !l.g)) return; const T = l.at + tr[0]*H; if (cur < T && T <= ev) l.d += l.p * (tr[1] - LOAN_TIERS[k-1][1]); }); }); loanSync(); cur = ev;
     if (!hit) break; loanPayment(ev); } }
-function perHour(t){
+/* income tax: progressive brackets on hourly profit, 10/12/22/24/32/35/37% (1 hour = 1 game month), plus loopholes */
+const TAX_B = [[1000,.10],[4000,.12],[8600,.22],[16400,.24],[20900,.32],[52200,.35],[Infinity,.37]]; /* the real US rates; limits are a year's brackets divided by 12 game months */
+function bracketTax(h, sh){ if (!(h > 0)) return 0; let tax = 0, lo = 0; for (const [hi,r] of TAX_B){ if (h > lo) tax += (Math.min(h,hi)-lo)*Math.max(0,r-(sh||0)); lo = hi; } return tax; }
+const writeOff = t => .0003*(S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>ITEMM[i.id].c==="veh" ? a+itemVal(i,t) : a, 0));
+const charDed = t => ((S.tax&&S.tax.ch)||[]).reduce((a,c)=>c.until>t ? a+c.amt/24 : a, 0);
+const acctH = () => (S.tax && S.tax.sal) ? S.tax.sal/12 : 0;
+function taxParts(pre, t){ t = t||Date.now(); const T = S.tax||{}, ded = Math.min(writeOff(t)+charDed(t), Math.max(0,pre)*.15); let base = Math.max(0, pre-ded); const hide = (T.off && T.off > t) ? base*.20 : 0; base -= hide;
+  let tax = bracketTax(base, T.hold ? .02 : 0); if (T.sal) tax *= .90; return {tax, raw:bracketTax(Math.max(0,pre),0), ded, hide, base}; }
+const taxFor = (pre, t) => taxParts(pre, t).tax;
+const perHour = t => { t = t||Date.now(); const v = perHourPre(t); return v - taxFor(v, t); };
+function perHourPre(t){
   t=t||Date.now(); let v=0;
   Object.keys(S.biz).forEach(id => v += bizNetAt(id,t));
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) v += propRent(p,t); v -= propCost(p,t); });
   (S.mort||[]).forEach(m => v -= mortRate(m,t));
   S.items.forEach(i => v -= itemCarry(i,t));
-  v += rentAll(t);
+  v += rentAll(t); v -= acctH() + uberH();
   return v;
 }
 
@@ -1082,7 +1111,7 @@ const grossHour = t => { t=t||Date.now(); let v=0; Object.keys(S.biz).forEach(id
 const netHour = () => perHour() - ((S.debt||0) > .005 ? loanDueNow()/LOAN_EVERY_H : 0);
 
 /* income over [t0,t1] with event modifiers integrated exactly */
-const EXP_SPLIT = [["Business running costs",.55],["Business taxes",.30],["Business insurance",.15]];
+const EXP_SPLIT = [["Business running costs",.78],["Business insurance",.22]];
 function incomeBetween(t0,t1){
   const lines=[]; let tot=0; const hrs=(t1-t0)/H; if (hrs <= 0) return {lines,total:0};
   let bx=0;
@@ -1101,6 +1130,7 @@ function incomeBetween(t0,t1){
   if (carry > 0){ lines.push(["Vehicle insurance & upkeep", -carry]); tot -= carry; }
   const cr = S.items.reduce((a,i)=> i.rent ? a + carRent(i,t1)*Math.max(0,t1-Math.max(t0,i.rentAt))/H : a, 0);
   if (cr > 0){ lines.push(["Vehicle & bicycle rentals", cr]); tot += cr; }
+  { const sal = acctH()*hrs; if (sal > .005){ lines.push(["Tax accountant", -sal]); tot -= sal; } const ub = uberH()*hrs; if (ub > .005){ lines.push(["Rideshare fees", -ub]); tot -= ub; } const itx = taxFor(tot/hrs, t1)*hrs; if (itx > .005){ lines.push(["Income tax", -itx]); tot -= itx; } }
   return {lines,total:tot};
 }
 
@@ -1143,6 +1173,7 @@ function advance(t){
   const lost = from - S.last; /* time past the away cap: the world stood still, so locked timers wait too */
   if (lost > 0){ (S.sav||[]).forEach(v => { v.at += lost; v.end += lost; }); (S.proj||[]).forEach(p => { p.at += lost; p.end += lost; }); }
   const inc = incomeBetween(from, t);
+  { const tl = inc.lines.find(l => l[0]==="Income tax"); if (tl) S.taxPaid = (S.taxPaid||0) - tl[1]; }
   S.props.forEach(p => { if (p.rentTot == null){ p.rentTot = 0; p.upTot = 0; } const hrs = Math.max(0,t-from)/H; p.upTot += propCost(p,t)*hrs; if (p.rented){ const a0 = Math.max(from, p.renoUntil||0); if (t > a0) p.rentTot += propRentFull(p,t)*occHours(p,a0,t); } });
   S.items.forEach(i => { if (i.rent){ const a0 = Math.max(from, i.rentAt); if (i.rtot == null) i.rtot = carRent(i,t)*((i.rh||0) + Math.max(0,from-i.rentAt)/H); if (t > a0) i.rtot += carRent(i,t)*(t-a0)/H; } });
   loanMigrate();
@@ -1214,6 +1245,10 @@ const RANGES = [["mine","Matched to my wealth",0,Infinity],["u10","Under $10K",0
 let vRange = "mine", pRange = "mine", vcOpen = {"Cars":true};
 const VCATS = ["Cars","Trucks, SUVs & RVs","Bikes & scooters","Motorcycles & ATVs","Boats & aircraft"];
 const VSET = {"Bikes & scooters":"bike scooter carbon vespa mtb ebike","Motorcycles & ATVs":"dirt moto cruiser sportbike atv snowmobile","Boats & aircraft":"fishboat speedboat cruiserboat yacht superyacht pontoon offshore jetski heli jet","Trucks, SUVs & RVs":"beater pickup suv luxsuv minivan crossover rv campervan offroad dually"};
+let poOpen = {};
+function ownPropList(row){ const t = Date.now(); if (S.props.length <= 4) return `<div class="list">${S.props.map(row).join("")}</div>`;
+  return `<div style="display:flex;flex-direction:column;gap:6px">${PCATS.map(g => { const ls = S.props.filter(p=>hcat(p)===g); if (!ls.length) return ""; const o = !!poOpen[g], v = ls.reduce((a,p)=>a+propVal(p,t),0), inc = ls.reduce((a,p)=>a+(p.rented&&!(p.renoUntil>t)?propRent(p,t):0)-propCost(p),0);
+    return `<button class="msg${o?" open":""}" data-act="pocat" data-arg="${esc(g)}"><b>${g}</b><span>${ls.length} · ${nwMoney(v)} · ${signed(inc)}/h ${o?"▲":"▼"}</span></button>`+(o?`<div class="list" style="margin-bottom:6px">${ls.map(row).join("")}</div>`:""); }).join("")}</div>`; }
 const vCat = id => VCATS.find(c => VSET[c] && VSET[c].split(" ").includes(id)) || "Cars";
 function vCatList(L, c){ if (!L.length) return `<div class="empty">No listings right now.</div>`;
   const row = l => { const d = ITEMM[l.id]; return rowHtml({e:d.e,title:d.n,sub:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${l.steal?`<span class="pill g">STEAL</span>`:l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:"openListing",arg:c+"|"+l.lid}); };
@@ -1276,7 +1311,7 @@ function propListings(){
 function spend(amt, type, desc){ if (amt > S.cash + 1e-6) { toast("Not enough cash"); return false; } S.cash -= amt; tx(type, desc, -amt); return true; }
 function gain(amt, type, desc){ S.cash += amt; tx(type, desc, amt); }
 const A = {
-  carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0); } },
+  carRent(u){ const i=S.items.find(x=>x.uid===u); if (!i || ITEMM[i.id].c!=="veh") return; const t=Date.now(); if (i.rent){ i.rh=rentedH(i,t); i.rent=false; tx("income",`${ITEMM[i.id].n} back from rental`,0); } else { if (i.ls){ toast("Take it off the market first"); return; } i.rent=true; i.rentAt=t; tx("income",`Rented out ${ITEMM[i.id].n}`,0);; } },
   loanTake(a){ if (trusteeBlock()) return; a = Math.min(+a, loanRoom()); if (!(a >= .01)) return; loanMigrate(); const nowT = Date.now(); if (!S.loans.length || !S.dueAt) S.dueAt = nowT + LOAN_EVERY; S.loans.push({p:a, d:a*(1+LOAN_FEE), i:LOAN_PART*a, pp:0, at:nowT, o:a, g:1}); S.cash += a; loanSync(); S.lb = (S.lb||0) + a; tx("loan","Took out a loan",a); },
   projPut(arg){ if (trusteeBlock()) return; const [id,a0]=String(arg).split("|"), L=projListings().find(x=>x.id===id); if (!L) return; S.proj=S.proj||[]; if (S.proj.length>=PROJ_MAX){ toast(`You can run ${PROJ_MAX} projects at once`); return; }
     const a=Math.min(+a0,S.cash); if (!(a>=1)) return; const d=PROJ[L.kind]; S.cash-=a; S.projDone=(S.projDone||[]).concat(id).slice(-40);
@@ -1312,7 +1347,7 @@ const A = {
   advHire(){ const f=advFee(); if (!spend(f,"buy",`Business advisor (${ADV_L[advSel-1]}, 1 hour)`)) return; S.advUntil=Date.now()+H; S.advN=advSel; S.advBase={fee:f,n:advSel,inc:advInc(),spent:advSpent()}; toast("🧑‍💼 Advisor hired for 1 hour"); },
   propRenoLoan(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (c>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } A.loanTake(c); S.lb=Math.max(0,(S.lb||0)-c); if (!spend(c,"buy",`Renovation (loan): ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
   propReno(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (!spend(c,"buy",`Renovation: ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
-  propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (S.home===u){ toast(UNITS[p.type] ? "You live here, so the other units have to stay rented" : "You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
+  propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (isHome(u)){ toast(UNITS[p.type] ? "You live here, so the other units have to stay rented" : "You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
   propMort(arg){ if (trusteeBlock()) return; const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L||!(+am>=1)) return; const d=PROPM[L.type], loan=Math.round(Math.min(+am,L.ask)*100)/100, down=Math.round((L.ask-loan)*100)/100;
     if (loan > L.ask*.8+.5){ toast("The bank wants at least 20% down"); return; } if (houseShort(down)) return; if (mortDebt()+loan > mortCap()){ toast("The bank won't lend that much against your net worth. Put more down."); return; }
     S.cash -= down; const u=uid(); S.sold.push(lid); S.props.push({uid:u,type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,down,at:Date.now()});
@@ -1321,8 +1356,8 @@ const A = {
   propMortPlan(arg){ const [u,f]=String(arg).split("|"), m=mortOf(u); if (!m) return; const o=mortPlanOpts(m).find(x=>x.f===+f); if (!o) return; m.pp=(m.pp||0)+mortPaid(m,m.at,Date.now()); if (!m.pay0) m.pay0=m.pay; m.p0=mortBal(m); m.at=Date.now(); m.pay=o.pay; m.N=o.n; tx("loan","Switched to a faster mortgage plan",0); },
   propMortSlow(arg){ const [u,k]=String(arg).split("|"), m=mortOf(u); if (!m) return; const o=mortSlowOpts(m).find(x=>x.key===k); if (!o) return; m.pp=(m.pp||0)+mortPaid(m,m.at,Date.now()); m.p0=mortBal(m); m.at=Date.now(); m.pay=o.pay; m.N=o.n; tx("loan","Eased the mortgage plan",0); },
   propMortPay(u){ const m=mortOf(u); if (!m) return; const b=mortBal(m); if (houseShort(b)) return; { const pr=S.props.find(x=>x.uid===u); if (pr) pr.mdone=(m.pp||0)+mortPaid(m,m.at,Date.now())+b; } S.cash -= b; S.mort=S.mort.filter(x=>x!==m); tx("loan","Paid off a mortgage",-b); },
-  propLive(u){ const p=S.props.find(x=>x.uid===u); if (!p) return; if (S.home===u){ S.home=null; return; } if (NOHOME.has(p.type)) return; S.home=u; p.rented=!!UNITS[p.type]; },
-  propSell(u){ const i=S.props.findIndex(x=>x.uid===u); if (i<0) return; const p=S.props[i]; if (p.renoUntil>Date.now()) { toast("Wait for the renovation to finish"); return; } const v=propVal(p), m=mortOf(u), bal=m?mortBal(m):0; if (v > p.paid+p.reno) S.flips++; S.props.splice(i,1); if (m) S.mort=S.mort.filter(x=>x!==m); gain(v-bal,"sell",`Sold ${p.name}`); if (S.home===u) S.home=null; },
+  propLive(u){ const p=S.props.find(x=>x.uid===u); if (!p) return; const H0=homesOf(); if (H0.includes(u)){ S.homes=H0.filter(x=>x!==u); return; } if (NOHOME.has(p.type)) return; if (H0.length>=MAX_HOMES){ toast(`You can live in up to ${MAX_HOMES} homes. Move out of one first`); return; } H0.push(u); p.rented=!!UNITS[p.type]; },
+  propSell(u){ const i=S.props.findIndex(x=>x.uid===u); if (i<0) return; const p=S.props[i]; if (p.renoUntil>Date.now()) { toast("Wait for the renovation to finish"); return; } const v=propVal(p), m=mortOf(u), bal=m?mortBal(m):0; if (v > p.paid+p.reno) S.flips++; S.props.splice(i,1); if (m) S.mort=S.mort.filter(x=>x!==m); gain(v-bal,"sell",`Sold ${p.name}`); if (isHome(u)) S.homes=homesOf().filter(x=>x!==u); },
   itemBuy(c,lid){ const L=itemListings(c).find(x=>x.lid===lid); if (!L) return; const d=ITEMM[L.id]; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.items.push({uid:uid(),id:L.id,cm:L.cm,base:L.base,at:Date.now(),paid:L.ask}); },
   itemSell(u){ const i=S.items.findIndex(x=>x.uid===u); if (i<0) return; const it=S.items[i]; const v=itemVal(it); S.items.splice(i,1); gain(v,"sell",`Sold ${it.name||ITEMM[it.id].n}`); },
   stkBuy(s,f){ const amt = S.cash*f; if (amt < .01) { toast("Not enough cash"); return; } const p=S.stk[s].p; if (!spend(amt,"buy",`Bought ${s}`)) return; const h=S.hold[s]||(S.hold[s]={sh:0,cost:0}); h.sh += amt/p; h.cost += amt; },
@@ -1519,7 +1554,7 @@ function listThing(u, price){ const th = thingOf(u); if (!th || price <= 0) retu
 function unlistThing(u){ const th = thingOf(u); if (th){ th.ls = null; } }
 function completeSale(th, amt, how){
   const prop = isProp(th);
-  if (prop){ if (amt > th.paid + th.reno) S.flips++; S.props = S.props.filter(x=>x!==th); const m=mortOf(th.uid); if (m){ amt -= mortBal(m); S.mort=S.mort.filter(x=>x!==m); } if (S.home===th.uid) S.home=null; }
+  if (prop){ if (amt > th.paid + th.reno) S.flips++; S.props = S.props.filter(x=>x!==th); const m=mortOf(th.uid); if (m){ amt -= mortBal(m); S.mort=S.mort.filter(x=>x!==m); } if (isHome(th.uid)) S.homes=homesOf().filter(x=>x!==th.uid); }
   else S.items = S.items.filter(x=>x!==th);
   S.cash += amt; tx("sell",`Sold ${thingName(th)}${how?" ("+how+")":""}`,amt);
   toast(`Sold ${thingName(th)} for ${money(amt)}`, true); needRender = true;
@@ -1694,7 +1729,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795633664";
+const BUILD = "1795679615";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1802,8 +1837,9 @@ function viewMarket(){
     const tot=bizVal()+S.props.reduce((a,p)=>a+propVal(p,t),0)+S.items.reduce((a,i)=>a+itemVal(i,t),0);
     const grp=(name,rows,emptyTxt)=>`<div class="sechead" style="margin-top:6px"><h2>${name}</h2><small>${rows.length} owned</small></div>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="empty">${emptyTxt}</div>`}`;
     body = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="lbl">Everything you own</div><b class="num" style="font:700 22px var(--display)">${money(tot)}</b></div><div style="text-align:right"><div class="lbl">Earning</div><b class="num up">${signed(perHour(t))}/h</b></div></div>
+    ${noCar()&&lifeAge()>=19&&ownedBiz().length?`<div class="card" style="padding:12px 14px;margin-bottom:10px;border-color:var(--bad,#e5484d)"><b>${noRide()?"🚕 No car":"🚕 Rideshare fees"}</b><p class="note" style="margin:6px 0 0">You aren't driving a car, so you pay <b class="down">${money(uberH())}/h</b> in rideshare fees${noRide()?` and your businesses earn <b class="down">5% less</b>`:""}. Drive a car with a business bonus to stop it. Renting one out doesn't count. A bike doesn't count either.</p></div>`:""}<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>🚗🏠 Lifestyle advisor</b><p class="note" style="margin:6px 0 10px">Ranks the cars and homes you own by what each earns you per hour. Each report stays open for 15 minutes, then you buy it again.</p><div style="display:flex;gap:8px">${["car","home"].map(k=>{const left=lifeLeft(k),ic=k==="car"?"🚗 Cars":"🏠 Homes";return `<button class="btn gold" style="flex:1" data-act="lifeAdv" data-arg="${k}" ${!left&&S.cash<lifeFee(k)?"disabled":""}>${left?`${ic} · ${Math.floor(left/MIN)}:${String(Math.floor(left%MIN/1000)).padStart(2,"0")} left`:`${ic} · ${wholeMoney(lifeFee(k))}`}</button>`}).join("")}</div></div>
     ${grp("Businesses",owned.map(id=>{const b=BIZM[id],o=S.biz[id];return rowHtml({e:b.e,title:b.n,sub:`${o.n} location${o.n>1?"s":""} · ${lvTxt(o)} · worth ${money(bizEquity(id))}`,right:`<b class="up num">${signed(bizNetAt(id,t))}</b><span>per hour</span>`,act:"openBiz",arg:id});}),"No businesses yet. Start with a vending machine under Businesses.")}
-    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
+    ${grp("Properties",S.props.map(p=>{const d=PROPM[p.type],reno=p.renoUntil>t;return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${isHome(p.uid)?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${isHome(p.uid)?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span>value</span>`,act:"openProp",arg:p.uid});}),"No properties yet.")}
     ${grp("Vehicles",veh.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No vehicles yet.")}
     ${grp("Collectibles",col.map(i=>{const d=ITEMM[i.id],ch=itemVal(i)/i.paid-1;return rowHtml({e:d.e,gold:true,title:i.name||d.n,sub:`${i.ls?`<span class="pill g">For sale</span> `:""}${i.rent?`<span class="pill g">Rented +${money(carRent(i,Date.now()))}/h</span> `:""}Paid ${money(i.paid)} · <span class="${ch>=0?"up":"down"}">${pct(ch)}</span>`,right:`<b class="num" data-live="iv:${i.uid}"></b><span>value</span>`,act:"openItem",arg:i.uid});}),"No collectibles yet.")}
     <p class="note">Stocks and crypto you own are on the Invest tab.</p>`;
@@ -1815,9 +1851,9 @@ function viewMarket(){
     const L=propListings();
     const hp = homeProp();
     const mt = mortDebt();
-    body = (mt > .005 ? `<button class="lrow" data-act="bank"><div class="lines"><div><span>Mortgages owed · tap for details</span><b class="num down">${pm(mt)}</b></div></div></button>` : "") + (hp ? `<div class="sechead"><h2>Your Home</h2><small>+${homePct(hp)}% on every business</small></div><div class="list">${rowHtml({e:PROPM[hp.type].e,title:hp.name,sub:"You live here",right:`<b class="num goldt">+${+homePct(hp).toFixed(1)}%</b>`,act:"openProp",arg:hp.uid})}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living anywhere gives all your businesses +1%. Pricier homes give up to +4%.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
-    ${S.props.length?`<div class="list">${S.props.map(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
-      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${p.uid===S.home?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${p.uid===S.home?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}).join("")}</div>`:`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
+    body = (mt > .005 ? `<button class="lrow" data-act="bank"><div class="lines"><div><span>Mortgages owed · tap for details</span><b class="num down">${pm(mt)}</b></div></div></button>` : "") + (hp ? `<div class="sechead"><h2>Your Home${homeList().length>1?"s":""} · ${homeList().length}/${MAX_HOMES}</h2><small>+${Math.round((homeBonus()-1)*100)}% on every business</small></div><div class="list">${homeList().map(h=>rowHtml({e:PROPM[h.type].e,title:h.name,sub:"You live here",right:`<b class="num goldt">+${+homePct(h).toFixed(1)}%</b>`,act:"openProp",arg:h.uid})).join("")}</div>` : S.props.length ? `<p class="note">Pick a property and tap Live here. Living anywhere gives all your businesses +1%. Pricier homes give up to +4%.</p>` : "") + `<div class="sechead"><h2>Your properties</h2><small>${S.props.length} owned</small></div>
+    ${S.props.length?ownPropList(p=>{const d=PROPM[p.type]; const reno=p.renoUntil>Date.now();
+      return rowHtml({e:d.e,title:p.name,sub:reno?`<span data-live="reno:${p.uid}"></span>`:`${isHome(p.uid)?`<span class="pill g">Your Home</span> `:""}${p.ls?`<span class="pill g">For sale</span> `:""}${propCond(p.cond)} · ${isHome(p.uid)?"You live here":p.rented?"Rented out":"Vacant"}`,right:`<b class="num" data-live="pv:${p.uid}"></b><span class="${p.rented&&!reno?"up":""}">${p.rented&&!reno?signed(propRent(p)-propCost(p))+"/h":signed(-propCost(p))+"/h"}</span>`,act:"openProp",arg:p.uid});}):`<div class="empty">${S.lvl<2?"Real estate unlocks at Entrepreneur ($10,000 net worth).":"No properties yet. Buy one below, renovate it, then rent or flip it."}</div>`}
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
     ${rangeSel("prsel",pRange,PROP)}<div style="display:flex;flex-direction:column;gap:6px">${pCatList(L)}</div>`;
   } else {
@@ -1911,6 +1947,7 @@ function viewProfile(){
     <div class="stat"><span class="lbl">Auctions won</span><b class="num">${S.aucWins}</b></div>
     <div class="stat"><span class="lbl">Shifts worked</span><b class="num">${S.shifts}</b></div>
   </div>
+  <section class="sec" id="taxsec"><div class="sechead"><h2>Taxes</h2><small>Loopholes included</small></div>${taxTab()}</section>
   <section class="sec"><div class="sechead"><h2>Milestones</h2></div><div class="ms">${msGroups()}</div></section>
   <section class="sec"><div class="sechead"><h2>Achievements</h2><small>${got} of ${ACH.length}</small></div><div class="ach">${ACH.map(a=>`<div class="${S.ach[a[0]]?"got":""}"><b>${a[1]}</b><span>${a[2]}</span></div>`).join("")}</div></section>
   <section class="sec"><div class="sechead"><h2>Collections</h2><small>+5% business income each</small></div><div class="list">${Object.entries(SETS).map(([k,st])=>{const have=st.ids.filter(id=>S.items.some(i=>i.id===id)).length;return rowHtml({e:ITEMM[st.ids[0]].e,gold:true,title:st.n,sub:st.ids.map(id=>ITEMM[id].n).join(", "),right:`<b class="${have===st.ids.length?"goldt":""}">${have}/${st.ids.length}</b>`});}).join("")}</div></section>
@@ -1931,6 +1968,35 @@ function render(){
 }
 
 /* ================= sheets ================= */
+/* lifestyle advisor: a one-time paid report ranking which car to drive and which home to live in, owned or for sale, by what they add to business income per hour */
+const lifeLeft = k => Math.max(0, ((S.lifePass||{})[k]||0) - Date.now());
+const lifeFee = k => Math.max(k==="home"?25:15, Math.round(Math.max(0,perHour())*(k==="home"?.068:.043)));
+function lifeAdvice(){ const t = Date.now(), tot = () => Object.keys(S.biz).reduce((a,id)=>a+bizNetAt(id,t),0);
+  /* cars: only the one you drive boosts your businesses; every other car can be rented out */
+  const vehs = S.items.filter(i => ITEMM[i.id].c==="veh"), saved = vehs.map(i => i.rent);
+  vehs.forEach(i => i.rent = true); const none = tot();
+  const cars = vehs.map(i => { vehs.forEach(x => x.rent = x !== i); const drive = tot()-none, rent = itemVal(i,t)*RENT_RATE; return {e:ITEMM[i.id].e, n:i.name||ITEMM[i.id].n, drive, rent, edge:drive-rent, now:!saved[vehs.indexOf(i)]}; });
+  vehs.forEach((x,k) => x.rent = saved[k]);
+  cars.sort((a,b) => b.edge-a.edge);
+  const best = cars.length && cars[0].edge > 0 ? cars[0] : null, others = cars.filter(c => c !== best), othersRent = others.reduce((a,c)=>a+c.rent,0);
+  const carPlan = {best, others:others.length, gain:(best?best.drive:0)+othersRent, rentAll:cars.reduce((a,c)=>a+c.rent,0)};
+  /* homes: each home you live in adds its bonus (up to MAX_HOMES) but gives up its rent */
+  const hs = S.props.filter(p => !NOHOME.has(p.type)).map(p => { const c = homeCompare(p.uid), units = UNITS[p.type], full = propVal(p,t)*.0125*tm("land",1.2)*occAt(p,t), lost = units ? full/units : full;
+    return {e:PROPM[p.type].e, n:p.name, live:c?c.live:0, rent:full, lost, edge:(c?c.live:0)-lost, now:isHome(p.uid)}; }).sort((a,b) => b.edge-a.edge);
+  const pick = hs.filter(h => h.edge > 0).slice(0, MAX_HOMES), rest = hs.filter(h => !pick.includes(h)).sort((a,b) => b.rent-a.rent);
+  const homePlan = {pick, rest, gain:pick.reduce((a,h)=>a+h.live+(h.rent-h.lost),0)+rest.reduce((a,h)=>a+h.rent,0), rentAll:hs.reduce((a,h)=>a+h.rent,0)};
+  return {cars, carPlan, homes:hs, homePlan}; }
+function sheetLifeAdv(r, k){ const car = k==="car", row = (x,verdict,good) => rowHtml({e:x.e,title:esc(x.n),sub:`${car?"Drive":"Live"}: <b>${signed(x.drive!=null?x.drive:x.live)}/h</b> · Rent: <b>${money(x.rent)}/h</b>`,right:`<b class="${good?"up":"goldt"}">${verdict}</b>`});
+  return () => { let body;
+    if (car){ const P = r.carPlan, b = P.best;
+      body = `<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>The plan</b><p style="margin:6px 0 0;line-height:1.5">${b?`Drive your <b>${esc(b.n)}</b> for <b class="up num">${signed(b.drive)}/h</b> in business bonuses${P.others?`, and rent out the other ${P.others} for <b class="num">${money(P.gain-b.drive)}/h</b>`:""}.`:(r.cars.length?`Renting beats driving. Rent out all ${r.cars.length} for <b class="num">${money(P.rentAll)}/h</b>.`:`You don't own a car. Once you're 19 that costs rideshare fees, and from 20 your businesses earn 5% less. A bike doesn't count.`)}</p>${r.cars.length?`<p class="note" style="margin:6px 0 0">Total from your garage: <b class="num">${money(P.gain)}/h</b>${P.gain>P.rentAll+.005?`, ${money(P.gain-P.rentAll)}/h better than renting everything.`:"."}</p>`:""}</div>
+      ${r.cars.length?`<div class="lbl">Your cars, best to drive first</div><div class="list">${r.cars.slice(0,3).map((x,i)=>row(x,i===0&&P.best?"Drive":"Rent",i===0&&P.best)).join("")}</div><p class="note">Only your single best car boosts your businesses. Every car you aren't driving can be rented out.</p>`:""}`; }
+    else { const P = r.homePlan;
+      body = `<div class="card" style="padding:12px 14px;margin-bottom:10px"><b>The plan</b><p style="margin:6px 0 0;line-height:1.5">${P.pick.length?`Live in <b>${P.pick.map(h=>esc(h.n)).join(", ")}</b> for <b class="up num">${signed(P.pick.reduce((a,h)=>a+h.live,0))}/h</b> in business bonuses${P.rest.length?`, and rent out the other ${P.rest.length}`:""}.`:(r.homes.length?`Renting beats living in any of them. Rent out all ${r.homes.length}.`:`You don't own any homes yet.`)}</p>${r.homes.length?`<p class="note" style="margin:6px 0 0">Total from your homes: <b class="num">${money(P.gain)}/h</b>${P.gain>P.rentAll+.005?`, ${money(P.gain-P.rentAll)}/h better than renting everything.`:"."}</p>`:""}</div>
+      ${P.pick.length?`<div class="lbl">Live in (up to ${MAX_HOMES})</div><div class="list">${P.pick.map(h=>row(h,"Live",true)).join("")}</div>`:""}
+      ${P.rest.length?`<div class="lbl">Rent out, best renters first</div><div class="list">${P.rest.slice(0,3).map(h=>row(h,"Rent",false)).join("")}</div>`:""}
+      <p class="note">Each home you live in adds its bonus to your businesses but gives up its rent. Multi-unit buildings keep renting their other units.</p>`; }
+    return `<div class="shead"><div class="tile gold">${car?"🚗":"🏠"}</div><div><h3>${car?"Car report":"Home report"}</h3><p>${car?"Drive or rent, car by car":"Live in or rent, home by home"}</p></div></div>${body}<p class="note" style="margin-top:10px">Open for 15 minutes, with live numbers. After that, buy it again.</p>`; }; }
 const advActive = () => (S.advUntil||0) > Date.now();
 const advInc = () => Object.keys(S.biz).reduce((a,id) => a + bizRev(id) - bizExp(id), 0), advSpent = () => Object.values(S.biz).reduce((a,o) => a + o.spent, 0);
 /* when the advisor's hour is up, tell the player what the shift was worth */
@@ -1978,7 +2044,7 @@ function sheetProp(u){ return () => {
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${pm(renoCost(p))} (adds ${pm(propBaseVal({...p,cond:100})*hm(p,Date.now())-v)} value)</button><button class="btn bank" data-act="propRenoLoan" data-arg="${u}" ${renoCost(p)>loanRoom()?"disabled":""}>Renovate with a loan</button><p class="note"><b>About the loan:</b> it's a regular bank loan, not a mortgage, so it isn't tied to this home. The money goes straight into the work. Pay it back within ${LOAN_GRACE_H} and the interest is just 1%. After that it follows the normal loan schedule, so it costs more the longer you wait. It counts toward your loan limit and shows up in your Bank under Loans.</p>`:""}
   ${(()=>{const m=mortOf(u); return m?`<div class="lines" style="margin-bottom:8px"><div><span>Mortgage left</span><b class="num">${pm(mortBal(m))}</b></div><div><span>Rate</span><b class="num">${((m.apr)||6.5).toFixed(2).replace(/\.?0+$/,"")}%</b></div><div><span>Mortgage payment</span><b class="num">${pm(mortRate(m))}/h</b></div><div><span>Taken every second</span><b class="num down">${perSec(mortRate(m))}</b></div><div><span>Paid off in</span><b class="num">${dur(Math.max(0,mN(m)-mortK(m,Date.now()))*H)}</b></div></div><p class="note">Your mortgage comes out a little every second, not once an hour, so your cash is never hit by one big bill. The hourly payment is just that spread across the hour.</p><button class="btn bank" data-act="propMortPay" data-arg="${u}" style="margin-bottom:8px" ${mortBal(m)>ownCash()?"disabled":""}>Pay off mortgage · ${pm(mortBal(m))}</button><div class="lbl">Put extra toward it</div><div class="amtrow"><span class="dollar">$</span><input id="mortx" type="text" inputmode="decimal" placeholder="Any amount" value="${esc(mortXV)}" autocomplete="off"><button class="btn bank" data-act="propMortXC" data-arg="${u}">Pay extra</button></div><p class="note">Every dollar goes straight to what you owe. Your payment stays about the same and the mortgage ends sooner.</p>${mortPlanOpts(m).length?`<div class="lbl">Pay it off faster</div><div class="btns three">${mortPlanOpts(m).map(o=>`<button class="btn stk bank" data-act="propMortPlan" data-arg="${u}|${o.f}"><span>${dur(o.n*H)}</span><small>${pm(o.pay)}/h</small></button>`).join("")}</div><p class="note">A faster plan means bigger hourly payments and less interest overall. Saves ${pm(mortPlanOpts(m)[0].save)} to ${pm(mortPlanOpts(m).slice(-1)[0].save)}.</p>`:""}${mortSlowOpts(m).length?`<div class="lbl">Ease it back</div><div class="btns three">${mortSlowOpts(m).map(o=>`<button class="btn stk bank" data-act="propMortSlow" data-arg="${u}|${o.key}"><span>${o.key==="std"?"Standard":"Halfway"}</span><small>${pm(o.pay)}/h</small></button>`).join("")}</div><p class="note">Your payment drops, but never below your original one. You can speed up again anytime.</p>`:""}`:"";})()}
   
-  ${NOHOME.has(p.type)?`<p class="note" style="margin-bottom:8px">Not a place to live. Rent only.</p>`:""}<button class="btn ${S.home===u?"ghost":"gold"}" ${NOHOME.has(p.type)?"hidden":""} data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${S.home===u?"Move out":"Live here (+"+homePct(p)+"% on every business)"+(UNITS[p.type]?" · other units stay rented":" · no rent while you live here")}</button>
+  ${NOHOME.has(p.type)?`<p class="note" style="margin-bottom:8px">Not a place to live. Rent only.</p>`:""}<button class="btn ${isHome(u)?"ghost":"gold"}" ${NOHOME.has(p.type)?"hidden":""} data-act="propLive" data-arg="${u}" style="margin-bottom:8px">${isHome(u)?"Move out":(homesOf().length>=MAX_HOMES?"Live here (move out of one of your 3 homes first)":(homesOf().length?"Add as home #"+(homesOf().length+1):"Live here")+" (+"+homePct(p)+"% on every business)")+(UNITS[p.type]?" · other units stay rented":" · no rent while you live here")}</button>
   <button class="btn ghost" data-act="propRent" data-arg="${u}">${p.rented?"Stop renting":"Rent it out"}</button>
   ${sellPanel(p)}
   <p class="note">Property values follow the economy's cycles. Renovation takes 3 minutes and pauses rent.</p>`;
@@ -1999,6 +2065,7 @@ function sheetListing(c,lid){ return () => {
   const l=itemListings(c).find(x=>x.lid===lid); if (!l) return null; const d=ITEMM[l.id];
   return `<div class="shead"><div class="tile${c==="col"?" gold":""}">${d.e}</div><div><h3>${d.n}</h3><p>${condName(l.cm)} condition</p></div></div>
   ${kv([["Asking price",money(l.ask)],["Market value",money(l.val)],["Trend",d.a>=0?`<span class="up">Gains value</span>`:`<span class="down">Loses value</span>`],["Carrying cost",d.carry?money(l.val*d.carry)+"/h":"None"],["Resale today",money(l.val)],["Set",d.set?SETS[d.set].n:"None"]].concat(d.c==="veh"?[["Rental income",`<span class="up">+${money(l.val*RENT_RATE)}/h</span><br><small>${payH(l.ask,l.val*RENT_RATE-l.val*(d.carry||0))}</small>`]]:[]).concat((d.vb||d.hx)?[["Bonuses",`<span class="up">${d.vb?"+"+d.vb+"% income · ":""}${hustleX(d)}x hustle</span>`]]:[]))}
+  ${noCar()&&lifeAge()>=19&&ownedBiz().length?`<p class="note down">You aren't driving a car, so you're paying rideshare fees${noRide()?" and your businesses earn 5% less":""}. Drive a car with a business bonus to stop it. Renting one out doesn't count.</p>`:""}
   ${d.vb||d.hx?`<p class="note">Only your best vehicle counts toward the bonuses${vehBonus()>1?`. You have +${Math.round((vehBonus()-1)*100)}% now`:""}.</p>`:""}
   <button class="btn" data-act="itemBuy" data-arg="${c}|${lid}" ${l.ask>S.cash?"disabled":""}>Buy for ${money(l.ask)}</button>
   ${l.ask>S.cash?`<p class="note">You need ${money(l.ask-S.cash)} more cash.</p>`:""}`;
@@ -2130,6 +2197,7 @@ const GUIDE = [
     "<b>Real estate</b> (from $10,000 net worth): buy cheap, renovate, then rent it out or sell it.",
     "<b>Vehicles</b> double your side hustle pay and boost all business income: +3% for everyday cars, +6% for sports, luxury and classics, +10% for supercars. Only your best one counts.",
     "<b>Collectibles</b>: buy below value and sell higher. Watches and classics gain value; everyday cars lose it.",
+    "<b>Getting around:</b> at 18 your parents drive you. From 19 you pay rideshare fees until you <i>drive</i> a car with a business bonus. From 20 your businesses also earn 5% less. Bikes and rented-out cars don't count.",
     "New listings show up every <b>20 minutes</b>."]},
   {tab:"invest",e:"📈",t:"Invest",p:"Stocks, funds and crypto. All fictional.",l:[
     "<b>What you own</b> is at the top, with your profit or loss on each one. <b>All stocks</b> is below.",
@@ -2197,8 +2265,8 @@ function cashFlow(t){ t=t||Date.now(); let biz=0, prop=0, car=0, up=0, bx=0;
   Object.keys(S.biz).forEach(id => { biz += bizNetAt(id,t); bx += bizExp(id); });
   S.props.forEach(p => { if (p.rented && t >= p.renoUntil) prop += propRent(p,t); up += propCost(p,t); });
   S.items.forEach(i => up += itemCarry(i,t)); car = rentAll(t); const mort = (S.mort||[]).reduce((a,m)=>a+mortRate(m,t),0);
-  const net = biz + prop + car - up - mort, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
-  return {biz,bx,prop,car,up,mort,net,intr,after:net-intr}; }
+  const sal = acctH(), uber = uberH(), pre = biz + prop + car - up - mort - sal - uber, tax = taxFor(pre,t), net = pre - tax, nLeft = (S.inst||0) > 0 ? Math.ceil((S.prin||0)/S.inst - 1e-9) : 0, intr = (S.debt||0) > .005 ? (loanIntr()/Math.max(1,nLeft*LOAN_EVERY_H) + loanAccrualH()) : 0;
+  return {biz,bx,prop,car,up,mort,sal,uber,pre,tax,net,intr,after:net-intr}; }
 let curLoan = "", loanOneV = "", projAmtV = "", mortAmtV = "", curPL = "";
 function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) === curLoan); if (!l) return sheetBank()();
   const n = loanNextStep(l), pay = Math.min(l.d, S.cash);
@@ -2214,17 +2282,58 @@ function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) 
   <div class="amtrow"><span class="dollar">$</span><input id="loanone" type="text" inputmode="decimal" placeholder="Type an amount" value="${esc(loanOneV)}" autocomplete="off"><button class="btn bank" data-act="loanPayOneC">Pay</button></div>
   <button class="btn ghost" data-act="bank" style="width:100%;margin-top:12px">‹ Back to the bank</button>`; }; }
 function sheetActivity(){ return () => `<div class="shead"><div class="tile gold">🧾</div><div><h3>All activity</h3><p>Your last ${S.tx.length} transactions</p></div></div>${S.tx.length?`<div class="list">${S.tx.map(txRow).join("")}</div>`:`<div class="empty">Nothing yet.</div>`}`; }
+let taxGiveV = "", off = {red:-1, pick:-1, msg:""};
+const holdFee = () => Math.max(2000, Math.round(perHourPre()*5)), acctSal = () => Math.max(1200, Math.round(perHourPre()*12*.03));
+const OFF_CD = 12;
+function taxTab(){ const t = Date.now(), pre = perHourPre(t), P = taxParts(pre,t), T = S.tax||{}, eff = pre > 0 ? P.tax/pre : 0, saved = Math.max(0, P.raw-P.tax), cd = (T.cd||0)-t, hf = holdFee(), sal = acctSal();
+  const card = (title, body, k) => `<div class="card" style="padding:12px 14px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>${title}</b>${k?`<button class="btn ghost" data-act="taxInfo" data-arg="${k}" style="width:auto;padding:6px 12px;font-size:12px">How it works</button>`:""}</div>${body}</div>`;
+  return `<div class="lbl">Your taxes, per hour</div>${kv([["Profit before tax",signed(pre)],["Income tax",money(P.tax)],["Effective rate",(eff*100).toFixed(1)+"%"],["Loopholes save you",money(saved)+"/h"]])}
+  <p class="note">US rates, by hourly profit: ${TAX_B.map(([hi,r],k)=>`${Math.round(r*100)}%${hi<1e9?` to ${wholeMoney(hi)}`:" above"}`).join(", ")}. One hour is one game month.</p>
+  <div class="lbl">Loopholes</div>
+  ${card("🧾 Write-offs",`<p class="note" style="margin:6px 0 0">Automatic. Your vehicles and properties lose value on paper, which cuts taxable profit by ${money(Math.min(writeOff(t)+charDed(t), Math.max(0,pre)*.15))}/h. Deductions can't cover more than 15% of your profit.</p>`,"wo")}
+  ${card("🏢 Holding company",T.hold?`<p class="note" style="margin:6px 0 0">Active. Every tax rate is 2 points lower.</p>`:`<p class="note" style="margin:6px 0 10px">One-time setup. Knocks 2 points off every rate, for the rest of this life.</p><button class="btn gold" data-act="taxHold" ${S.cash<hf?"disabled":""}>Set it up · ${money(hf)}</button>`,"hold")}
+  ${card("🧮 Tax accountant",T.sal?`<p class="note" style="margin:6px 0 10px">Marv Pennywise, CPA. Salary ${money(T.sal)} a year, paid ${money(T.sal/12)} every game month. Cuts your tax bill 10%.</p><button class="btn ghost" data-act="taxFire">Let him go</button>`:`<p class="note" style="margin:6px 0 10px">Cuts your tax bill 10%. Salary ${money(sal)} a year, paid ${money(sal/12)} every game month, until you let him go.</p><button class="btn gold" data-act="taxHire">Hire him · ${money(sal)}/yr</button>`,"acct")}
+  ${card("🎗️ Charity foundation",`<p class="note" style="margin:6px 0 10px">Cuts your taxes for a day and raises your Family Name income forever. Costs more than it saves up front.</p><div class="amtrow"><span class="dollar">$</span><input id="taxgive" type="text" inputmode="decimal" placeholder="Amount to donate" value="${esc(taxGiveV)}" autocomplete="off"><button class="btn gold" data-act="taxGive">Donate</button></div>`,"char")}
+  ${card("🏝️ Offshore account",T.off>t?`<p class="note" style="margin:6px 0 0">Active. 20% of your profit is hidden from the tax office for ${dur(T.off-t)} more.</p>`:cd>0?`<p class="note" style="margin:6px 0 0">Cooling off for ${dur(cd)}.</p>`:`<p class="note" style="margin:6px 0 10px">Hides 20% of your profit for ${OFF_CD} hours. Six cards, one red. Pick the red one and you're audited: 8 hours of tax back, plus a 50% fine.</p><button class="btn gold" data-act="offOpen">Open one</button>`,"off")}
+  <p class="note" style="text-align:center;margin:4px 0 0;opacity:.7">Taxes paid over every generation: <b class="num">${money(S.taxPaid||0)}</b></p>`; }
+function charEst(a){ const t = Date.now(), pre = perHourPre(t); S.tax = S.tax||{}; const ch = S.tax.ch = S.tax.ch||[], t0 = taxFor(pre,t); ch.push({amt:a, until:t+24*H}); const t1 = taxFor(pre,t); ch.pop();
+  const saved = Math.max(0,(t0-t1)*24), g = Math.max(0, Math.min(.10-(S.charFam||0), .012*a/1e7)), biz = Object.keys(S.biz).reduce((x,id)=>x+bizRev(id),0)/Math.max(1,1+(S.fam||0)), inc = biz*g*.66, net = a-saved;
+  return {saved, g, inc, net, back: inc > .005 ? net/inc*H : 0}; }
+let taxInfoK = "";
+function sheetTaxInfo(){ return () => { const k = taxInfoK, t = Date.now(), pre = perHourPre(t), T = S.tax||{};
+  const hd = (e,n,sub) => `<div class="shead"><div class="tile gold">${e}</div><div><h3>${n}</h3><p>${sub}</p></div></div>`, P = x => `<p style="margin:0 0 10px;line-height:1.5">${x}</p>`;
+  if (k === "char"){ const typed = parseAmt(taxGiveV), amts = [1e6,5e6,2e7,1e8].filter(a => a <= Math.max(S.cash*4, 1e6));
+    const rows = (typed >= 1 && !amts.includes(typed) ? [typed] : []).concat(amts).map(a => { const e = charEst(a); return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><b>Give ${money(a)}</b>${kv([["Tax saved (over 24h)",`<span class="up">${money(e.saved)}</span>`],["Real cost after tax",money(e.net)],["Family Name",e.g>0?`+${(e.g*100).toFixed(2)}% income forever`:"Maxed out"],["Earns back the cost in",e.back?dur(e.back):"Never"]])}</div>`; }).join("");
+    return hd("🎗️","Charity foundation","What a donation actually does") +
+    P("<b>1. It lowers your taxes for a day.</b> The gift is deducted from your profit over the next 24 hours, so you pay less income tax. It never saves more than your top tax rate on the gift.") +
+    P("<b>2. It raises your Family Name.</b> Every $10M donated adds 1.2% business income, forever, for you and every heir. Charity can add up to 10% in total.") +
+    P("<b>The catch:</b> it always costs more than the tax it saves. It's a long-game move.") +
+    `<div class="lbl">With your numbers right now</div>${rows}<p class="note">Write-offs and donations together can't cover more than 15% of your profit. Anything over that saves no tax.</p>`; }
+  if (k === "wo"){ const w = Math.min(writeOff(t), pre*.15), sv = Math.max(0, bracketTax(pre,0)-bracketTax(Math.max(0,pre-w),0)); return hd("🧾","Write-offs","Automatic, nothing to buy") + P("The tax office lets you count wear and tear on your vehicles and properties as a cost, even though you didn't spend anything. That lowers the profit you're taxed on.") + kv([["Your write-off",money(w)+"/h"],["Tax it saves",money(sv)+"/h"]]) + P("More vehicles and property means bigger write-offs. Together with donations, they can't cover more than 15% of your profit."); }
+  if (k === "hold"){ const sv = Math.max(0, bracketTax(pre,0)-bracketTax(pre,.02)); return hd("🏢","Holding company","A one-time setup") + P("You move your businesses under one company on paper. Every tax bracket drops 2 points: 10% becomes 8%, 37% becomes 35%.") + kv([["Setup fee",money(holdFee())],["Tax it saves",money(sv)+"/h"],["Pays for itself in",sv>.005?dur(holdFee()/sv*H):"Never"]]) + P("It lasts the rest of this life. Your heir has to set up their own."); }
+  if (k === "acct"){ const sal = T.sal || acctSal(), cut = taxFor(pre,t)*(T.sal?.10/.90:.10), pay = sal/12; return hd("🧮","Tax accountant","Marv Pennywise, CPA") + P("Marv finds the deductions you miss and cuts your tax bill 10%. He's paid a yearly salary, one-twelfth every game month (every real hour), until you let him go.") + kv([["Salary",money(sal)+" a year"],["Paid each month",money(pay)],["He saves you",money(cut)+"/h"],["Worth it?",cut>pay?`<span class="up">Yes, ${money(cut-pay)}/h ahead</span>`:`<span class="down">No, ${money(pay-cut)}/h behind</span>`]]) + P("His salary is locked when you hire him, so he's better value as your income grows."); }
+  if (k === "off"){ const hidden = Math.max(0, bracketTax(pre,0)-bracketTax(pre*.80,0)), audit = taxFor(pre,t)*8*1.5; return hd("🏝️","Offshore account","Risky, but it pays") + P("You park money overseas where the tax office can't see it. Pick one of six cards. Five are green, one is red.") + kv([["Green, 5 in 6",`<span class="up">Hides 20% of profit for ${OFF_CD}h</span>`],["You'd save about",money(hidden*OFF_CD)],["Red, 1 in 6",`<span class="down">Audit</span>`],["An audit costs about",money(audit)]]) + P(`An audit charges 8 hours of tax plus a 50% fine. Either way you wait ${OFF_CD} hours before trying again.`); }
+  return null; }; }
+function sheetOffshore(){ return () => { if (off.warn){ const t = Date.now(), pre = perHourPre(t), hid = Math.max(0, bracketTax(pre,0)-bracketTax(pre*.80,0))*OFF_CD, aud = taxFor(pre,t)*8*1.5;
+  return `<div class="shead"><div class="tile gold">⚠️</div><div><h3>Before you hide money</h3><p>This is tax evasion</p></div></div>
+  <p style="margin:0 0 12px;line-height:1.5">You're about to pick one of six cards. <b>One is red.</b> If you pick it, the tax office audits you and you pay <b class="down num">${money(aud)}</b> in back taxes and fines. It comes out of your cash right away and can't be undone. <b>Cash account can go negative.</b></p>
+  ${kv([["Odds of an audit","1 in 6"],["If you're audited",`<span class="down">-${money(aud)}</span>`],["If you're clean",`<span class="up">Saves about ${money(hid)}</span>`],["Hidden for",OFF_CD+" hours"],["Next try",OFF_CD+" hours later, win or lose"]])}
+  <button class="btn gold" data-act="offGo" style="width:100%;margin:12px 0 8px">I understand, pick a card</button><button class="btn ghost" data-act="close" style="width:100%">Never mind</button>`; }
+  const done = off.pick >= 0, ok = done && off.pick !== off.red;
+  return `<div class="shead"><div class="tile gold">🏝️</div><div><h3>Offshore account</h3><p>${done?(ok?"You're in the clear":"Audited"):"Pick a card. One is red"}</p></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">${[0,1,2,3,4,5].map(i=>`<button class="btn ${done?"":"ghost"}" data-act="offPick" data-arg="${i}" ${done?"disabled":""} style="height:78px;font-size:28px;${done?`background:${i===off.red?"#d6454a":"#26a867"};color:#fff;opacity:${i===off.pick?1:.45};${i===off.pick?"outline:3px solid #fff":""}`:""}">${done?(i===off.red?"🚨":"✅"):"?"}</button>`).join("")}</div>
+  ${done?`<p class="note" style="margin:0 0 12px">${off.msg}</p><button class="btn gold" data-act="offClose" style="width:100%">Done</button>`:`<p class="note">Five cards are green and one is red. Green hides 20% of your profit for ${OFF_CD} hours. Red means an audit.</p>`}`; }; }
 function sheetBank(){ return () => { const d=S.debt||0, room=loanRoom(), pay=Math.min(d,S.cash), f=cashFlow(), sg=x=>Math.abs(x)<.005?money(0):`<i style="font-style:normal" class="${x>=0?"up":"down"}">${signed(x)}</i>`;
   const assets=assetsVal()+bizVal();
   return `<div class="shead"><div class="tile gold">🏦</div><div><h3>The Bank</h3><p>All your money in one place</p></div></div>
-  <div class="btns three" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">${[["money","Money"],["save","Savings"],["loans","Loans"],["mort","Mortgages"]].map(([k,n])=>`<button class="btn stk ${bankTab===k?"":"ghost"}" data-act="bankTab" data-arg="${k}"><span>${n}</span></button>`).join("")}</div>
+  <div class="btns three" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:8px">${[["money","Money"],["save","Savings"],["loans","Loans"],["mort","Mortgage"]].map(([k,n])=>`<button class="btn stk ${bankTab===k?"":"ghost"}" data-act="bankTab" data-arg="${k}" style="padding:10px 2px;font-size:12px"><span>${n}</span></button>`).join("")}</div>
   ${bankTab==="money"?`
   <div class="lbl">Your money</div>
   ${kv([["Net worth",money(netWorth())],["Cash",money(S.cash)],["Assets",money(assets)],["Loans owed",`<i style="font-style:normal" class="${d>0?"down":""}">${money(d)}</i>`],...(mortDebt()>.005?[["Mortgages owed",`<i style="font-style:normal" class="down">${money(mortDebt())}</i>`],["Total debt",`<i style="font-style:normal" class="down">${money(d+mortDebt())}</i>`]]:[]),["Lifetime earnings",money(S.earned)],["Peak net worth",money(S.peak)]])}
   <div class="lbl">Income</div>
   ${kv([["Per minute",sg(f.net/60)],["Per hour",sg(f.net)],["Per day",sg(f.net*24)],["Per week",sg(f.net*168)]])}
   <div class="lbl">Where it comes from, per hour</div>
-  <div class="lines"><div><span>Business revenue</span><b class="num">${sg(f.biz+f.bx)}</b></div>${EXP_SPLIT.map(([n,x])=>`<div><span>${n}</span><b class="num">${sg(-f.bx*x)}</b></div>`).join("")}<div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Vehicle & bicycle rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Vehicle &amp; property upkeep</span><b class="num">${sg(-f.up)}</b></div>${f.mort>.005?`<div><span>Mortgage payments</span><b class="num">${sg(-f.mort)}</b></div>`:""}<div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
+  <div class="lines"><div><span>Business revenue</span><b class="num">${sg(f.biz+f.bx)}</b></div>${EXP_SPLIT.map(([n,x])=>`<div><span>${n}</span><b class="num">${sg(-f.bx*x)}</b></div>`).join("")}<div><span>Property rent</span><b class="num">${sg(f.prop)}</b></div><div><span>Vehicle & bicycle rentals</span><b class="num">${sg(f.car)}</b></div><div><span>Vehicle &amp; property upkeep</span><b class="num">${sg(-f.up)}</b></div>${f.tax>.005||f.sal>.005?`<button class="btn ghost" data-act="goTax" style="width:100%;margin:0 0 10px">🧾 Taxes &amp; loopholes · Profile ›</button>`:""}${f.uber>.005?`<div><span>Rideshare fees</span><b class="num">${sg(-f.uber)}</b></div>`:""}${f.sal>.005?`<div><span>Tax accountant</span><b class="num">${sg(-f.sal)}</b></div>`:""}${f.tax>.005?`<div><span>Income tax</span><b class="num">${sg(-f.tax)}</b></div>`:""}${f.mort>.005?`<div><span>Mortgage payments</span><b class="num">${sg(-f.mort)}</b></div>`:""}<div><span>Loan interest</span><b class="num">${sg(-f.intr)}</b></div><div><span><b>Net after interest</b></span><b class="num">${sg(f.after)}</b></div></div>
   `:""}
   ${bankTab==="loans"?`
   <div class="lbl">Loans</div>
@@ -2268,9 +2377,9 @@ const parseAmt = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); 
 document.addEventListener("change", e => { if (e.target.id==="advsel"){ advSel=+e.target.value; render(); } if (e.target.id==="vrsel"){ vRange=e.target.value; render(); } if (e.target.id==="prsel"){ pRange=e.target.value; Object.keys(pcOpen).length||(pcOpen.Homes=true); PCATS.forEach(c=>pcOpen[c]=true); render(); } });
 /* what is on screen is what counts: read the boxes right before acting, in case the browser filled one without an input event */
 function syncAmts(){ const g = id => { const el = document.getElementById(id); return el && typeof el.value === "string" ? el.value : null; }, set = (id, f) => { const v = g(id); if (v !== null) f(v); };
-  set("chtc", v => chtVal = v); set("loanamt", v => loanAmt = v); set("acctamt", v => acctAmtV = v); set("mortx", v => mortXV = v); set("upn", v => upNV = v); set("loanpay", v => loanPayV = v); set("loanone", v => loanOneV = v);
+  set("chtc", v => chtVal = v); set("loanamt", v => loanAmt = v); set("acctamt", v => acctAmtV = v); set("mortx", v => mortXV = v); set("upn", v => upNV = v); set("loanpay", v => loanPayV = v); set("loanone", v => loanOneV = v); set("taxgive", v => taxGiveV = v);
   set("projamt", v => projAmtV = v); set("mortamt", v => mortAmtV = v); set("savamt", v => savAmt = v); set("savdays", v => { const n = parseInt(v); if (n>=1 && n<=30) savDays = n; }); set("stkamt", v => stkAmt = v); set("stksell", v => stkSellAmt = v); }
-document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="savamt"||e.target.id==="savdays") liveTick(); if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
+document.addEventListener("input", e => { if (e.target.id==="chtc") chtVal = e.target.value; if (e.target.id==="loanamt") loanAmt = e.target.value; if (e.target.id==="acctamt") acctAmtV = e.target.value; if (e.target.id==="mortx") mortXV = e.target.value; if (e.target.id==="upn") upNV = e.target.value; if (e.target.id==="loanpay") loanPayV = e.target.value; if (e.target.id==="loanone") loanOneV = e.target.value; if (e.target.id==="taxgive") taxGiveV = e.target.value; if (e.target.id==="projamt") projAmtV = e.target.value; if (e.target.id==="mortamt") mortAmtV = e.target.value; if (e.target.id==="savamt") savAmt = e.target.value; if (e.target.id==="savdays"){ const n=parseInt(e.target.value); if (n>=1&&n<=30) savDays=n; } if (e.target.id==="savamt"||e.target.id==="savdays") liveTick(); if (e.target.id==="stkamt") stkAmt = e.target.value; if (e.target.id==="stksell") stkSellAmt = e.target.value; });
 document.addEventListener("keydown", e => { if (e.key==="Enter"){ const m={loanamt:"loanTakeC",loanpay:"loanPayC",loanone:"loanPayOneC",projamt:"projPutC",mortamt:"propMortC",savamt:"savPutC",acctamt:"acctDepC",mortx:"propMortXC",lprice:"lcustom",bqin:"bqset",stkamt:"stkBuyAmt",stksell:"stkSellAmt"}[e.target.id]; const b=m&&document.querySelector(`[data-act="${m}"]`); if (b){ e.preventDefault(); b.click(); } } });
 /* confirmation step for every Market buy and sell */
 function cfmInfo(act, arg){
@@ -2363,6 +2472,7 @@ document.addEventListener("click", e => {
   const run = fn => { ownCash(); const c0 = S.cash, lb0 = S.lb||0; fn(); const d = c0 - S.cash; if (d > .005 && lb0 > 0 && (S.lb||0) === lb0 && !HOME_ACTS.includes(act)) S.lb = Math.max(0, lb0 - d); progress(); save(); render(); drawSheet(); };
   switch(act){
     case "close": closeSheet(); render(); break;
+    case "pocat": poOpen[arg] = !poOpen[arg]; render(); break;
     case "vcat": vcOpen[arg] = !vcOpen[arg]; render(); break;
     case "mcat": mcat=arg; try{localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); break;
     case "carRent": run(()=>A.carRent(arg)); break;
@@ -2379,6 +2489,7 @@ document.addEventListener("click", e => {
     case "bizBuy": run(()=>A.bizBuy(arg)); break;
     case "bizBuyLoan": run(()=>A.bizBuyLoan(arg)); break;
     case "advHire": run(()=>A.advHire()); break;
+    case "lifeAdv": { if (!lifeLeft(arg)) { const f = lifeFee(arg); if (!spend(f,"buy",arg==="car"?"Advisor car report":"Advisor home report")) break; S.lifePass = S.lifePass||{}; S.lifePass[arg] = Date.now()+15*MIN; } const r = lifeAdvice(); save(); openSheet(sheetLifeAdv(r, arg)); } break;
     case "bizBuyN": { const [id,k]=arg.split("|"); run(()=>A.bizBuyN(id,+k)); break; }
     case "bizSellN": { const [id,k]=arg.split("|"); run(()=>A.bizSellN(id,+k)); if (!S.biz[id]) closeSheet(); break; }
     case "bqty": { const [id,v]=arg.split("|"); bizQ[id] = v==="Max" ? Math.max(1,maxBuy(id)) : +v; drawSheet(); break; }
@@ -2457,6 +2568,21 @@ document.addEventListener("click", e => {
     case "loanDrip": run(()=>A.loanDrip()); break;
     case "loanPayOne": loanOneV=""; run(()=>A.loanPayOne(arg)); break;
     case "bankTab": bankTab=arg; drawSheet(); break;
+    case "taxHold": { const f = holdFee(); if (!spend(f,"buy","Set up holding company")) break; S.tax = S.tax||{}; S.tax.hold = 1; save(); render(); } break;
+    case "taxHire": { const sl = acctSal(); S.tax = S.tax||{}; S.tax.sal = sl; tx("buy","Hired tax accountant ("+money(sl)+"/yr)",0); save(); render(); } break;
+    case "taxFire": { if (S.tax) S.tax.sal = 0; save(); render(); } break;
+    case "taxGive": { syncAmts(); const a = parseAmt(taxGiveV); if (!(a >= 1)){ toast("Type an amount"); break; } if (!spend(a,"buy","Foundation donation")) break; S.tax = S.tax||{}; (S.tax.ch = S.tax.ch||[]).push({amt:a, until:Date.now()+24*H}); S.tax.ch = S.tax.ch.filter(c=>c.until>Date.now()); const g = Math.min(.10-(S.charFam||0), .012*a/1e7); if (g > 0){ S.charFam = (S.charFam||0)+g; S.fam = (S.fam||0)+g; } taxGiveV = ""; save(); render(); toast("Donated "+money(a)); } break;
+    case "offOpen": { off = {red:-1, pick:-1, msg:"", warn:true}; openSheet(sheetOffshore()); } break;
+    case "offGo": { off.red = Math.floor(Math.random()*6); off.warn = false; drawSheet(); } break;
+    case "offPick": { if (off.pick >= 0) break; const i = +arg, t = Date.now(); S.tax = S.tax||{}; off.pick = i; S.tax.cd = t+OFF_CD*H;
+      if (i === off.red){ const owed = taxFor(perHourPre(t),t)*8*1.5; S.cash -= owed; S.taxPaid = (S.taxPaid||0)+owed; tx("buy","Tax audit: back taxes and fine",-owed); off.msg = `The tax office came knocking. Back taxes and a fine cost you <b class="num down">${money(owed)}</b>. The account is closed for ${OFF_CD} hours.`; }
+      else { S.tax.off = t+OFF_CD*H; off.msg = `Clean. 20% of your profit stays hidden for the next ${OFF_CD} hours.`; }
+      save(); drawSheet(); needRender = true; } break;
+    case "offClose": closeSheet(); render(); break;
+    case "taxInfo": syncAmts(); taxInfoK = arg; openSheet(sheetTaxInfo()); break;
+    case "goVeh": closeSheet(); tab="market"; mcat="veh"; try{localStorage.setItem("mm-tab",tab);localStorage.setItem("mm-mcat",mcat)}catch(_){} render(); window.scrollTo(0,0); break;
+    case "goTax": closeSheet(); tab="profile"; try{localStorage.setItem("mm-tab",tab)}catch(_){} render(); setTimeout(()=>{ const el=document.getElementById("taxsec"); if (el) el.scrollIntoView({behavior:"smooth"}); },50); break;
+
     case "acctDep": if ((S.debt||0) > .005){ acctBlocked(); break; } run(()=>A.acctDep(arg)); break;
     case "acctBlocked": bankTab="loans"; drawSheet(); break;
     case "acctWd": acctAmtV=""; run(()=>A.acctWd(arg)); break;
