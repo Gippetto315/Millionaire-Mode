@@ -1119,7 +1119,9 @@ const ACCT_WAIT_H = 2, ACCT_MIN_H = 12; /* hours before he starts saving you tax
 const HOLD_H = 24; /* hours of paperwork before the holding company counts */
 const TAX_B = [[1000,.10],[4000,.12],[8600,.22],[16400,.24],[20900,.32],[52200,.35],[Infinity,.37]]; /* the real US rates; limits are a year's brackets divided by 12 game months */
 function bracketTax(h, sh){ if (!(h > 0)) return 0; let tax = 0, lo = 0; for (const [hi,r] of TAX_B){ if (h > lo) tax += (Math.min(h,hi)-lo)*Math.max(0,r-(sh||0)); lo = hi; } return tax; }
-const writeOff = t => .0003*(S.props.reduce((a,p)=>a+propVal(p,t),0) + S.items.reduce((a,i)=>ITEMM[i.id].c==="veh" ? a+itemVal(i,t) : a, 0));
+const WO_WAIT_H = 24; /* hours you must own something before it counts as a write-off */
+const woOld = (x,t) => !x.at || t - x.at >= WO_WAIT_H*H;
+const writeOff = t => .0003*(S.props.reduce((a,p)=>woOld(p,t) ? a+propVal(p,t) : a,0) + S.items.reduce((a,i)=>ITEMM[i.id].c==="veh" && woOld(i,t) ? a+itemVal(i,t) : a, 0));
 const charNext = () => ((S.tax&&S.tax.ch)||[]).reduce((m,c)=>Math.max(m,c.until), 0);
 const charDed = t => ((S.tax&&S.tax.ch)||[]).reduce((a,c)=>c.until>t ? a+c.amt/24 : a, 0);
 const acctH = () => (S.tax && S.tax.sal) ? S.tax.sal/12 : 0;
@@ -1771,7 +1773,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795809640";
+const BUILD = "1795809815";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2387,7 +2389,7 @@ function taxTab(){ const t = Date.now(), pre = perHourPre(t), P = taxParts(pre,t
   return `<div class="lbl">Your taxes, per hour</div>${kv([["Profit before tax",signed(pre)],["Income tax",money(P.tax)],["Effective rate",(eff*100).toFixed(1)+"%"],["Loopholes save you",money(saved)+"/h"]])}
   <p class="note">US rates, by hourly profit: ${TAX_B.map(([hi,r],k)=>`${Math.round(r*100)}%${hi<1e9?` to ${wholeMoney(hi)}`:" above"}`).join(", ")}. One hour is one game month.</p>
   <div class="lbl">Loopholes</div>
-  ${card("🧾 Write-offs",`<p class="note" style="margin:6px 0 0">Automatic. Your vehicles and properties lose value on paper, which cuts taxable profit by ${money(Math.min(writeOff(t)+charDed(t), Math.max(0,pre)*.15))}/h. Deductions can't cover more than 15% of your profit.</p>`,"wo")}
+  ${card("🧾 Write-offs",`<p class="note" style="margin:6px 0 0">Automatic. Your vehicles and properties lose value on paper, which cuts taxable profit by ${money(Math.min(writeOff(t)+charDed(t), Math.max(0,pre)*.15))}/h. Anything new only counts after you've owned it ${WO_WAIT_H} hours. Deductions can't cover more than 15% of your profit.</p>`,"wo")}
   ${card("🏢 Holding company",T.hold?(T.hold > Date.now() ? `<p class="note" style="margin:6px 0 0">Filing the paperwork. Ready in <b>${dur(T.hold-Date.now())}</b>, then every tax rate drops 2 points.</p>` : `<p class="note" style="margin:6px 0 0">Active. Every tax rate is 2 points lower.</p>`):`<p class="note" style="margin:6px 0 10px">One-time setup. Takes ${HOLD_H} hours of paperwork, then knocks 2 points off every rate for the rest of this life.</p><button class="btn gold" data-act="taxHold" ${S.cash<hf?"disabled":""}>Set it up · ${money(hf)}</button>`,"hold")}
   ${card("🧮 Tax accountant",T.sal?`<p class="note" style="margin:6px 0 10px">Marv Pennywise, CPA. Salary ${money(T.sal)} a year, paid ${money(T.sal/12)} every game month. ${(T.st||0) > Date.now() ? `Settling in, he starts saving you tax in <b>${dur(T.st-Date.now())}</b>.` : "Cuts your tax bill 10%."}${(T.min||0) > Date.now() ? ` Contract runs another ${dur(T.min-Date.now())}. Let him go before that and you pay the rest.` : ""}</p><button class="btn ghost" data-act="taxFire">Let him go</button>`:`<p class="note" style="margin:6px 0 10px">Cuts your tax bill 10%. Salary ${money(sal)} a year, paid ${money(sal/12)} every game month, until you let him go. He needs ${ACCT_WAIT_H} hours to settle in before he saves you anything, and the contract runs at least ${ACCT_MIN_H} hours.</p><button class="btn gold" data-act="taxHire">Hire him · ${money(sal)}/yr</button>`,"acct")}
   ${card("🎗️ Charity foundation",`<p class="note" style="margin:6px 0 10px">Cuts your taxes for a day and raises your Family Name income forever. Costs more than it saves up front. One donation a day.${charNext() > Date.now() ? ` <b>Next one in ${dur(charNext()-Date.now())}.</b>` : ""}</p><div class="amtrow"><span class="dollar">$</span><input id="taxgive" type="text" inputmode="decimal" placeholder="Amount to donate" value="${esc(taxGiveV)}" autocomplete="off"><button class="btn gold" data-act="taxGive">Donate</button></div>`,"char")}
