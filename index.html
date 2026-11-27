@@ -852,6 +852,7 @@ function chooseHeir(k){ const h = HEIRS[k]; if (!h) return; const w0 = ensureWho
   const wi = willItem(), hv = wi ? wi.v : 0, keepB = wi && wi.k==="biz" ? S.biz[wi.id] : null, keepP = wi && wi.k==="prop" ? S.props.find(p=>p.uid===wi.id) : null;
   const nw0 = netWorth(), est = nw0 - hv, cash0 = Math.max(0, Math.min(h.start, est)), toV = Math.max(0, est-h.start), short = Math.max(0, -est), peak = Math.max(S.peak||0, nw0);
   S.fam = famBonus() + famGain(peak);
+  if (S.tax && S.tax.lock > 0){ S.cash += S.tax.lock; S.tax.lock = 0; }
   S.mo = newMO(); S.biz = {}; S.props = []; S.items = []; S.hold = {}; S.auto = {}; S.sav = []; S.proj = []; S.mort = []; S.home = null; S.homes = []; S.tax = null; S.acct = {b:0,at:t,st:t,earn:0}; S.lb = 0; S.advUntil = 0; S.advBase = null; S.will = null; loanClear(); S.cash = cash0;
   if (keepB) S.biz[wi.id] = keepB; if (keepP){ delete keepP.mid; S.props.push(keepP); }
   const trust = k==="great" ? Math.round(cash0*TRUST_SHARE) : 0; S.cash -= trust;
@@ -1062,7 +1063,7 @@ function projListings(){ const t=Date.now(), slot=Math.floor(t/PROJ_SLOT), done=
 const projTiers = () => { const nw=Math.max(netWorth(),100); return [.02,.05,.10].map(f=>Math.max(20,Math.round(nw*f))); };
 const projSmall = () => [20,100,1000,10000,100000].filter(a=>a<projTiers()[0]).slice(-3);
 const savVal = (t) => savVal0(t) + acctBal(t);
-const grossWorth = () => S.cash + assetsVal() + bizVal() + savVal() + projLocked() + ((S.life&&S.life.trust)||0);
+const grossWorth = () => S.cash + assetsVal() + bizVal() + savVal() + projLocked() + ((S.life&&S.life.trust)||0) + ((S.tax&&S.tax.lock)||0);
 function netWorth(){ return grossWorth() - (S.debt||0) - mortDebt(); }
 const loanRatioAt = l => Math.min(2.5, .5 + .2*l);
 const loanRatio = () => loanRatioAt(S.lvl);
@@ -1197,6 +1198,8 @@ function advance(t){
   S.items.forEach(i => { if (i.rent){ const a0 = Math.max(from, i.rentAt); if (i.rtot == null) i.rtot = carRent(i,t)*((i.rh||0) + Math.max(0,from-i.rentAt)/H); if (t > a0) i.rtot += carRent(i,t)*(t-a0)/H; } });
   loanMigrate();
   credit(inc.total);
+  if (S.tax && S.tax.off){ const ov = Math.max(0, Math.min(t, S.tax.off) - from)/H; if (ov > 0){ const tp = taxParts(perHourPre(t), Math.min(t, S.tax.off)-1), amt = tp.hide*ov; if (amt > .005){ S.cash -= amt; S.tax.lock = (S.tax.lock||0) + amt; } }
+    if (S.tax.off <= t && S.tax.lock > .005){ const a = S.tax.lock; S.tax.lock = 0; S.cash += a; tx("income","Offshore money released",a); toast(`🏝️ ${money(a)} came back from offshore`, true); } }
   vaultPay(from, t);
   loanDrip(t);
   loanRun(from, t);
@@ -1752,7 +1755,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795751455";
+const BUILD = "1795752605";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2317,7 +2320,7 @@ function taxTab(){ const t = Date.now(), pre = perHourPre(t), P = taxParts(pre,t
   ${card("🏢 Holding company",T.hold?`<p class="note" style="margin:6px 0 0">Active. Every tax rate is 2 points lower.</p>`:`<p class="note" style="margin:6px 0 10px">One-time setup. Knocks 2 points off every rate, for the rest of this life.</p><button class="btn gold" data-act="taxHold" ${S.cash<hf?"disabled":""}>Set it up · ${money(hf)}</button>`,"hold")}
   ${card("🧮 Tax accountant",T.sal?`<p class="note" style="margin:6px 0 10px">Marv Pennywise, CPA. Salary ${money(T.sal)} a year, paid ${money(T.sal/12)} every game month. Cuts your tax bill 10%.</p><button class="btn ghost" data-act="taxFire">Let him go</button>`:`<p class="note" style="margin:6px 0 10px">Cuts your tax bill 10%. Salary ${money(sal)} a year, paid ${money(sal/12)} every game month, until you let him go.</p><button class="btn gold" data-act="taxHire">Hire him · ${money(sal)}/yr</button>`,"acct")}
   ${card("🎗️ Charity foundation",`<p class="note" style="margin:6px 0 10px">Cuts your taxes for a day and raises your Family Name income forever. Costs more than it saves up front.</p><div class="amtrow"><span class="dollar">$</span><input id="taxgive" type="text" inputmode="decimal" placeholder="Amount to donate" value="${esc(taxGiveV)}" autocomplete="off"><button class="btn gold" data-act="taxGive">Donate</button></div>`,"char")}
-  ${card("🏝️ Offshore account",T.off>t?`<p class="note" style="margin:6px 0 0">Active. 20% of your profit is hidden from the tax office for ${dur(T.off-t)} more.</p>`:cd>0?`<p class="note" style="margin:6px 0 0">Cooling off for ${dur(cd)}.</p>`:`<p class="note" style="margin:6px 0 10px">Hides 20% of your profit for ${OFF_CD} hours. Six cards, one red. Pick the red one and you're audited: 8 hours of tax back, plus a 50% fine.</p><button class="btn gold" data-act="offOpen">Open one</button>`,"off")}
+  ${card("🏝️ Offshore account",T.off>t?`<p class="note" style="margin:6px 0 0">Active. 20% of your profit is hidden from the tax office for ${dur(T.off-t)} more.<br>Locked offshore: <b class="num">${money(T.lock||0)}</b>, back in your cash when it ends.</p>`:cd>0?`<p class="note" style="margin:6px 0 0">Cooling off for ${dur(cd)}.</p>`:`<p class="note" style="margin:6px 0 10px">Hides 20% of your profit for ${OFF_CD} hours. Six cards, one red. Pick the red one and you're audited: 8 hours of tax back, plus a 50% fine.</p><button class="btn gold" data-act="offOpen">Open one</button>`,"off")}
   <p class="note" style="text-align:center;margin:4px 0 0;opacity:.7">Taxes paid over every generation: <b class="num">${money(S.taxPaid||0)}</b></p>`; }
 function charEst(a){ const t = Date.now(), pre = perHourPre(t); S.tax = S.tax||{}; const ch = S.tax.ch = S.tax.ch||[], t0 = taxFor(pre,t); ch.push({amt:a, until:t+24*H}); const t1 = taxFor(pre,t); ch.pop();
   const saved = Math.max(0,(t0-t1)*24), g = Math.max(0, Math.min(.10-(S.charFam||0), .012*a/1e7)), biz = Object.keys(S.biz).reduce((x,id)=>x+bizRev(id),0)/Math.max(1,1+(S.fam||0)), inc = biz*g*.66, net = a-saved;
@@ -2340,7 +2343,7 @@ function sheetTaxInfo(){ return () => { const k = taxInfoK, t = Date.now(), pre 
 function sheetOffshore(){ return () => { if (off.warn){ const t = Date.now(), pre = perHourPre(t), hid = Math.max(0, bracketTax(pre,0)-bracketTax(pre*.80,0))*OFF_CD, aud = taxFor(pre,t)*8*1.5;
   return `<div class="shead"><div class="tile gold">⚠️</div><div><h3>Before you hide money</h3><p>This is tax evasion</p></div></div>
   <p style="margin:0 0 12px;line-height:1.5">You're about to pick one of six cards. <b>One is red.</b> If you pick it, the tax office audits you and you pay <b class="down num">${money(aud)}</b> in back taxes and fines. It comes out of your cash right away and can't be undone. <b>Cash account can go negative.</b></p>
-  ${kv([["Odds of an audit","1 in 6"],["If you're audited",`<span class="down">-${money(aud)}</span>`],["If you're clean",`<span class="up">Saves about ${money(hid)}</span>`],["Hidden for",OFF_CD+" hours"],["Next try",OFF_CD+" hours later, win or lose"]])}
+  ${kv([["Odds of an audit","1 in 6"],["If you're audited",`<span class="down">-${money(aud)}</span>`],["If you're clean",`<span class="up">Saves about ${money(hid)}</span>`],["Hidden for",OFF_CD+" hours"],["The hidden money","Locked offshore until the "+OFF_CD+" hours are up"],["Next try",OFF_CD+" hours later, win or lose"]])}
   <button class="btn gold" data-act="offGo" style="width:100%;margin:12px 0 8px">I understand, pick a card</button><button class="btn ghost" data-act="close" style="width:100%">Never mind</button>`; }
   const done = off.pick >= 0, ok = done && off.pick !== off.red;
   return `<div class="shead"><div class="tile gold">🏝️</div><div><h3>Offshore account</h3><p>${done?(ok?"You're in the clear":"Audited"):"Pick a card. One is red"}</p></div></div>
@@ -2599,7 +2602,7 @@ document.addEventListener("click", e => {
     case "offGo": { off.red = Math.floor(Math.random()*6); off.warn = false; drawSheet(); } break;
     case "offPick": { if (off.pick >= 0) break; const i = +arg, t = Date.now(); S.tax = S.tax||{}; off.pick = i; S.tax.cd = t+OFF_CD*H;
       if (i === off.red){ const owed = taxFor(perHourPre(t),t)*8*1.5; S.cash -= owed; S.taxPaid = (S.taxPaid||0)+owed; tx("buy","Tax audit: back taxes and fine",-owed); off.msg = `The tax office came knocking. Back taxes and a fine cost you <b class="num down">${money(owed)}</b>. The account is closed for ${OFF_CD} hours.`; }
-      else { S.tax.off = t+OFF_CD*H; off.msg = `Clean. 20% of your profit stays hidden for the next ${OFF_CD} hours.`; }
+      else { S.tax.off = t+OFF_CD*H; off.msg = `Clean. 20% of your profit stays hidden for the next ${OFF_CD} hours. That money is locked offshore and comes back to your cash when the time's up.`; }
       save(); drawSheet(); needRender = true; } break;
     case "offClose": closeSheet(); render(); break;
     case "taxInfo": syncAmts(); taxInfoK = arg; openSheet(sheetTaxInfo()); break;
