@@ -1767,7 +1767,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795804016";
+const BUILD = "1795808295";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1847,7 +1847,7 @@ const LIVE = {
   gph: () => signed(grossHour()),
   nph: () => signed(netHour()),
   lcash: () => { ownCash(); return money(S.lb||0); },
-  savOut: () => { const ai=document.getElementById("savamt"), di=document.getElementById("savdays"), amt=parseAmt(ai?ai.value:savAmt), dd=parseInt(di?di.value:savDays), d=dd>=1&&dd<=30?dd:savDays; return amt>=.01 ? money(amt*(1+savRate(d)))+" · +"+money(amt*savRate(d)) : "Type an amount above"; },
+  savOut: () => { const ai=document.getElementById("savamt"), di=document.getElementById("savdays"), amt=parseAmt(ai?ai.value:savAmt), dd=parseInt(di?di.value:savDays), d=dd>=1&&dd<=30?dd:savDays; return amt>=.01 ? money(amt*(1+savRate(d)))+" · +"+money(amt*savRate(d)) : "Type an amount below"; },
   dripT: () => { const g=graceLoans(); return g.length ? dur(Math.max(0,Math.min(...g.map(l=>dripEnd(l)-Date.now())))) : ""; },
   dripD: () => { const d=dripLoans(); return d.length ? dur(Math.max(0,Math.min(...d.map(l=>dripEnd(l)-Date.now())))) : ""; },
   dripL: () => money(dripLoans().reduce((a,l)=>a+l.d,0)),
