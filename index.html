@@ -1759,7 +1759,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795752708";
+const BUILD = "1795803984";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2313,7 +2313,7 @@ function sheetLoan(){ return () => { const l = loansOf().find(x => String(x.at) 
   <button class="btn ghost" data-act="bank" style="width:100%;margin-top:12px">‹ Back to the bank</button>`; }; }
 function sheetActivity(){ return () => `<div class="shead"><div class="tile gold">🧾</div><div><h3>All activity</h3><p>Your last ${S.tx.length} transactions</p></div></div>${S.tx.length?`<div class="list">${S.tx.map(txRow).join("")}</div>`:`<div class="empty">Nothing yet.</div>`}`; }
 let taxGiveV = "", off = {red:-1, pick:-1, msg:""};
-const holdFee = () => Math.max(2000, Math.round(perHourPre()*5)), acctSal = () => Math.max(1200, Math.round(perHourPre()*12*.03));
+const holdFee = () => Math.max(1e6, Math.round(perHourPre()*5)), acctSal = () => Math.max(1200, Math.round(perHourPre()*12*.03));
 const OFF_CD = 12;
 function taxTab(){ const t = Date.now(), pre = perHourPre(t), P = taxParts(pre,t), T = S.tax||{}, eff = pre > 0 ? P.tax/pre : 0, saved = Math.max(0, P.raw-P.tax), cd = (T.cd||0)-t, hf = holdFee(), sal = acctSal();
   const card = (title, body, k) => `<div class="card" style="padding:12px 14px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>${title}</b>${k?`<button class="btn ghost" data-act="taxInfo" data-arg="${k}" style="width:auto;padding:6px 12px;font-size:12px">How it works</button>`:""}</div>${body}</div>`;
