@@ -709,6 +709,23 @@ const hustleX = d => !d ? 1 : d.hx ? d.hx : !d.vb ? 1 : d.vb>=10 ? 3 : d.vb>=6 ?
 const drivable = () => S.items.filter(i => ITEMM[i.id].c==="veh" && !i.rent);
 const bestCar = () => drivable().reduce((b,i)=> (ITEMM[i.id].vb||0) > (b ? ITEMM[b.id].vb||0 : 0) ? i : b, null);
 const HOME_PCT = [1,2,3,4,5,6,7,8,9,10,11,12];
+const ST_N = ["Navy","Oak","Maple","Harbor","Elm","Cedar","Willow","Pine","Lincoln","Magnolia","Sycamore","Birch","Juniper","Mercer","Canal","Orchard","Bayview","Franklin","Sunset","Ocean"], ST_T = ["St","Ave","Ln","Dr","Ct","Blvd","Way"], TOWNS = ["Venice Beach","Brookfield","Lakewood","Riverside","Harmony","Cedar Falls","Westport","Pine Hollow","Fairview","Oak Ridge","Port Alder","Millbrook","Stonebridge","Sandy Cove","Maple Heights"], FLOWERS = ["Gladiola","Magnolia","Jasmine","Marigold","Peony","Azalea","Lilac","Camellia","Primrose","Orchid"], LAND_N = ["Miller","Hollis","Whitaker","Calloway","Dunmore","Ashby","Tucker","Redfern","Larkin","Bellamy"], BIZ_N = ["Harbor","Summit","Crossroads","Keystone","Heritage","Liberty","Northgate","Riverfront","Cornerstone","Eastside"], LUX_N = ["Casa","Villa","Maison","Chateau","Palazzo"], LUX_S = ["Cielo","Aurelia","Montclair","Bellavista","Sorrento","Belmont","Oakmere","Rosewood"];
+const pick = a => a[Math.floor(Math.random()*a.length)];
+function propName(d){ const adr = () => `${1+Math.floor(Math.random()*298)} ${pick(ST_N)} ${pick(ST_T)}`, town = pick(TOWNS), c = d.c;
+  if (c==="Multi-family") return Math.random()<.5 ? `The ${pick(FLOWERS)} ${["Apartments","Court","Flats","Terrace"][Math.floor(Math.random()*4)]}` : `${adr()} ${d.n.replace(/ \(.*\)/,"")}`;
+  if (c==="Land & farms") return `${pick(LAND_N)} ${d.n.replace(/ \(.*\)/,"")}`;
+  if (c==="Commercial") return `${pick(BIZ_N)} ${d.n}`;
+  if (c==="Luxury") return d.id==="castle"||d.id==="empire" ? `${pick(LUX_S)} ${d.n}` : `${pick(LUX_N)} ${pick(LUX_S)}`;
+  if (c==="Vacation") return `${adr()}, ${town}`;
+  return `${adr()}, ${town}`; }
+const MESS = {
+  Homes:["The tenants moved out and left it trashed","A pipe burst behind the kitchen wall","The roof started leaking after a storm","The tenants left a hole in the drywall and a smell in the carpet"],
+  "Multi-family":["A tenant moved out and left the unit a mess","Water damage from the unit upstairs","The hallway and stairs took a beating from a move-out","A kitchen fire in one unit, nobody hurt"],
+  "Land & farms":["A storm took down the fencing","The barn roof gave out","Flooding washed out the access road"],
+  Vacation:["A storm tore shingles off the roof","The renters trashed the place over the holiday weekend","The deck rotted through"],
+  Commercial:["The tenant left and gutted the unit on the way out","The HVAC died","The roof drain failed and the ceiling came down"],
+  Luxury:["Water damage in the east wing","A guest party left the place wrecked","The pool equipment failed and flooded the patio"]};
+const WEAR_H = .5, MESS_EVERY_H = 60;
 const UNITS = {duplex:2, triplex:3, threedecker:3, fourplex:4, rowblock:6, walkup:10, condobld:8, aptbld:12};
 const PCATS = ["Homes","Multi-family","Land & farms","Vacation","Commercial","Luxury"];
 /* up to 3 homes; each one you live in adds its bonus, and gives up its rent */
@@ -1194,6 +1211,10 @@ function advance(t){
   S.last = t;
   S.mods = S.mods.filter(m => m.until > t);
   { const w = "-" + win(t) + "-"; S.sold = S.sold.filter(l => l.includes(w)); }
+  { let msgs = []; S.props.forEach(p => { const d = PROPM[p.type]; if (p.name === d.n) p.name = propName(d); if (p.renoUntil > from) return; const hrs = Math.max(0, t - Math.max(from, p.renoUntil||0))/H; if (hrs <= 0 || p.cond == null) return;
+    p.cond = Math.max(12, p.cond - WEAR_H*hrs);
+    if (p.rented){ const ex = hrs/MESS_EVERY_H; let n = Math.floor(ex) + (Math.random() < ex%1 ? 1 : 0); for (let k=0; k<n && p.cond>12; k++){ const hit = 8 + Math.floor(Math.random()*13); p.cond = Math.max(12, p.cond - hit); const m = pick(MESS[d.c]||MESS.Homes); msgs.push(`${p.name}: ${m.charAt(0).toLowerCase()+m.slice(1)}`); tx("spend",`${p.name}: ${m}`,0); } } });
+    if (msgs.length) toast(`🛠️ ${msgs[0]}${msgs.length>1?` (+${msgs.length-1} more)`:""}. Needs renovation.`, true); }
   S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t && p.cond < 100){ p.cond = 100; toast(`${p.name} renovation finished`, true); } });
   const sc = stepStocks(t);
   const ac = lotsTick(t) | listingsTick(t);
@@ -1344,7 +1365,7 @@ const A = {
   bizBuyN(id,k){ for (let i=0;i<k;i++){ const o=S.biz[id]; if ((o?o.n:0)>=25 || unitCost(id)>S.cash+1e-6) break; A.bizBuy(id); } },
   bizSellN(id,k){ for (let i=0;i<k && S.biz[id];i++) A.bizSell(id); },
   bizSell(id){ const o=S.biz[id]; if (!o) return; const v=o.spent/o.n*SELL; o.spent -= o.spent/o.n; const L=migrateLocs(o); L.splice(lowIdx(L),1); o.n--; gain(v,"sell",`Sold a ${BIZM[id].n} location`); if (o.n<=0) delete S.biz[id]; },
-  propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (houseShort(L.ask)) return; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
+  propBuy(lid){ const L=propListings().find(x=>x.lid===lid); if (!L) return; const d=PROPM[L.type]; if (houseShort(L.ask)) return; if (!spend(L.ask,"buy",`Bought ${d.n}`)) return; S.sold.push(lid); S.props.push({uid:uid(),type:L.type,name:propName(d),base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,at:Date.now()}); },
   bizBuyLoan(id){ const o=S.biz[id]; if ((o?o.n:0)>=25) return; const c=unitCost(id), u=upCost(id,0), tot=Math.round((c+u)*100)/100; if (tot>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } const c0=S.cash; A.loanTake(tot); if (S.cash<c0+tot-1e-6) return; S.lb=Math.max(0,(S.lb||0)-tot); const n0=(o?o.n:0); A.bizBuy(id); const b=S.biz[id]; if (!b||b.n<=n0) return; const L=migrateLocs(b); A.bizUp(id,L.length-1); },
   advHire(){ const f=advFee(); if (!spend(f,"buy",`Business advisor (${ADV_L[advSel-1]}, 1 hour)`)) return; S.advUntil=Date.now()+H; S.advN=advSel; S.advBase={fee:f,n:advSel,inc:advInc(),spent:advSpent()}; toast("🧑‍💼 Advisor hired for 1 hour"); },
   propRenoLoan(u){ const p=S.props.find(x=>x.uid===u); if (!p || p.cond>=100 || p.renoUntil>Date.now()) return; const c=renoCost(p); if (c>loanRoom()+1e-6){ toast("The bank won't lend that much right now"); return; } A.loanTake(c); S.lb=Math.max(0,(S.lb||0)-c); if (!spend(c,"buy",`Renovation (loan): ${p.name}`)) return; p.reno+=c; p.renoUntil=Date.now()+3*MIN; },
@@ -1352,7 +1373,7 @@ const A = {
   propRent(u){ const p=S.props.find(x=>x.uid===u); if (p){ if (isHome(u)){ toast(UNITS[p.type] ? "You live here, so the other units have to stay rented" : "You live here. Move out first to rent it."); return; } p.rented=!p.rented; } },
   propMort(arg){ if (trusteeBlock()) return; const [lid,am]=String(arg).split("|"), L=propListings().find(x=>x.lid===lid); if (!L||!(+am>=1)) return; const d=PROPM[L.type], loan=Math.round(Math.min(+am,L.ask)*100)/100, down=Math.round((L.ask-loan)*100)/100;
     if (loan > L.ask*.8+.5){ toast("The bank wants at least 20% down"); return; } if (houseShort(down)) return; if (mortDebt()+loan > mortCap()){ toast("The bank won't lend that much against your net worth. Put more down."); return; }
-    S.cash -= down; const u=uid(); S.sold.push(lid); S.props.push({uid:u,type:L.type,name:d.n,base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,down,at:Date.now()});
+    S.cash -= down; const u=uid(); S.sold.push(lid); S.props.push({uid:u,type:L.type,name:propName(d),base:L.base,cond:L.cond,rented:false,renoUntil:0,paid:L.ask,reno:0,down,at:Date.now()});
     const ap=mortAPR(loan,L.ask), ii=aprI(ap); (S.mort=S.mort||[]).push({uid:u,p0:loan,at:Date.now(),pay:loan*payF(ii),i:ii,apr:ap}); tx("buy",`Bought ${d.n} (mortgage)`,-down); },
   propMortExtra(arg){ const [u,a]=String(arg).split("|"), m=mortOf(u), x=Math.round(+a); if (!m||!(x>=1)) return; const bal=mortBal(m); if (x>=bal-.01){ return A.propMortPay(u); } if (houseShort(x)) return; const o=mortExtra(m,x); if (!o) return; S.cash-=x; m.pp=(m.pp||0)+mortPaid(m,m.at,Date.now())+x; m.p0=o.b2; m.at=Date.now(); m.pay=o.pay; m.N=o.n; tx("loan","Extra mortgage payment",-x); },
   propMortPlan(arg){ const [u,f]=String(arg).split("|"), m=mortOf(u); if (!m) return; const o=mortPlanOpts(m).find(x=>x.f===+f); if (!o) return; m.pp=(m.pp||0)+mortPaid(m,m.at,Date.now()); if (!m.pay0) m.pay0=m.pay; m.p0=mortBal(m); m.at=Date.now(); m.pay=o.pay; m.N=o.n; tx("loan","Switched to a faster mortgage plan",0); },
@@ -1629,7 +1650,7 @@ const EVENTS = [
     const pool=PROP.filter(p=>p.t<=S.lvl); const d=pool[Math.floor(Math.random()*pool.length)];
     const p={type:d.id,base:d.base*(.9+Math.random()*.2),cond:Math.round(25+Math.random()*30)}; const val=propVal(p), ask=val*.65;
     return {icon:"🏚️",title:"Distressed property",text:`A motivated seller needs out fast. A ${propCond(p.cond).toLowerCase()} ${d.n.toLowerCase()} worth ${money(val)} is yours for ${money(ask)}.`,choices:[
-      {label:`Buy it (${money(ask)})`,cost:ask,run(){ if(!spend(ask,"buy",`Bought ${d.n} (distressed)`)) return "You couldn't cover it."; S.props.push({uid:uid(),type:d.id,name:d.n,base:p.base,cond:p.cond,rented:false,renoUntil:0,paid:ask,reno:0,at:Date.now()}); return `It's yours. That's ${money(val-ask)} of instant equity.`; }},
+      {label:`Buy it (${money(ask)})`,cost:ask,run(){ if(!spend(ask,"buy",`Bought ${d.n} (distressed)`)) return "You couldn't cover it."; S.props.push({uid:uid(),type:d.id,name:propName(d),base:p.base,cond:p.cond,rented:false,renoUntil:0,paid:ask,reno:0,at:Date.now()}); return `It's yours. That's ${money(val-ask)} of instant equity.`; }},
       {label:"Pass",run(){ return "Someone else snapped it up."; }}
     ]};
   }},
@@ -1731,7 +1752,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795701781";
+const BUILD = "1795744608";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -2039,8 +2060,8 @@ function bizQtyPanel(id){
 }
 function sheetProp(u){ return () => {
   const p=S.props.find(x=>x.uid===u); if (!p) return null; const d=PROPM[p.type], reno=p.renoUntil>Date.now(), v=propVal(p), into=p.paid+p.reno;
-  return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
-  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(hm(p,Date.now())-1)}</small>`],["You put in",pm(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",pm(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"],["Condition",p.cond+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${psigned(v-into)}</span>`]])}
+  return `<div class="shead"><div class="tile">${d.e}</div><div><h3>${p.name}</h3><p>${d.n} · ${propCond(p.cond)} · ${p.rented?"Rented out":"Vacant"}</p></div></div>
+  ${kv([["Market value",`<span data-live="pv:${u}"></span><br><small>${mktTag(hm(p,Date.now())-1)}</small>`],["You put in",pm(into)],["Rent ("+Math.round(occAt(p,Date.now())*100)+"% occupied)",pm(propRent(p))+"/h<br><small>"+payH(into,propRent(p)-propCost(p))+"</small>"],["Upkeep & taxes",pm(propCost(p))+"/h"],["Condition",Math.round(p.cond)+" / 100"],["Gain",`<span class="${v-into>=0?"up":"down"}">${psigned(v-into)}</span>`]])}
   ${(()=>{const m=mortOf(u), re=p.rentTot||0, up=p.upTot||0, rn=re-up, dn=p.down!=null?p.down:(m?Math.max(0,p.paid-m.p0):p.paid), cin=dn+p.reno, mp=m?(m.pp||0)+mortPaid(m,m.at,Date.now()):(p.mdone||0), out=cin+mp, net=out-rn; return `<div class="lbl">What it's cost you so far</div>${kv([[m?"Down payment":"Purchase price",pm(dn)],["Renovations",pm(p.reno)],["Mortgage payments",pm(mp)],["Total paid in",pm(out)],["Rent earned (after upkeep)",`<span class="${rn>=0?"up":"down"}">${psigned(rn)}</span>`],[net>0?"Still to earn back":"Ahead by",`<span class="${net>0?"down":"up"}">${pm(Math.abs(net))}</span>`]])}<p class="note">${net<=0?"It has paid for itself. Everything from here is profit.":"Rent counts from the day this update went live."}</p>`;})()}
   ${reno?`<p class="note goldt" data-live="reno:${u}"></p>`:""}
   ${p.cond<100&&!reno?`<button class="btn gold" data-act="propReno" data-arg="${u}" ${renoCost(p)>S.cash?"disabled":""}>Renovate for ${pm(renoCost(p))} (adds ${pm(propBaseVal({...p,cond:100})*hm(p,Date.now())-v)} value)</button><button class="btn bank" data-act="propRenoLoan" data-arg="${u}" ${renoCost(p)>loanRoom()?"disabled":""}>Renovate with a loan</button><p class="note"><b>About the loan:</b> it's a regular bank loan, not a mortgage, so it isn't tied to this home. The money goes straight into the work. Pay it back within ${LOAN_GRACE_H} and the interest is just 1%. After that it follows the normal loan schedule, so it costs more the longer you wait. It counts toward your loan limit and shows up in your Bank under Loans.</p>`:""}
