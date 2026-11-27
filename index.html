@@ -1215,7 +1215,7 @@ function advance(t){
     p.cond = Math.max(12, p.cond - WEAR_H*hrs);
     if (p.rented){ const ex = hrs/MESS_EVERY_H; let n = Math.floor(ex) + (Math.random() < ex%1 ? 1 : 0); for (let k=0; k<n && p.cond>12; k++){ const hit = 8 + Math.floor(Math.random()*13); p.cond = Math.max(12, p.cond - hit); const m = pick(MESS[d.c]||MESS.Homes); msgs.push(`${p.name}: ${m.charAt(0).toLowerCase()+m.slice(1)}`); tx("spend",`${p.name}: ${m}`,0); } } });
     if (msgs.length) toast(`🛠️ ${msgs[0]}${msgs.length>1?` (+${msgs.length-1} more)`:""}. Needs renovation.`, true); }
-  S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t && p.cond < 100){ p.cond = 100; toast(`${p.name} renovation finished`, true); } });
+  S.props.forEach(p => { if (p.renoUntil && p.renoUntil <= t){ if (p.renoUntil > from){ p.cond = 100; toast(`${p.name} renovation finished`, true); } p.renoUntil = 0; } });
   const sc = stepStocks(t);
   const ac = lotsTick(t) | listingsTick(t);
   if (t - S.pendingAt >= 5*MIN){ if (Math.abs(S.pending) >= .01){ tx("income","Passive income",S.pending); S.tx[0].parts = Object.entries(S.pendParts||{}).filter(p=>Math.abs(p[1])>=.01).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])); } S.pending=0; S.pendParts={}; S.pendingAt=t; }
@@ -1752,7 +1752,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795744608";
+const BUILD = "1795751455";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
