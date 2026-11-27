@@ -93,6 +93,7 @@ h2{font:700 15px/1.2 var(--display);margin:0;letter-spacing:.01em}
 .row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:left;width:100%;min-height:64px}
 .row:active{background:var(--surface2)}
 .tile{flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:radial-gradient(circle at 35% 30%,#24332c,#141a17);border:1px solid var(--line)}
+.tile{position:relative}.ndot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 2px var(--bg,#0b0f0d);animation:ndp 1.6s ease-in-out infinite}@keyframes ndp{50%{transform:scale(1.25)}}#dock button,.chip{position:relative}#dock button .ndot{top:2px;right:calc(50% - 18px)}.chip .ndot{top:-3px;right:-3px;width:10px;height:10px}.pill.offer{background:#e5484d;color:#fff}
 .tile.gold{background:radial-gradient(circle at 35% 30%,#4a3a17,#1c160a);border-color:#4a3c1c}
 .rmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .rmain strong{font-weight:800;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1701,9 +1702,12 @@ let evResume = null, evReopen = null;
 function closeSheet(){ sheetFn=null; cfm=null; $("sheetroot").innerHTML=""; if (evResume){ const f=evResume; evResume=null; f(); } }
 function drawSheet(){ if (!sheetFn) return; const html = cfm ? cfmHtml() : sheetFn(); if (html===null){ closeSheet(); return; } const sc = $("sheetroot").querySelector(".sheet"); const st = sc ? sc.scrollTop : 0; $("sheetroot").innerHTML = `<div class="scrim${sc?" still":""}" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="stop"><span style="width:36px"></span><div class="grab"></div>${sheetLocked?'<span style="width:36px"></span>':'<button class="xbtn" data-act="close" aria-label="Close">✕</button>'}</div>${html}</div></div>`; const ns=$("sheetroot").querySelector(".sheet"); if (ns) ns.scrollTop = st; }
 
-function rowHtml(o){
+const offerOn = th => !!(th && th.ls && th.ls.off && th.ls.off.exp > Date.now());
+const anyOffer = () => [...S.items, ...S.props].some(offerOn);
+function rowHtml(o){ const th = typeof o.arg === "string" ? thingOf(o.arg) : null, of = offerOn(th);
+  if (of) o = {...o, sub:`<span class="pill offer">Offer ${money(th.ls.off.a)}</span> ` + String(o.sub).replace(/<span class="pill g">For sale[^<]*<\/span> ?/,"")};
   return `<button class="row${o.locked?" locked":""}" ${o.act?`data-act="${o.act}"`:""} ${o.arg!==undefined?`data-arg="${esc(o.arg)}"`:""}>
-    <div class="tile${o.gold?" gold":""}">${o.e}</div>
+    <div class="tile${o.gold?" gold":""}">${o.e}${of?'<i class="ndot"></i>':""}</div>
     <div class="rmain"><strong>${esc(o.title)}</strong><span>${o.sub}</span></div>
     <div class="rside">${o.right||""}</div></button>`;
 }
@@ -1755,7 +1759,7 @@ function chartCursorApply(scroll){ const cur = document.getElementById("ccur"), 
 function chartRestore(){ const el = document.getElementById("cscroll"); if (!el) return; el.scrollLeft = chartScroll == null ? el.scrollWidth : chartScroll; }
 document.addEventListener("scroll", e => { if (e.target && e.target.id === "cscroll"){ const el = e.target; chartScroll = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? null : el.scrollLeft; } }, true);
 
-const BUILD = "1795752605";
+const BUILD = "1795752708";
 let lastUpd = 0;
 function checkUpdate(){ const now = Date.now(); if (now - lastUpd < 60000) return; lastUpd = now;
   fetch(location.pathname + "?chk=" + now, {cache:"no-store"}).then(r => r.ok ? r.text() : "").then(t => { const m = /const BUILD = "(\d+)"/.exec(t); if (m && m[1] !== BUILD && !location.search.includes("v=" + m[1])){ const go = () => { if (document.getElementById("splash")) return setTimeout(go, 300); try { save(); } catch(e){} location.replace(location.pathname + "?v=" + m[1]); }; go(); } }).catch(()=>{}); }
@@ -1889,7 +1893,7 @@ function viewMarket(){
     <div class="sechead" style="margin-top:8px"><h2>For sale</h2><small>New listings in <span class="num" data-live="win"></span></small></div>
     ${c==="veh"?rangeSel("vrsel",vRange,ITEMS.filter(i=>i.c==="veh"&&!i.hidden))+vCatList(L,c):`<div class="list">${L.map(l=>{const d=ITEMM[l.id],lock=c!=="veh"&&d.t>S.lvl;return rowHtml({e:d.e,title:d.n,gold:c==="col",locked:lock,sub:lock?`Unlocks at ${msName(d.t)}`:`${condName(l.cm)} · worth ${money(l.val)}${d.vb?` · <span class="up">+${d.vb}% income</span>`:d.hx?` · <span class="up">${d.hx}x side hustle</span>`:""}`,right:`<b class="num">${money(l.ask)}</b>${!lock&&l.steal?`<span class="pill g">STEAL</span>`:!lock&&l.ask<l.val?`<span class="pill">Deal</span>`:`<span>asking</span>`}`,act:lock?"":"openListing",arg:c+"|"+l.lid});}).join("")||`<div class="empty">No listings right now.</div>`}</div>`}`;
   }
-  return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}</button>`).join("")}</div>${body}</section>`;
+  return `<section class="sec" style="margin-top:4px"><div class="chips">${cats.map(([k,n])=>`<button class="chip${mcat===k?" on":""}" data-act="mcat" data-arg="${k}">${n}${k==="mine"&&anyOffer()?'<i class="ndot"></i>':""}</button>`).join("")}</div>${body}</section>`;
 }
 
 function miniSpark(vals){
@@ -1989,7 +1993,7 @@ function viewProfile(){
 function render(){
   const v = {home:viewHome,market:viewMarket,invest:viewInvest,auctions:viewAuctions,profile:viewProfile}[tab]();
   $("view").innerHTML = v;
-  document.querySelectorAll("#dock button").forEach(b => b.classList.toggle("on", b.dataset.tab===tab));
+  { const ao = anyOffer(); document.querySelectorAll("#dock button").forEach(b => { b.classList.toggle("on", b.dataset.tab===tab); const has = b.querySelector(".ndot"), want = b.dataset.tab==="market" && ao; if (want && !has) b.insertAdjacentHTML("beforeend",'<i class="ndot"></i>'); else if (!want && has) has.remove(); }); }
   liveTick(); needRender = false; chartRestore(); chartCursorApply(false);
 }
 
